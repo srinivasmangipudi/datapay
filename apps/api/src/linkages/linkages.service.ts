@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { Pool } from "pg";
+import { AuditService } from "../audit/audit.service";
 import { PG_POOL } from "../db/db.module";
 
 // §6B's "internal-first" priority, applied to the sell side too (SPEC.md §12
@@ -17,7 +18,10 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 
 @Injectable()
 export class LinkagesService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly audit: AuditService
+  ) {}
 
   /**
    * SPEC.md §6B / Phase 6: pairs a listing with candidate buyers,
@@ -55,6 +59,12 @@ export class LinkagesService {
     await this.pool.query(`UPDATE produce_listings SET state = 'matched' WHERE id = $1`, [
       listingId,
     ]);
+    await this.audit.record(
+      "system",
+      null,
+      "run_produce_matching",
+      `listing:${listingId} linkages:${created}`
+    );
 
     return { listingId, linkagesCreated: created };
   }

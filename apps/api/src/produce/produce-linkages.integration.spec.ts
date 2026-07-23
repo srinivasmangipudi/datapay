@@ -256,4 +256,48 @@ describe("Produce & Linkages (SPEC.md §12 Phase 6)", () => {
 
     await cleanupMember(member);
   });
+
+  it("§19C: a low-trust producer's payout is held for review, never auto-paid or dropped", async () => {
+    const member = await producerMember();
+    await pool.query(`UPDATE members SET trust_score = 0.3 WHERE alias_id = $1`, [member.aliasId]);
+    const auth = { Authorization: `Bearer ${member.token}` };
+
+    await request(app.getHttpServer())
+      .post("/v1/produce/payout-instrument")
+      .set(auth)
+      .send({ upiId: "lowtrust@upi" });
+
+    const listingId = await listSugarcane(member);
+    await request(app.getHttpServer()).post(`/v1/admin/produce-matching/run/${listingId}`).send();
+    const { rows: linkageRows } = await pool.query<{ id: number }>(
+      `SELECT id FROM linkages WHERE listing_id = $1 ORDER BY id ASC LIMIT 1`,
+      [listingId]
+    );
+    const linkageId = linkageRows[0].id;
+
+    for (const toState of ["producer_interested", "negotiating", "agreed"]) {
+      const res = await request(app.getHttpServer())
+        .post(`/v1/linkages/${linkageId}/advance`)
+        .set(auth)
+        .send({ toState });
+      expect(res.status).toBe(201);
+    }
+
+    const runRes = await request(app.getHttpServer()).post("/v1/admin/producer-payouts/run").send();
+    expect(runRes.status).toBe(201);
+    expect(runRes.body.review).toBeGreaterThanOrEqual(1);
+    expect(runRes.body.batchId).toMatch(/^[0-9a-f-]{36}$/);
+
+    const { rows: payoutRows } = await pool.query<{
+      status: string;
+      upi_ref: string | null;
+      batch_id: string;
+    }>(`SELECT status, upi_ref, batch_id FROM producer_payouts WHERE linkage_id = $1`, [linkageId]);
+    expect(payoutRows).toHaveLength(1);
+    expect(payoutRows[0].status).toBe("review");
+    expect(payoutRows[0].upi_ref).toBeNull(); // never attempted — no fabricated payment claim
+    expect(payoutRows[0].batch_id).toBe(runRes.body.batchId);
+
+    await cleanupMember(member);
+  });
 });

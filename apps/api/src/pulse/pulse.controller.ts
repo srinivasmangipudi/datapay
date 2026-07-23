@@ -17,6 +17,6 @@ export class PulseController {
   @Post("answers")
   submitAnswers(@Req() req: AliasRequest, @Body() body: unknown) {
     const dto: PulseAnswersBatchDto = parseOrThrow(PulseAnswersBatchDtoSchema, body);
-    return this.pulse.submitAnswers(req.aliasId, dto.answers);
+    return this.pulse.submitAnswers(req.aliasId, dto.answers, dto.deviceFingerprint);
   }
 }

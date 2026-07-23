@@ -1,8 +1,10 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { SnapDto } from "@datapay/shared";
 import { Pool } from "pg";
+import { AuditService } from "../audit/audit.service";
 import { PG_POOL } from "../db/db.module";
 import { withTransaction } from "../db/tx.util";
+import { FraudService, TRUST_SCORE_VERIFICATION_BONUS } from "../fraud/fraud.service";
 import { LedgerService } from "../ledger/ledger.service";
 import { DevNoopStorageProvider, StorageProvider } from "./storage.provider";
 
@@ -20,7 +22,9 @@ export class SnapsService {
 
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
-    private readonly ledger: LedgerService
+    private readonly ledger: LedgerService,
+    private readonly fraud: FraudService,
+    private readonly audit: AuditService
   ) {}
 
   async submit(aliasId: string, dto: SnapDto) {
@@ -51,6 +55,36 @@ export class SnapsService {
       });
 
       return { status: "credited" as const, snapId: inserted[0].id };
+    });
+  }
+
+  /**
+   * §6's "verification bonus": ops confirms a snap is real (the
+   * `uploaded → recognized → member_confirmed → ops_verified` chain SPEC.md
+   * §8.4 describes was never wired to an endpoint until now) and the
+   * member's trust_score ticks up. Only a snap not already in a terminal
+   * state can be verified — verifying twice, or verifying a rejected snap,
+   * is rejected rather than silently double-crediting trust.
+   */
+  async verify(snapId: number): Promise<{ aliasId: string; trustScoreBonus: number }> {
+    return withTransaction(this.pool, async (client) => {
+      const { rows } = await client.query<{ alias_id: string; state: string }>(
+        `SELECT alias_id, state FROM snaps WHERE id = $1 FOR UPDATE`,
+        [snapId]
+      );
+      if (!rows[0]) throw new NotFoundException("Snap not found");
+      if (rows[0].state === "ops_verified" || rows[0].state === "rejected") {
+        throw new BadRequestException(`Snap is already '${rows[0].state}'`);
+      }
+
+      await client.query(
+        `UPDATE snaps SET state = 'ops_verified', verified_at = now() WHERE id = $1`,
+        [snapId]
+      );
+      await this.fraud.adjustTrustScore(client, rows[0].alias_id, TRUST_SCORE_VERIFICATION_BONUS);
+      await this.audit.record("admin", null, "verify_snap", `snap:${snapId}`, client);
+
+      return { aliasId: rows[0].alias_id, trustScoreBonus: TRUST_SCORE_VERIFICATION_BONUS };
     });
   }
 

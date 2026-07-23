@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Req, UseGuards } from "@nestjs/common";
 import { SnapDtoSchema } from "@datapay/shared";
 import { AliasAuthGuard, AliasRequest } from "../auth/alias-auth.guard";
 import { parseOrThrow } from "../zod.util";
@@ -18,5 +18,18 @@ export class SnapsController {
   @Get()
   list(@Req() req: AliasRequest) {
     return this.snaps.list(req.aliasId);
+  }
+}
+
+// Same deliberately-deferred-auth posture as the aggregation/token-rate/
+// produce-matching/producer-payouts admin endpoints — ops-write auth is a
+// later hardening pass (SPEC.md §19E).
+@Controller("v1/admin/snaps")
+export class AdminSnapsController {
+  constructor(private readonly snaps: SnapsService) {}
+
+  @Post(":id/verify")
+  verify(@Param("id", ParseIntPipe) id: number) {
+    return this.snaps.verify(id);
   }
 }

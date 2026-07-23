@@ -2,9 +2,11 @@ import { Module } from "@nestjs/common";
 import { AggregationModule } from "./aggregation/aggregation.module";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
+import { AuditModule } from "./audit/audit.module";
 import { AuthModule } from "./auth/auth.module";
 import { ConsentsModule } from "./consents/consents.module";
 import { DbModule } from "./db/db.module";
+import { FraudModule } from "./fraud/fraud.module";
 import { JobsModule } from "./jobs/bullmq.module";
 import { LedgerModule } from "./ledger/ledger.module";
 import { LinkagesModule } from "./linkages/linkages.module";
@@ -42,6 +44,8 @@ import { ZonesModule } from "./zones/zones.module";
     LinkagesModule,
     ProduceModule,
     ProducerPayoutsModule,
+    FraudModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -546,3 +546,110 @@ against both the internal collective and an external buyer, the lowest-`id` link
 `negotiating` and non-`NULL` from `agreed` onward; and running the producer-payouts job twice
 against the same agreed linkage produces exactly one `producer_payouts` row, `status = 'paid'`,
 `upi_ref` matching `sandbox-*`.
+
+---
+
+## 19. HARDENING — ADDENDUM (2026-07-23, Phase 7)
+
+§12's Phase 7 line lists six things: a fraud/quality engine, payout batches, audit exports, a
+10k-member load test, a full Kannada copy review, and a TalkBack pass + EAS store builds. The first
+three are real code, built and tested below. The last three are **not done** — not quietly skipped,
+not claimed and hoped for, but explicitly out of reach of this build environment, for reasons given
+in §19G. §11's own rule is the reason to say so plainly: "if code can't honour a claim, flag it —
+don't ship the claim."
+
+**19A. The fraud/quality engine v1 is the three mechanisms §6 already named, made concrete.**
+`quality_flags` and `device_fingerprints` (named in §5's target schema, never migrated until now)
+land in migration `1738108800000_fraud_quality_engine.js`; `FraudService`
+(`apps/api/src/fraud/fraud.service.ts`) implements all three:
+
+- **Velocity cap.** `PulseService.submitAnswers()` calls `enforceVelocityCap()` before inserting
+  each response — 60 responses/24h (server-side `created_at`, not the client-supplied,
+  legitimately-backdated `answered_at`) throws, the transaction rolls back, and the remaining
+  answers in that batch are rejected too (one over-cap alias means every later answer in the same
+  batch would fail identically). The flag itself is written on a *separate* connection from the
+  one that's about to roll back — otherwise the one record of why the request was rejected would
+  disappear along with it.
+- **Consistency scoring.** A member declaring an intent with a different `strength` for the same
+  category within 24h of a prior declaration (SPEC.md §6's "contradictions lower trust_score") gets
+  flagged and `trust_score` decremented by 0.05, floored at 0 — the intent itself is still recorded,
+  never dropped. `intents.strength` only has `yes`/`maybe` (§5's schema), so the real signal is
+  flip-flopping between them, not a `yes`-then-`no` reversal that doesn't exist in this schema.
+- **Device-fingerprint dedup.** The mobile client may send a raw `deviceFingerprint` string on
+  `POST /v1/pulse/answers`; Core hashes it (SHA-256) before storage — the raw value never persists,
+  and the table has no path to a phone number (LAW 1 holds here too). If the same hash is already
+  registered under a *different* alias, both aliases get flagged. Nothing is blocked — flagged
+  aliases go to review, per §6's own rule, never silent confiscation.
+- **Verification bonus.** Phase 2 defined `snaps.state`'s full chain
+  (`uploaded → recognized → member_confirmed → ops_verified → rejected`) but never wired an endpoint
+  to advance it past `uploaded` — a real gap, not a deliberate stub. `POST
+  /v1/admin/snaps/:id/verify` closes it: it's the first real transition into `ops_verified`, and it
+  bumps the submitting member's `trust_score` by 0.05 (ceiling 1.0). Re-verifying an already-verified
+  or rejected snap is rejected, not a silent no-op-turned-double-credit.
+
+**19B. Payout batches: a run IS a batch, not a separate table.** Every `producer_payouts` row a
+single `runPayouts()` call inserts shares one `batch_id` (a `uuid`, generated once per run) —
+migration `1738108800000_fraud_quality_engine.js` adds the column. No `payout_batches` table exists
+because nothing needs one yet: the batch's own rows, queried by `batch_id`, already answer "what
+went out in this run."
+
+**19C. Trust-weighted eligibility, without a new confiscation path.** `ProducerPayoutsService`
+checks the producer's `trust_score` (via `producer_profiles → members`) before attempting a payout.
+Below 0.5, the row is claimed with `status = 'review'` — same `ON CONFLICT (linkage_id) DO NOTHING`
+idempotency guard as every other outcome — and no UPI attempt is made, no `upi_ref` fabricated. This
+is §6's own line, applied for real: "payout/eligibility weight by trust_score; flagged aliases go to
+review, never silent confiscation." `'review'` is a new value on `producer_payouts.status`'s CHECK
+constraint, not a repurposed `'failed'` (which would misreport an attempted-and-failed payment that
+never happened).
+
+**19D. Audit export is one CSV across three tables, not three exports.** `token_ledger`,
+`fund_ledger`, and `producer_payouts` have different native shapes (alias vs zone, tokens vs paise) —
+`AuditService.exportCsv()` (`apps/api/src/audit/audit.service.ts`) unions them into one common row
+(`source, subject_id, entry, amount, ref_type, ref_id, at`) so an auditor gets a single file, ordered
+by time, instead of three to reconcile by hand. `GET /v1/admin/audit-export?since=<ISO8601>` streams
+it as `text/csv`. Every source table is alias/zone-keyed only — an export can never carry a phone
+number, because `core_db` never has one to carry (LAW 1, unchanged by this phase).
+
+Alongside it, a new append-only `audit_log` table (also named in §5, never migrated until now)
+records *that* an admin/system action ran — `run_produce_matching`, `run_producer_payouts`,
+`verify_snap` — with the same append-only trigger discipline §15/§17 give the money ledgers. What
+ran is now exactly as tamper-evident as what it moved.
+
+**19E. Admin-endpoint auth is still deliberately deferred — now five endpoints deep.** Aggregation
+and token-rate's admin triggers were already unauthenticated by explicit, commented decision (Phase
+3). Produce-matching and producer-payouts (Phase 6) followed the same posture. Snap-verify and
+audit-export (this phase) make five. This is a widening, acknowledged gap, not five independent
+oversights — ops-write/read auth across all five is now the single largest piece of unfinished
+hardening work, tracked as Phase 8's first item rather than patched ad hoc per endpoint.
+
+**19F. Ledger math is property-tested, not just example-tested.** `apps/api/src/ledger/ledger.
+property.spec.ts` uses `fast-check` to run 25 random sequences of credits/debits (including
+deliberate over-drafts) through `LedgerService.creditTokens()` against a real Postgres connection,
+asserting after every sequence that `members.token_balance` still equals `SUM(token_ledger.tokens)`
+and is never negative — the property §12 literally asks for ("ledger math property-tested, never
+unbalanced"), not a fixed set of hand-picked example cases.
+
+**19G. What Phase 7 does NOT claim to have done, and why.** Three items from §12's Phase 7 line are
+real infrastructure/human-review work this coding environment cannot honestly perform, so none of
+them were touched:
+
+- **A 10k-member load test.** Running one, and trusting its numbers, needs a provisioned
+  environment sized like the target (or a documented model of how a laptop's Docker Postgres
+  predicts production) — not present here. Writing a load-test *script* nobody has run and calling
+  the phase's acceptance line met would be exactly the claim-without-a-code-path §11 forbids.
+- **A full Kannada copy review.** Every user-facing string in the mobile app needs a fluent Kannada
+  speaker's judgment — a linguistic review, not a code change. Nothing here can substitute for that
+  judgment without pretending to have it.
+- **TalkBack pass + EAS builds for Play Store/TestFlight.** TalkBack accessibility testing needs a
+  real Android device or emulator exercising the actual screen reader; EAS builds need a live Expo
+  account and store-signing credentials. Neither exists in this session.
+
+These three remain open Phase 7 acceptance items, explicitly, in the status grid below — not folded
+into "done" and not silently dropped from the list.
+
+**Acceptance test (folds into Phase 7's existing bar, §12):** a velocity-capped alias's remaining
+batch answers are rejected with zero additional `responses` rows; a contradicting intent
+declaration is recorded (not dropped) and lowers `trust_score`; two aliases sharing one device
+fingerprint hash both appear in `quality_flags`; a sub-threshold-trust producer's payout lands as
+`status = 'review'` with no `upi_ref`; the ledger property suite passes across randomized
+credit/debit sequences including deliberate over-drafts.

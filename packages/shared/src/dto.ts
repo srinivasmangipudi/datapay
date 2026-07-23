@@ -16,6 +16,9 @@ export type PulseAnswerDto = z.infer<typeof PulseAnswerDtoSchema>;
 /** POST /v1/pulse/answers — batch envelope; the offline outbox flushes many at once. */
 export const PulseAnswersBatchDtoSchema = z.object({
   answers: z.array(PulseAnswerDtoSchema).min(1).max(20),
+  // Raw device fingerprint, hashed server-side before storage (SPEC.md §6
+  // fraud engine, §19A). Optional — older mobile builds won't send one yet.
+  deviceFingerprint: z.string().min(8).max(256).optional(),
 });
 export type PulseAnswersBatchDto = z.infer<typeof PulseAnswersBatchDtoSchema>;
 
