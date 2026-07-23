@@ -1,39 +1,41 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { QuestionTopicDto } from "@datapay/shared";
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import { PG_POOL } from "../db/db.module";
 import { withTransaction } from "../db/tx.util";
+import { DocumentGroundedGeneratorService } from "../intelligence/document-grounded-generator.service";
+import { QuestionVariantSchema } from "./question-variant.schema";
+
+export { QuestionVariantSchema };
 
 // The 'template' generator's config shape — deterministic, no external calls.
-// Each variant becomes one draft question. 'llm_assisted' topics validate
-// nothing here; they're not implemented yet (see generate() below).
+// Each variant becomes one draft question.
 const TemplateConfigSchema = z.object({
-  variants: z
-    .array(
-      z.object({
-        textEn: z.string().min(1),
-        textKn: z.string().optional(),
-        type: z.enum(["single", "multi", "yesno", "intent_window", "numeric"]),
-        rewardTokens: z.number().int().positive().default(4),
-        options: z
-          .array(z.object({ labelEn: z.string().min(1), labelKn: z.string().optional() }))
-          .optional(),
-      })
-    )
-    .min(1),
+  variants: z.array(QuestionVariantSchema).min(1),
 });
 
 @Injectable()
 export class QuestionFeederService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly documentGrounded: DocumentGroundedGeneratorService
+  ) {}
 
   async createTopic(dto: QuestionTopicDto) {
     const { rows } = await this.pool.query<{ id: number }>(
-      `INSERT INTO question_topics (slug, name, category_id, generator_kind, config, schedule_cron)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO question_topics (slug, name, category_id, generator_kind, config, schedule_cron, zone_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id`,
-      [dto.slug, dto.name, dto.categoryId, dto.generatorKind, dto.config, dto.scheduleCron ?? null]
+      [
+        dto.slug,
+        dto.name,
+        dto.categoryId,
+        dto.generatorKind,
+        dto.config,
+        dto.scheduleCron ?? null,
+        dto.zoneId ?? null,
+      ]
     );
     return { id: rows[0].id };
   }
@@ -44,7 +46,8 @@ export class QuestionFeederService {
       category_id: number;
       generator_kind: string;
       config: unknown;
-    }>(`SELECT id, category_id, generator_kind, config FROM question_topics WHERE id = $1`, [
+      zone_id: string | null;
+    }>(`SELECT id, category_id, generator_kind, config, zone_id FROM question_topics WHERE id = $1`, [
       topicId,
     ]);
     const topic = topicRows[0];
@@ -79,34 +82,62 @@ export class QuestionFeederService {
   }
 
   private async runGenerator(
-    topic: { id: number; category_id: number; generator_kind: string; config: unknown },
+    topic: {
+      id: number;
+      category_id: number;
+      generator_kind: string;
+      config: unknown;
+      zone_id: string | null;
+    },
     runId: number
   ): Promise<number> {
+    let variants: z.infer<typeof QuestionVariantSchema>[];
+
     if (topic.generator_kind === "llm_assisted") {
       // Not implemented — no model wiring in this pass. Fails the run cleanly
       // rather than faking generated content.
       throw new BadRequestException("llm_assisted generator is not implemented yet");
+    } else if (topic.generator_kind === "document_grounded") {
+      // SPEC.md §20D: the LLM drafts variants grounded in this topic's
+      // zone's understanding; validated against the exact same schema a
+      // human-authored template variant would be.
+      variants = await this.documentGrounded.generateVariants({
+        zoneId: topic.zone_id,
+        categoryId: topic.category_id,
+        config: topic.config,
+      });
+    } else {
+      variants = TemplateConfigSchema.parse(topic.config).variants;
     }
 
-    const config = TemplateConfigSchema.parse(topic.config);
+    return this.persistVariants(topic.id, topic.category_id, runId, variants);
+  }
 
-    // Phase 2 of 2: draft questions + options are one transaction — if any
-    // variant fails, NONE of this run's drafts persist (§14B, no partial batches).
-    return withTransaction(this.pool, async (client) => {
+  // Phase 2 of 2: draft questions + options are one transaction — if any
+  // variant fails, NONE of this run's drafts persist (§14B, no partial batches).
+  // Shared by every generator kind — a document-grounded draft gets exactly
+  // the same review-queue treatment a template draft does.
+  private async persistVariants(
+    topicId: number,
+    categoryId: number,
+    runId: number,
+    variants: z.infer<typeof QuestionVariantSchema>[]
+  ): Promise<number> {
+    return withTransaction(this.pool, async (client: PoolClient) => {
       let count = 0;
-      for (const variant of config.variants) {
+      for (const variant of variants) {
         const { rows: qRows } = await client.query<{ id: number }>(
           `INSERT INTO questions
              (category_id, type, text_en, text_kn, reward_tokens, source, generator_topic_id, generation_run_id, review_state)
            VALUES ($1, $2, $3, $4, $5, 'plugin_generated', $6, $7, 'draft')
            RETURNING id`,
           [
-            topic.category_id,
+            categoryId,
             variant.type,
             variant.textEn,
             variant.textKn ?? null,
             variant.rewardTokens,
-            topic.id,
+            topicId,
             runId,
           ]
         );

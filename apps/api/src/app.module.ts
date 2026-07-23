@@ -7,6 +7,7 @@ import { AuthModule } from "./auth/auth.module";
 import { ConsentsModule } from "./consents/consents.module";
 import { DbModule } from "./db/db.module";
 import { FraudModule } from "./fraud/fraud.module";
+import { IntelligenceModule } from "./intelligence/intelligence.module";
 import { JobsModule } from "./jobs/bullmq.module";
 import { LedgerModule } from "./ledger/ledger.module";
 import { LinkagesModule } from "./linkages/linkages.module";
@@ -46,6 +47,7 @@ import { ZonesModule } from "./zones/zones.module";
     ProducerPayoutsModule,
     FraudModule,
     AuditModule,
+    IntelligenceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

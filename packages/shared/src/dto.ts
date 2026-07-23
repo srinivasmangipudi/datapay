@@ -49,11 +49,22 @@ export const QuestionTopicDtoSchema = z.object({
   slug: z.string().min(1).max(60),
   name: z.string().min(1).max(120),
   categoryId: z.number().int().positive(),
-  generatorKind: z.enum(["template", "llm_assisted"]),
+  generatorKind: z.enum(["template", "llm_assisted", "document_grounded"]),
   config: z.record(z.unknown()),
   scheduleCron: z.string().optional(),
+  // Required for 'document_grounded' topics (validated at generation time,
+  // not here — the same free-form-config pattern 'template' already uses).
+  zoneId: z.string().uuid().optional(),
 });
 export type QuestionTopicDto = z.infer<typeof QuestionTopicDtoSchema>;
+
+/** POST /v1/admin/intelligence-sources — connects a Drive folder to a zone (SPEC.md §20). */
+export const ConnectIntelligenceSourceDtoSchema = z.object({
+  zoneId: z.string().uuid(),
+  externalRef: z.string().min(1), // Drive folder ID
+  displayName: z.string().min(1).max(120),
+});
+export type ConnectIntelligenceSourceDto = z.infer<typeof ConnectIntelligenceSourceDtoSchema>;
 
 /** Vault POST /register — phone + name never leave Vault. */
 export const RegisterDtoSchema = z.object({

@@ -305,6 +305,8 @@ The Trust owns member data (Vault + Core PII-adjacent aggregates + the charter).
 
 **Phase 7 — Hardening.** Fraud/quality engine v1; payout batches (UPI sandbox); audit exports; load test (10k members); full Kannada copy review; TalkBack pass; EAS builds for Play Store + TestFlight. *Acceptance:* ledger math property-tested (never unbalanced); k-anon + separation integration tests green; app runs on an Android 8 low-RAM device profile under 2s/screen on throttled 3G.
 
+**Phase 8 — Area Intelligence Question Engine.** Not in the original 8-phase plan — added when the vision grew to include grounding the Question Feeder Engine in real local knowledge, not just admin-authored templates. Document ingestion (Google Drive, per zone); a per-zone "understanding" (narrative summary + structured knowledge map) built from ingested documents by an LLM; a `document_grounded` topic generator kind that drafts candidate questions from that understanding; an ops portal page to connect sources, sync them, review the understanding, and approve/reject the resulting drafts. *Acceptance:* every document_grounded draft still requires human approval before reaching a member (no new bypass of §14's review gate); a topic with no zone or a zone with no understanding fails clearly, never silently; malformed LLM output fails the generation run cleanly, with zero partial drafts persisted.
+
 **Testing bar throughout:** unit tests on all ledger math (token + fund double-entry must balance); integration test proving Vault/Core separation; k-anonymity constraint tests; offline-sync idempotency tests; a test asserting the portal role cannot read member-level data.
 
 ---
@@ -653,3 +655,89 @@ declaration is recorded (not dropped) and lowers `trust_score`; two aliases shar
 fingerprint hash both appear in `quality_flags`; a sub-threshold-trust producer's payout lands as
 `status = 'review'` with no `upi_ref`; the ledger property suite passes across randomized
 credit/debit sequences including deliberate over-drafts.
+
+---
+
+## 20. AREA INTELLIGENCE QUESTION ENGINE — ADDENDUM (2026-07-23, Phase 8)
+
+The vision grew beyond §14's original Question Feeder Engine: instead of only admin-authored
+templates, ground daily questions in real, area-specific knowledge — read documents about a place,
+build an understanding of it, and let that understanding suggest what to ask. This phase wasn't in
+the original 8-phase plan (§12); it's a direct extension of §14, built the same way every other
+phase was — real code, real failure modes, nothing faked.
+
+**20A. Two credentialed external dependencies, chosen explicitly, not defaulted into.** Before
+writing any code, the two decisions only a human could make were asked and answered: **Anthropic**
+for the LLM (matching the ecosystem this whole project is built in), and a **Google service
+account** for Drive access (share the target folder with the service account's email — no OAuth
+consent flow, no broader access than the specific folders explicitly shared). Both are real
+implementations (`AnthropicLlmProvider`, `GoogleDriveProvider` in `apps/api/src/intelligence/`),
+not stubs — but neither is present in this dev environment (§20G), so both fail with a clear,
+named error the moment they're actually invoked without credentials, never a fake response.
+
+**20B. A zone's "understanding" is a new row every time, not an overwrite.** `zone_understanding`
+(migration `1738195300000_intelligence_engine.js`) holds a narrative summary (English + Kannada)
+and a structured `knowledge_map` (economic activities, common products/brands, seasonal patterns,
+notable concerns, demand signals) — built by feeding every ingested document for a zone to the LLM
+in one prompt and validating its JSON response against a zod schema (`ZoneUnderstandingService`,
+`apps/api/src/intelligence/zone-understanding.service.ts`). Refreshing never deletes the previous
+understanding — how the read on an area changed over time stays visible, the same "append, don't
+overwrite" instinct §15/§17 already apply to the money ledgers.
+
+**20C. Ingestion tracks change, and never silently drops what it can't read.**
+`IntelligenceSourcesService.sync()` (`apps/api/src/intelligence/intelligence-sources.service.ts`)
+hashes each document's extracted text; a file whose hash matches what's already stored is skipped
+(no wasted reprocessing), and a file this pass can't extract text from — PDFs, Google Sheets/Slides,
+images — is skipped too, but *named* in the sync result rather than disappearing without a trace
+(no silent caps, per §11). Google Docs export as plain text; `text/*` and JSON files are read
+directly; everything else is explicitly unsupported for now.
+
+**20D. Document-grounded drafts get exactly the same review gate as every other draft.**
+`question_topics.generator_kind` gained a third value, `document_grounded` (alongside `template` and
+the still-unimplemented `llm_assisted`), and a new nullable `zone_id` column (required only for this
+kind, checked in application code — a `template` topic doesn't need one).
+`DocumentGroundedGeneratorService.generateVariants()` builds a prompt from the topic's zone's latest
+understanding plus its category, explicitly instructs the model to never ask about health,
+religion, caste, precise location, or political opinion regardless of what the source documents
+contain, and validates the response against the exact same `QuestionVariantSchema` a hand-authored
+`template` variant is checked against. The result is handed to `QuestionFeederService`'s existing
+`persistVariants()` — the same one-transaction, all-or-nothing insert path template topics already
+use — landing in `review_state = 'draft'` like everything else. Nothing about this generator kind
+bypasses the human review step §14 established; it only changes where the draft's *content* comes
+from.
+
+**20E. The portal's first write actions, deliberately routed around its restricted DB role, not
+through it.** Every other portal page reads `demand_aggregates`/`token_rate`/`zones`/`categories`
+directly via the `core_portal` role, which has no grant beyond those four (§10). Rather than adding
+a grant for the new intelligence tables (defensible, since they hold no PII, but still a widening of
+a boundary that's been deliberately narrow and tested since Phase 3), the new `/intelligence` page
+routes every read *and* write through Core API's admin endpoints instead
+(`apps/portal/app/intelligence/core-api.ts`, using a new `CORE_API_INTERNAL_URL`) — the restricted
+role's grants are completely untouched by this phase.
+
+**20F. A circular import, caught by the build, not by inspection.** The document-grounded
+generator needs `QuestionFeederService`'s variant schema; `QuestionFeederService` needs the
+generator. Importing directly from each other's files created a real circular dependency that
+crashed Core API on boot (`Nest can't resolve dependencies of QuestionFeederService (PG_POOL, ?)`)
+— caught immediately by actually starting the server, not just by `tsc` (which doesn't catch
+runtime DI cycles). Fixed by extracting the shared schema into its own dependency-free file,
+`apps/api/src/question-feeder/question-variant.schema.ts`, that both sides import from instead of
+each other.
+
+**20G. What's NOT configured in this dev environment, and why that's fine.** No
+`ANTHROPIC_API_KEY` or `GOOGLE_SERVICE_ACCOUNT_KEY` exists here — real credentials only the project
+owner can obtain (an Anthropic Console account; a Google Cloud service account with the target
+Drive folder explicitly shared to it). Every code path up to the actual external call is built and
+integration-tested against fake `DriveProvider`/`LlmProvider` implementations
+(`apps/api/src/intelligence/intelligence.integration.spec.ts`); the two real provider classes
+themselves are exercised by attempting a sync/refresh with no credentials configured and confirming
+the failure is a clear, named `BadRequestException` — not a crash, not a fake success — surfaced
+all the way to the portal.
+
+**Acceptance test (folds into Phase 8's own bar, §12):** syncing a source with one supported and one
+unsupported file ingests exactly one document and names the skipped one; a second sync of unchanged
+content re-processes nothing; refreshing a zone's understanding twice produces two rows, not one
+overwritten row; a `document_grounded` topic with no `zone_id`, or whose zone has no understanding
+yet, fails with a clear message; malformed LLM JSON output fails the generation run with zero
+partial questions persisted; every successfully generated draft has `review_state = 'draft'` and
+`source = 'plugin_generated'`, identical to a template-generated draft.

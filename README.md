@@ -117,15 +117,40 @@ If a future `pnpm install` or Expo SDK upgrade breaks bundling again, `curl
 "http://localhost:8081/apps/mobile/index.bundle?platform=ios&dev=false"` reproduces the failure
 directly, without needing a device.
 
+## Area intelligence setup (optional — SPEC.md §20)
+
+The portal's `/intelligence` page ingests documents about an area, builds a per-zone understanding
+from them, and drafts candidate Pulse questions grounded in it. Two credentials are needed to
+actually use it — without them the page still loads and everything up to the external call works,
+it just fails with a clear error ("Missing ANTHROPIC_API_KEY", "Missing GOOGLE_SERVICE_ACCOUNT_KEY")
+instead of a generic crash.
+
+**Anthropic API key** — [console.anthropic.com](https://console.anthropic.com) → Get API Key. Set
+`ANTHROPIC_API_KEY` in `infra/.env`. Optionally set `ANTHROPIC_MODEL` to override the default
+(`claude-sonnet-5`).
+
+**Google service account, for Drive access** — Google Cloud Console → IAM & Admin → Service
+Accounts → create one → Keys → Add key (JSON). Paste the entire downloaded JSON file content as one
+line into `GOOGLE_SERVICE_ACCOUNT_KEY` in `infra/.env`. Then, for each Drive folder you want to
+ingest, share it (read-only) with the service account's `client_email` — the app never gets
+broader Drive access than the specific folders explicitly shared this way; there's no OAuth
+consent flow.
+
+Once both are set, restart `apps/api` and use the portal page: pick a zone → connect a folder →
+sync → refresh understanding → the review queue at the bottom of the page picks up whatever
+candidate questions a `document_grounded` topic then generates (create one via
+`POST /v1/admin/question-topics` with `generatorKind: "document_grounded"` and a `zoneId`).
+
 ## What's NOT wired up yet
 
 This is a live build following SPEC.md §12 phase-by-phase — some real gaps, tracked rather than
 hidden:
 
-- **The portal is read-only.** It has no UI for any of the admin-trigger endpoints built so far
-  (question review/approval, aggregation/token-rate/produce-matching/producer-payouts runs,
-  snap-verify, audit-export) — those are `curl`/Postman-only today. None of those endpoints have
-  auth either (SPEC.md §19E).
+- **Most of the portal's admin-trigger actions still have no UI.** Aggregation/token-rate/
+  produce-matching/producer-payouts runs and snap-verify are still `curl`/Postman-only. Question
+  review/approval and the area-intelligence pipeline (sources, sync, understanding, drafts) DO have
+  a portal UI now (`/intelligence`, SPEC.md §20) — none of these endpoints have auth yet either way
+  (SPEC.md §19E).
 - **Mobile has no Offers or Produce/Linkages screens.** The backend for both (Phase 4 and Phase 6)
   is built and tested; the member-facing UI for either isn't. Voice input is similarly unwired —
   `transcribeVoice()` exists but nothing in the UI calls it.
