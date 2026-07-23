@@ -11,7 +11,7 @@ const WIDTH = 720;
 const HEIGHT = 220;
 const PAD = { top: 16, right: 16, bottom: 28, left: 44 };
 
-export function TokenRateChart({ points }: Props) {
+export function TokenRateChart({ points }: Props): JSX.Element {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   const { path, dots, yTicks, xForIndex, yForRate, minRate, maxRate } = useMemo(() => {

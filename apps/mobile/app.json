@@ -8,7 +8,9 @@
     "android": {
       "package": "org.datapay.mobile",
       "minSdkVersion": 26,
-      "permissions": ["android.permission.CAMERA"]
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "ios": {
       "supportsTablet": false,

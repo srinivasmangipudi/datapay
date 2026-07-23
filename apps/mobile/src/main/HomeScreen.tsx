@@ -1,16 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getPulseToday, getTokens, TokensSummary } from "../api";
+import { Bilingual } from "../components/Bilingual";
+import { Card } from "../components/Card";
+import { strings } from "../i18n/strings";
 import type { Session } from "../session";
+import { colors, spacing, type } from "../theme";
 
 interface Props {
   session: Session;
+  onNavigate: (tab: "pulse") => void;
 }
 
-export function HomeScreen({ session }: Props) {
+export function HomeScreen({ session, onNavigate }: Props) {
   const [tokens, setTokens] = useState<TokensSummary | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const load = useCallback(async () => {
     const [tokenSummary, pulseToday] = await Promise.all([
@@ -33,7 +40,7 @@ export function HomeScreen({ session }: Props) {
   if (!tokens) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.teal} />
       </View>
     );
   }
@@ -41,52 +48,79 @@ export function HomeScreen({ session }: Props) {
   return (
     <ScrollView
       style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      contentContainerStyle={{ paddingTop: insets.top + spacing.md, paddingBottom: spacing.xl }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal} />}
     >
       <Text style={styles.greeting}>{session.displayAlias}</Text>
 
-      <View style={styles.balanceCard}>
-        <Text style={styles.cap}>Your tokens</Text>
+      <Card variant="dark" style={styles.balanceCard}>
+        <Bilingual {...strings.home.yourTokens} tone="onDarkSubtle" size={11.5} weight="700" style={type.label as any} />
         <Text style={styles.balance}>◈ {tokens.balance}</Text>
-      </View>
+      </Card>
 
-      <View style={styles.card}>
-        <Text style={styles.cap}>Today's Pulse</Text>
-        <Text style={styles.pending}>{pendingCount} question{pendingCount === 1 ? "" : "s"} waiting</Text>
-      </View>
-
-      <View style={styles.mini}>
-        <Text style={styles.cap}>Recent activity</Text>
-        {tokens.history.slice(0, 5).map((h, i) => (
-          <View key={i} style={styles.row}>
-            <Text style={styles.rowLabel}>{h.entry.replace("_", " ")}</Text>
-            <Text style={styles.rowValue}>{h.tokens > 0 ? "+" : ""}{h.tokens} ◈</Text>
+      <TouchableOpacity activeOpacity={0.85} onPress={() => onNavigate("pulse")}>
+        <Card style={styles.pulseCard}>
+          <View style={{ flex: 1 }}>
+            <Bilingual {...strings.home.todaysPulse} size={11.5} weight="700" tone="subtle" style={type.label as any} />
+            <Text style={styles.pending}>
+              {pendingCount > 0
+                ? `${pendingCount} ${pendingCount === 1 ? strings.home.pendingOne.en : strings.home.pendingMany.en}`
+                : strings.home.allDone.en}
+            </Text>
+            <Text style={styles.pendingKn}>
+              {pendingCount > 0
+                ? `${pendingCount} ${pendingCount === 1 ? strings.home.pendingOne.kn : strings.home.pendingMany.kn}`
+                : strings.home.allDone.kn}
+            </Text>
           </View>
-        ))}
-        {tokens.history.length === 0 && <Text style={styles.empty}>Nothing yet — answer today's Pulse.</Text>}
-      </View>
+          {pendingCount > 0 && <Text style={styles.chevron}>›</Text>}
+        </Card>
+      </TouchableOpacity>
+
+      <Card variant="outline">
+        <Bilingual {...strings.home.recentActivity} size={11.5} weight="700" tone="subtle" style={type.label as any} />
+        <View style={{ marginTop: spacing.md }}>
+          {tokens.history.slice(0, 5).map((h, i) => (
+            <View key={i} style={styles.row}>
+              <Text style={styles.rowLabel}>{h.entry.replace(/_/g, " ")}</Text>
+              <Text style={[styles.rowValue, h.tokens < 0 && styles.rowValueNegative]}>
+                {h.tokens > 0 ? "+" : ""}
+                {h.tokens} ◈
+              </Text>
+            </View>
+          ))}
+          {tokens.history.length === 0 && (
+            <Bilingual {...strings.home.emptyActivity} size={13} weight="500" tone="subtle" />
+          )}
+        </View>
+      </Card>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", padding: 20 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  greeting: { fontSize: 13, color: "#8A939B", marginBottom: 16, marginTop: 8 },
-  balanceCard: { backgroundColor: "#101418", borderRadius: 18, padding: 22, marginBottom: 14 },
-  cap: { color: "#8A939B", fontSize: 10.5, letterSpacing: 1.5, textTransform: "uppercase" },
-  balance: { color: "#D4AA45", fontSize: 32, fontWeight: "700", marginTop: 8 },
-  card: { backgroundColor: "#F6F5F1", borderRadius: 18, padding: 20, marginBottom: 14 },
-  pending: { fontSize: 18, fontWeight: "600", marginTop: 8, color: "#101418" },
-  mini: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#eee", borderRadius: 18, padding: 20 },
+  container: { flex: 1, backgroundColor: colors.paper, paddingHorizontal: spacing.lg },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.paper },
+  greeting: { fontSize: 13, color: colors.faint, marginBottom: spacing.base, fontWeight: "500" },
+  balanceCard: { marginBottom: spacing.md },
+  balance: { color: colors.brassOnDark, fontSize: 34, fontWeight: "700", marginTop: spacing.sm },
+  pulseCard: {
+    marginBottom: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  pending: { fontSize: 18, fontWeight: "700", marginTop: spacing.sm, color: colors.ink },
+  pendingKn: { fontSize: 14, fontWeight: "500", marginTop: 2, color: colors.subtle },
+  chevron: { fontSize: 26, color: colors.faint, fontWeight: "300", marginLeft: spacing.sm },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 10,
+    paddingVertical: spacing.sm + 2,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: colors.border,
   },
-  rowLabel: { fontSize: 13, color: "#444", textTransform: "capitalize" },
-  rowValue: { fontSize: 13, fontWeight: "600", color: "#0E7A5C" },
-  empty: { fontSize: 13, color: "#999", marginTop: 8 },
+  rowLabel: { fontSize: 13, color: colors.subtle, textTransform: "capitalize" },
+  rowValue: { fontSize: 13, fontWeight: "700", color: colors.teal },
+  rowValueNegative: { color: colors.danger },
 });

@@ -1,9 +1,14 @@
 import * as Crypto from "expo-crypto";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getPulseToday, PulseQuestion } from "../api";
+import { Button } from "../components/Button";
+import { Card } from "../components/Card";
+import { strings } from "../i18n/strings";
 import { enqueueAnswer, flushOutbox } from "../outbox";
 import type { Session } from "../session";
+import { colors, radii, spacing } from "../theme";
 
 interface Props {
   session: Session;
@@ -13,6 +18,7 @@ export function PulseScreen({ session }: Props) {
   const [questions, setQuestions] = useState<PulseQuestion[] | null>(null);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number[]>([]);
+  const insets = useSafeAreaInsets();
 
   const load = useCallback(async () => {
     const today = await getPulseToday(session.token);
@@ -53,7 +59,7 @@ export function PulseScreen({ session }: Props) {
   if (!questions) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.teal} />
       </View>
     );
   }
@@ -61,10 +67,12 @@ export function PulseScreen({ session }: Props) {
   if (index >= questions.length) {
     return (
       <View style={styles.center}>
-        <Text style={styles.doneTitle}>All caught up</Text>
-        <Text style={styles.doneSubtitle}>More questions tomorrow.</Text>
+        <Text style={styles.doneTitle}>{strings.pulse.allCaughtUp.en}</Text>
+        <Text style={styles.doneTitleKn}>{strings.pulse.allCaughtUp.kn}</Text>
+        <Text style={styles.doneSubtitle}>{strings.pulse.moreTomorrow.en}</Text>
+        <Text style={styles.doneSubtitleKn}>{strings.pulse.moreTomorrow.kn}</Text>
         <TouchableOpacity style={styles.refreshBtn} onPress={load}>
-          <Text style={styles.refreshText}>Check again</Text>
+          <Text style={styles.refreshText}>{strings.pulse.checkAgain.en}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -74,11 +82,24 @@ export function PulseScreen({ session }: Props) {
   const isMulti = question.type === "multi";
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.progress}>
-        Question {index + 1} of {questions.length}
+    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
+      <View style={styles.progressTrack}>
+        {questions.map((_, i) => (
+          <View
+            key={i}
+            style={[
+              styles.progressSegment,
+              i < index && styles.progressDone,
+              i === index && styles.progressCurrent,
+            ]}
+          />
+        ))}
+      </View>
+      <Text style={styles.progressLabel}>
+        {strings.pulse.questionOf.en} {index + 1} {strings.pulse.of.en} {questions.length}
       </Text>
-      <View style={styles.card}>
+
+      <Card style={styles.card}>
         <Text style={styles.question}>{question.textEn}</Text>
         {question.textKn && <Text style={styles.questionKn}>{question.textKn}</Text>}
 
@@ -90,58 +111,68 @@ export function PulseScreen({ session }: Props) {
                 key={opt.id}
                 style={[styles.chip, on && styles.chipOn]}
                 onPress={() => toggleOption(opt.id, isMulti)}
+                activeOpacity={0.8}
               >
                 <Text style={[styles.chipText, on && styles.chipTextOn]}>{opt.labelEn}</Text>
+                {opt.labelKn && (
+                  <Text style={[styles.chipTextKn, on && styles.chipTextOn]}>{opt.labelKn}</Text>
+                )}
               </TouchableOpacity>
             );
           })}
         </View>
 
         <Text style={styles.reward}>+{question.rewardTokens} ◈</Text>
-      </View>
+      </Card>
 
-      <TouchableOpacity
-        style={[styles.submit, selected.length === 0 && styles.submitDisabled]}
-        disabled={selected.length === 0}
+      <Button
+        label={strings.pulse.confirm.en}
+        labelKn={strings.pulse.confirm.kn}
         onPress={submit}
-      >
-        <Text style={styles.submitText}>Confirm</Text>
-      </TouchableOpacity>
+        disabled={selected.length === 0}
+        style={styles.submit}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", padding: 20, paddingTop: 40 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
-  progress: { fontSize: 12, color: "#8A939B", marginBottom: 14 },
-  card: { backgroundColor: "#FBFAF7", borderRadius: 18, padding: 22, borderWidth: 1, borderColor: "#E7E4DC" },
-  question: { fontSize: 18, fontWeight: "700", marginBottom: 6 },
-  questionKn: { fontSize: 14, color: "#666", marginBottom: 16 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
+  container: { flex: 1, backgroundColor: colors.paper, paddingHorizontal: spacing.lg },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.paper,
+    paddingHorizontal: spacing.xl,
+  },
+  progressTrack: { flexDirection: "row", gap: spacing.xs, marginBottom: spacing.sm },
+  progressSegment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.border },
+  progressDone: { backgroundColor: colors.teal },
+  progressCurrent: { backgroundColor: colors.brass },
+  progressLabel: { fontSize: 12, color: colors.faint, marginBottom: spacing.lg, fontWeight: "600" },
+  card: { flex: 0 },
+  question: { fontSize: 19, fontWeight: "700", marginBottom: spacing.sm, color: colors.ink },
+  questionKn: { fontSize: 15, color: colors.subtle, marginBottom: spacing.base, fontWeight: "500" },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.sm },
   chip: {
     borderWidth: 1,
-    borderColor: "#DDD9CF",
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    backgroundColor: "#fff",
-  },
-  chipOn: { backgroundColor: "#0E7A5C", borderColor: "#0E7A5C" },
-  chipText: { fontSize: 13, fontWeight: "500", color: "#333" },
-  chipTextOn: { color: "#fff" },
-  reward: { marginTop: 18, fontSize: 12, color: "#B98F2F", fontWeight: "600" },
-  submit: {
-    marginTop: 24,
-    backgroundColor: "#0E7A5C",
-    borderRadius: 999,
-    paddingVertical: 14,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    backgroundColor: colors.surface,
     alignItems: "center",
   },
-  submitDisabled: { backgroundColor: "#B7D9CD" },
-  submitText: { color: "#fff", fontWeight: "600", fontSize: 16 },
-  doneTitle: { fontSize: 20, fontWeight: "700" },
-  doneSubtitle: { fontSize: 14, color: "#666", marginTop: 6 },
-  refreshBtn: { marginTop: 20 },
-  refreshText: { color: "#0E7A5C", fontWeight: "600" },
+  chipOn: { backgroundColor: colors.teal, borderColor: colors.teal },
+  chipText: { fontSize: 14, fontWeight: "600", color: colors.ink },
+  chipTextKn: { fontSize: 12, fontWeight: "500", color: colors.subtle, marginTop: 1 },
+  chipTextOn: { color: colors.onDark },
+  reward: { marginTop: spacing.lg, fontSize: 13, color: colors.brass, fontWeight: "700" },
+  submit: { marginTop: spacing.xl },
+  doneTitle: { fontSize: 21, fontWeight: "700", color: colors.ink },
+  doneTitleKn: { fontSize: 17, fontWeight: "600", color: colors.subtle, marginTop: 4 },
+  doneSubtitle: { fontSize: 14, color: colors.subtle, marginTop: spacing.base },
+  doneSubtitleKn: { fontSize: 13, color: colors.faint, marginTop: 2 },
+  refreshBtn: { marginTop: spacing.xl },
+  refreshText: { color: colors.teal, fontWeight: "700", fontSize: 15 },
 });

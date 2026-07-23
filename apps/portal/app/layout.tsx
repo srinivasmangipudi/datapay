@@ -3,7 +3,7 @@ export const metadata = {
   description: "Supplier + ops back office — aggregates only, never member rows.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }): JSX.Element {
   return (
     <html lang="en">
       <body>

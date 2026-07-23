@@ -1,10 +1,15 @@
+import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Crypto from "expo-crypto";
 import { useRef, useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { submitSnap } from "../api";
+import { Button } from "../components/Button";
 import { hasFace } from "../faceDetector";
+import { strings } from "../i18n/strings";
 import type { Session } from "../session";
+import { colors, spacing } from "../theme";
 
 interface Props {
   session: Session;
@@ -13,8 +18,9 @@ interface Props {
 export function SnapScreen({ session }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const [uploading, setUploading] = useState(false);
-  const [lastResult, setLastResult] = useState<string | null>(null);
+  const [lastResult, setLastResult] = useState<{ en: string; kn: string } | null>(null);
   const cameraRef = useRef<CameraView>(null);
+  const insets = useSafeAreaInsets();
 
   async function capture() {
     if (!cameraRef.current) return;
@@ -26,7 +32,7 @@ export function SnapScreen({ session }: Props) {
       if (!photo?.base64) throw new Error("Capture failed");
 
       if (await hasFace(photo.base64)) {
-        Alert.alert("Photo rejected", "This looks like it contains a person. Try again without one.");
+        Alert.alert(strings.snap.rejectedTitle.en, strings.snap.rejectedBody.en);
         return;
       }
 
@@ -35,9 +41,9 @@ export function SnapScreen({ session }: Props) {
         imageBase64: photo.base64,
         capturedAt: new Date().toISOString(),
       });
-      setLastResult(result.status === "credited" ? "Snap saved — tokens on the way." : "Already saved.");
+      setLastResult(result.status === "credited" ? strings.snap.savedCredited : strings.snap.savedDuplicate);
     } catch (err) {
-      Alert.alert("Couldn't upload snap", (err as Error).message);
+      Alert.alert(strings.snap.uploadFailedTitle.en, (err as Error).message);
     } finally {
       setUploading(false);
     }
@@ -46,7 +52,7 @@ export function SnapScreen({ session }: Props) {
   if (!permission) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.teal} />
       </View>
     );
   }
@@ -54,10 +60,15 @@ export function SnapScreen({ session }: Props) {
   if (!permission.granted) {
     return (
       <View style={styles.center}>
-        <Text style={styles.permText}>Camera access is needed to snap what you use.</Text>
-        <TouchableOpacity style={styles.permBtn} onPress={requestPermission}>
-          <Text style={styles.permBtnText}>Allow camera</Text>
-        </TouchableOpacity>
+        <Ionicons name="camera-outline" size={40} color={colors.faint} style={{ marginBottom: spacing.base }} />
+        <Text style={styles.permText}>{strings.snap.permissionNeeded.en}</Text>
+        <Text style={styles.permTextKn}>{strings.snap.permissionNeeded.kn}</Text>
+        <Button
+          label={strings.snap.allowCamera.en}
+          labelKn={strings.snap.allowCamera.kn}
+          onPress={requestPermission}
+          style={styles.permBtn}
+        />
       </View>
     );
   }
@@ -65,12 +76,17 @@ export function SnapScreen({ session }: Props) {
   return (
     <View style={styles.container}>
       <CameraView ref={cameraRef} style={styles.camera} facing="back" />
-      <View style={styles.controls}>
-        {lastResult && <Text style={styles.result}>{lastResult}</Text>}
-        <TouchableOpacity style={styles.shutter} disabled={uploading} onPress={capture}>
-          {uploading ? <ActivityIndicator color="#fff" /> : <View style={styles.shutterInner} />}
+      <View style={[styles.controls, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+        {lastResult && (
+          <View style={styles.resultPill}>
+            <Text style={styles.result}>{lastResult.en}</Text>
+          </View>
+        )}
+        <TouchableOpacity style={styles.shutter} disabled={uploading} onPress={capture} activeOpacity={0.85}>
+          {uploading ? <ActivityIndicator color={colors.onDark} /> : <View style={styles.shutterInner} />}
         </TouchableOpacity>
-        <Text style={styles.hint}>Point at what you use — toothpaste, rice bag, soap.</Text>
+        <Text style={styles.hint}>{strings.snap.hint.en}</Text>
+        <Text style={styles.hintKn}>{strings.snap.hint.kn}</Text>
       </View>
     </View>
   );
@@ -78,23 +94,37 @@ export function SnapScreen({ session }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff", padding: 24 },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.paper,
+    padding: spacing.xl,
+  },
   camera: { flex: 1 },
-  controls: { padding: 24, alignItems: "center", backgroundColor: "#101418" },
+  controls: { padding: spacing.xl, alignItems: "center", backgroundColor: colors.ink },
   shutter: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#0E7A5C",
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: colors.teal,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 4,
-    borderColor: "#fff",
+    borderColor: colors.onDark,
   },
-  shutterInner: { width: 24, height: 24, borderRadius: 12, backgroundColor: "#fff" },
-  hint: { color: "#8A939B", fontSize: 12, marginTop: 12, textAlign: "center" },
-  result: { color: "#D4AA45", fontSize: 13, marginBottom: 10 },
-  permText: { fontSize: 14, color: "#444", textAlign: "center", marginBottom: 16 },
-  permBtn: { backgroundColor: "#0E7A5C", borderRadius: 999, paddingVertical: 12, paddingHorizontal: 24 },
-  permBtnText: { color: "#fff", fontWeight: "600" },
+  shutterInner: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.onDark },
+  hint: { color: colors.onDarkSubtle, fontSize: 13, marginTop: spacing.md, textAlign: "center", fontWeight: "500" },
+  hintKn: { color: colors.onDarkFaint, fontSize: 12, marginTop: 3, textAlign: "center", fontWeight: "500" },
+  resultPill: {
+    backgroundColor: "rgba(212,170,69,0.16)",
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    marginBottom: spacing.md,
+  },
+  result: { color: colors.brassOnDark, fontSize: 13, fontWeight: "700" },
+  permText: { fontSize: 15, color: colors.ink, textAlign: "center", fontWeight: "600" },
+  permTextKn: { fontSize: 13, color: colors.subtle, textAlign: "center", marginTop: 4, marginBottom: spacing.lg },
+  permBtn: { paddingHorizontal: spacing.xl, alignSelf: "stretch" },
 });

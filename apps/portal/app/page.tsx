@@ -6,7 +6,7 @@ import { TokenRateChart } from "./TokenRateChart";
 
 export const dynamic = "force-dynamic"; // ops dashboard — always current, never cached
 
-export default async function PortalHome() {
+export default async function PortalHome(): Promise<JSX.Element> {
   const [tokenRateHistory, aggregates] = await Promise.all([
     getTokenRateHistory(),
     getDemandAggregates(),
@@ -20,6 +20,9 @@ export default async function PortalHome() {
       <p className="lede">
         Aggregates only — every row below cleared the k-anonymity floor (cohort ≥ 50) before it
         could reach this screen. This portal's database role has no grant on member-level tables.
+      </p>
+      <p className="navLink">
+        <a href="/intelligence">Area intelligence &amp; question review →</a>
       </p>
 
       <div className="tiles">
@@ -82,7 +85,10 @@ export default async function PortalHome() {
         .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 80px; }
         .eyebrow { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #2a78d6; font-weight: 700; margin: 0 0 8px; }
         h1 { font-size: 1.8rem; margin: 0 0 12px; }
-        .lede { color: #52514e; max-width: 62ch; margin: 0 0 32px; font-size: 14px; line-height: 1.6; }
+        .lede { color: #52514e; max-width: 62ch; margin: 0 0 12px; font-size: 14px; line-height: 1.6; }
+        .navLink { margin: 0 0 32px; }
+        .navLink a { color: #2a78d6; font-size: 13.5px; font-weight: 600; text-decoration: none; }
+        .navLink a:hover { text-decoration: underline; }
         .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e1e0d9; border: 1px solid #e1e0d9; border-radius: 6px; overflow: hidden; margin-bottom: 40px; }
         .tile { background: #fcfcfb; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; }
         .tileLabel { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #898781; }
