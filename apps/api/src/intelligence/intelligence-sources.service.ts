@@ -4,6 +4,20 @@ import { Pool } from "pg";
 import { PG_POOL } from "../db/db.module";
 import { DriveFile, DriveProvider, GoogleDriveProvider } from "./drive.provider";
 
+// Whoever fills in the "folder ID" field is going to paste whatever's in
+// their browser's address bar most of the time, not go hunt for the bare
+// ID — accept the full share URL (any of Drive's several URL shapes) and
+// extract the ID, rather than silently storing an unusable value that only
+// fails later, deep inside a Drive API call.
+export function extractDriveFolderId(input: string): string {
+  const trimmed = input.trim();
+  const urlMatch = trimmed.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+  if (urlMatch) return urlMatch[1];
+  const idParamMatch = trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (idParamMatch) return idParamMatch[1];
+  return trimmed;
+}
+
 export interface SyncResult {
   documentsListed: number;
   synced: number;
@@ -43,7 +57,7 @@ export class IntelligenceSourcesService {
     const { rows } = await this.pool.query<{ id: number }>(
       `INSERT INTO intelligence_sources (zone_id, kind, external_ref, display_name)
        VALUES ($1, 'google_drive_folder', $2, $3) RETURNING id`,
-      [zoneId, externalRef, displayName]
+      [zoneId, extractDriveFolderId(externalRef), displayName]
     );
     return { id: rows[0].id };
   }

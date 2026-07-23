@@ -28,7 +28,7 @@ async function getZones(): Promise<Zone[]> {
 export default async function IntelligencePage({
   searchParams,
 }: {
-  searchParams: { zoneId?: string };
+  searchParams: { zoneId?: string; error?: string };
 }): Promise<JSX.Element> {
   const zones = await getZones();
   const zoneId = searchParams.zoneId ?? zones[0]?.id;
@@ -54,6 +54,12 @@ export default async function IntelligencePage({
       <p className="navLink">
         <a href="/">← Demand &amp; token rate</a>
       </p>
+
+      {searchParams.error && (
+        <div className="errorBanner">
+          <strong>Action failed:</strong> {searchParams.error}
+        </div>
+      )}
 
       <form method="GET" className="zonePicker">
         <label htmlFor="zoneId">Zone</label>
@@ -110,7 +116,7 @@ export default async function IntelligencePage({
             <form action={connectSourceAction} className="connectForm">
               <input type="hidden" name="zoneId" value={zoneId} />
               <input name="displayName" placeholder="Display name, e.g. 'Kikkeri gram panchayat records'" required />
-              <input name="externalRef" placeholder="Google Drive folder ID" required />
+              <input name="externalRef" placeholder="Google Drive folder URL or ID — either works" required />
               <button type="submit">Connect folder</button>
             </form>
             <p className="hint">
@@ -240,7 +246,11 @@ export default async function IntelligencePage({
         )}
       </section>
 
-      <style>{`
+      {/* dangerouslySetInnerHTML — see layout.tsx for why a plain <style>{`...`}</style>
+          with a quoted value inside causes a hydration mismatch. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .page { max-width: 960px; margin: 0 auto; padding: 48px 24px 80px; }
         .eyebrow { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #2a78d6; font-weight: 700; margin: 0 0 8px; }
         h1 { font-size: 1.8rem; margin: 0 0 12px; }
@@ -248,6 +258,8 @@ export default async function IntelligencePage({
         .navLink { margin: 0 0 28px; }
         .navLink a { color: #2a78d6; font-size: 13.5px; font-weight: 600; text-decoration: none; }
         .navLink a:hover { text-decoration: underline; }
+        .errorBanner { background: #f3e4e2; border: 1px solid #8c3a34; color: #8c3a34; border-radius: 6px; padding: 12px 16px; font-size: 13px; margin-bottom: 28px; }
+        .errorBanner strong { font-weight: 700; }
         .zonePicker { display: flex; align-items: center; gap: 10px; margin-bottom: 36px; font-size: 13.5px; }
         .zonePicker select { padding: 6px 10px; border-radius: 6px; border: 1px solid #d8d7cf; background: #fcfcfb; }
         .zonePicker button, .connectForm button, .understanding + form button { padding: 6px 14px; border-radius: 6px; border: 1px solid #2a78d6; background: #2a78d6; color: #fff; font-size: 13px; cursor: pointer; }
@@ -286,8 +298,11 @@ export default async function IntelligencePage({
           th { background: #14161b; color: #c3c2b7; border-bottom-color: #2c2c2a; }
           td { border-bottom-color: #2c2c2a; }
           .knowledgeCard { background: #14161b; }
+          .errorBanner { background: #2e1f1e; border-color: #d98a83; color: #d98a83; }
         }
-      `}</style>
+      `,
+        }}
+      />
     </main>
   );
 }

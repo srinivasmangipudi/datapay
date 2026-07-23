@@ -81,7 +81,11 @@ export default async function PortalHome(): Promise<JSX.Element> {
         )}
       </section>
 
-      <style>{`
+      {/* dangerouslySetInnerHTML — see layout.tsx for why a plain <style>{`...`}</style>
+          with a quoted value inside causes a hydration mismatch. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .page { max-width: 880px; margin: 0 auto; padding: 48px 24px 80px; }
         .eyebrow { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #2a78d6; font-weight: 700; margin: 0 0 8px; }
         h1 { font-size: 1.8rem; margin: 0 0 12px; }
@@ -115,7 +119,9 @@ export default async function PortalHome(): Promise<JSX.Element> {
           td { border-bottom-color: #2c2c2a; }
           td.level { color: #c3c2b7; }
         }
-      `}</style>
+      `,
+        }}
+      />
     </main>
   );
 }

@@ -120,7 +120,11 @@ export function TokenRateChart({ points }: Props): JSX.Element {
         )}
       </div>
 
-      <style>{`
+      {/* dangerouslySetInnerHTML — see layout.tsx for why a plain <style>{`...`}</style>
+          with a quoted value inside causes a hydration mismatch. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .chartWrap { --series-1: #2a78d6; --gridline: #e1e0d9; --muted: #898781; --primary: #0b0b0b; --secondary: #52514e; }
         @media (prefers-color-scheme: dark) {
           .chartWrap { --series-1: #3987e5; --gridline: #2c2c2a; --muted: #898781; --primary: #ffffff; --secondary: #c3c2b7; }
@@ -139,7 +143,9 @@ export function TokenRateChart({ points }: Props): JSX.Element {
         .tooltipDate { font-variant-numeric: tabular-nums; }
         .tooltipHint { color: var(--muted); font-style: italic; }
         .empty { color: var(--muted); font-size: 13px; }
-      `}</style>
+      `,
+        }}
+      />
     </div>
   );
 }
