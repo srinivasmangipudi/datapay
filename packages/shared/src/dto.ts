@@ -136,3 +136,47 @@ export const CreateFundProjectDtoSchema = z.object({
   estimatePaise: z.number().int().positive(),
 });
 export type CreateFundProjectDto = z.infer<typeof CreateFundProjectDtoSchema>;
+
+/** Core POST /v1/produce/payout-instrument, proxied to Vault's internal /payout-instrument. */
+export const SetPayoutInstrumentDtoSchema = z.object({
+  upiId: z.string().min(3).max(120),
+});
+export type SetPayoutInstrumentDto = z.infer<typeof SetPayoutInstrumentDtoSchema>;
+
+/** Vault-internal POST /payout-instrument — Core supplies aliasId, never a user_id. */
+export const VaultSetPayoutInstrumentDtoSchema = SetPayoutInstrumentDtoSchema.extend({
+  aliasId: z.string().length(64),
+});
+export type VaultSetPayoutInstrumentDto = z.infer<typeof VaultSetPayoutInstrumentDtoSchema>;
+
+/** Vault-internal POST /resolve-payout — batch, producers only (SPEC.md §5A). */
+export const VaultResolvePayoutDtoSchema = z.object({
+  aliasIds: z.array(z.string().length(64)).min(1).max(500),
+});
+export type VaultResolvePayoutDto = z.infer<typeof VaultResolvePayoutDtoSchema>;
+
+/** Producer registration + listing (SPEC.md §12 Phase 6). */
+export const ProducerProfileDtoSchema = z.object({
+  kind: z.enum(["farmer", "shg", "artisan", "micro_unit"]),
+  shgId: z.number().int().positive().optional(),
+  capacityNote: z.string().max(500).optional(),
+});
+export type ProducerProfileDto = z.infer<typeof ProducerProfileDtoSchema>;
+
+export const ProduceListingDtoSchema = z.object({
+  produceCategoryId: z.number().int().positive(),
+  qty: z.number().positive(),
+  unit: z.enum(["kg", "quintal", "litre", "piece", "acre_yield"]),
+  qualityNote: z.string().max(300).optional(),
+  readyAt: z.string().datetime().optional(),
+  inputMode: z.enum(["tap", "voice", "snap"]).default("tap"),
+  snapIds: z.array(z.number().int().positive()).optional(),
+  askingPricePaise: z.number().int().positive().optional(),
+});
+export type ProduceListingDto = z.infer<typeof ProduceListingDtoSchema>;
+
+/** POST /v1/linkages/:id/advance — progressive identity disclosure (SPEC.md §8 screen 5). */
+export const AdvanceLinkageDtoSchema = z.object({
+  toState: z.enum(["producer_interested", "negotiating", "agreed", "completed", "declined"]),
+});
+export type AdvanceLinkageDto = z.infer<typeof AdvanceLinkageDtoSchema>;

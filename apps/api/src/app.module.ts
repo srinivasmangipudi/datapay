@@ -7,8 +7,11 @@ import { ConsentsModule } from "./consents/consents.module";
 import { DbModule } from "./db/db.module";
 import { JobsModule } from "./jobs/bullmq.module";
 import { LedgerModule } from "./ledger/ledger.module";
+import { LinkagesModule } from "./linkages/linkages.module";
 import { MeModule } from "./me/me.module";
 import { OffersModule } from "./offers/offers.module";
+import { ProduceModule } from "./produce/produce.module";
+import { ProducerPayoutsModule } from "./producer-payouts/producer-payouts.module";
 import { PulseModule } from "./pulse/pulse.module";
 import { QuestionFeederModule } from "./question-feeder/question-feeder.module";
 import { RelayModule } from "./relay/relay.module";
@@ -36,6 +39,9 @@ import { ZonesModule } from "./zones/zones.module";
     TokenRateModule,
     OffersModule,
     RelayModule,
+    LinkagesModule,
+    ProduceModule,
+    ProducerPayoutsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

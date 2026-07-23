@@ -1,7 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../db/db.module";
-import { decryptAddress, encryptAddress } from "../crypto/address-crypto.util";
+import { decryptSecret, encryptSecret } from "../crypto/secret-crypto.util";
 
 @Injectable()
 export class RelayService {
@@ -24,7 +24,7 @@ export class RelayService {
     const userId = await this.resolveUserId(aliasId);
     await this.pool.query(
       `INSERT INTO delivery_addresses (user_id, address_encrypted, zone_hint) VALUES ($1, $2, $3)`,
-      [userId, encryptAddress(address), zoneHint ?? null]
+      [userId, encryptSecret(address), zoneHint ?? null]
     );
     return { ok: true };
   }
@@ -81,7 +81,7 @@ export class RelayService {
     );
 
     return {
-      address: decryptAddress(rows[0].address_encrypted),
+      address: decryptSecret(rows[0].address_encrypted),
       zoneHint: rows[0].zone_hint,
     };
   }

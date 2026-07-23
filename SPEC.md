@@ -485,3 +485,64 @@ same `UNIQUE(ref_type, ref_id)` idempotency key.
 **Acceptance test (folds into Phase 5's existing bar, §12):** confirming delivery on an
 already-`delivered` participation is a clean no-op — `already_confirmed`, zero additional
 `fund_ledger` rows, zone balance unchanged.
+
+---
+
+## 18. PRODUCE & LINKAGES — ADDENDUM (2026-07-23, Phase 6)
+
+Phase 6's acceptance line — "internal-collective matches rank first, identity stays hidden until
+'Reveal & proceed', producer paid in rupees via sandbox UPI" — needed the same treatment §14-§17
+gave earlier phases: turn each clause into a mechanism a test can check, not a description to take
+on faith.
+
+**18A. Ranking is insertion order, not a priority column.** `LinkagesService.matchListing()`
+(`apps/api/src/linkages/linkages.service.ts`) queries `buyer_directory` for the listing's category,
+`ORDER BY array_position(BUYER_KIND_RANK, kind), id ASC`, and inserts one `linkages` row per buyer
+in that order. `BUYER_KIND_RANK` is `['internal_collective', 'local_processor', 'institutional',
+'external_trader', 'retail_chain']` — the same internal-first posture §6B already applies to the
+buy side, applied here to the sell side. Because insertion order tracks the rank exactly, "does
+internal-collective rank first" reduces to "is the lowest-`id` linkage for this listing
+`internal_collective`" — no separate priority field to drift out of sync with the rule it's
+supposed to encode.
+
+**18B. Identity disclosure is a one-way gate on a single column.** `linkages.identity_disclosed_at`
+stays `NULL` through `suggested → producer_interested → negotiating`. `LinkagesService.advance()`
+sets it to `now()` if and only if the transition lands on `'agreed'` — never on any other
+transition, and never cleared afterward. A hand-authored state-transition map
+(`VALID_TRANSITIONS`) rejects anything not on the allowed path (e.g. `suggested → agreed` directly,
+skipping negotiation), so the disclosure gate can't be bypassed by an unexpected state jump.
+
+**18C. Payouts reuse Phase 4's reversible-encryption pattern, generalized.** Phase 4 built
+AES-256-GCM encrypt/decrypt for delivery addresses only, named accordingly
+(`address-crypto.util.ts`). Producer UPI IDs need the identical treatment — reversible, unlike the
+alias's one-way HMAC, because a payout has to decrypt back to a real UPI handle at payment time.
+Rather than duplicate the logic under a second name, the utility was generalized in place:
+`address-crypto.util.ts` → `secret-crypto.util.ts`, `encryptAddress`/`decryptAddress` →
+`encryptSecret`/`decryptSecret`, `ADDRESS_ENCRYPTION_KEY` → `VAULT_SECRET_KEY`. Vault's `POST
+/payout-instrument` (set) and `POST /resolve-payout` (batch resolve, alias → UPI ID) are the fourth
+and fifth endpoints added to Vault's surface (after §16's `/delivery-address` and `/relay-map`) —
+same posture: single-purpose, no general read access, every `resolve-payout` call logged to
+`vault_access_log`.
+
+**18D. The payout gateway is honestly fake.** `DevSandboxUpiProvider`
+(`apps/api/src/producer-payouts/upi-provider.ts`) always "succeeds" and returns a fabricated
+`sandbox-<uuid>` reference — there is no bank/NPCI/UPI integration behind it. This follows §11's
+rule directly: the code must not claim a payment happened when it didn't. It's the same posture as
+Phase 2's `DevNoopStorageProvider` and `DevNoopAsrProvider` — swapped for a real gateway when one is
+contracted, never silently presented as real in the meantime.
+
+**18E. Payout idempotency comes from a DB constraint, not app logic.**
+`ProducerPayoutsService.runPayouts()` claims a linkage with `INSERT INTO producer_payouts (...)
+... ON CONFLICT (linkage_id) DO NOTHING RETURNING id`; the `UNIQUE(linkage_id)` constraint
+(migration `1738022401000_buyers_linkages_payouts.js`) is what actually prevents a double pay, not
+a check-then-insert in application code. Re-running the payout job is always safe: a second pass
+inserts zero rows for anything already claimed, so a retried or duplicated job run can never charge
+the same deal twice — the same idempotency discipline §15 established for `token_ledger`, reused
+here for a real-rupee payout record.
+
+**Acceptance test (folds into Phase 6's existing bar, §12):** for a produce listing matched
+against both the internal collective and an external buyer, the lowest-`id` linkage is always
+`internal_collective`; `identity_disclosed_at` is `NULL` through every state up to and including
+`negotiating` and non-`NULL` from `agreed` onward; and running the producer-payouts job twice
+against the same agreed linkage produces exactly one `producer_payouts` row, `status = 'paid'`,
+`upi_ref` matching `sandbox-*`.
