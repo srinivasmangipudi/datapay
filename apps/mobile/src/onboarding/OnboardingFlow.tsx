@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, View, StyleSheet } from "react-native";
 import type { VerifyOtpResult, Zone } from "../api";
-import { loadSession, saveSession } from "../session";
+import { MainApp } from "../main/MainApp";
+import { loadSession, saveSession, Session } from "../session";
 import { AliasRevealScreen } from "./AliasRevealScreen";
 import { OtpVerifyScreen } from "./OtpVerifyScreen";
 import { PhoneEntryScreen } from "./PhoneEntryScreen";
@@ -13,32 +14,30 @@ type Step =
   | { name: "otp"; phoneE164: string }
   | { name: "zone"; auth: VerifyOtpResult }
   | { name: "reveal"; auth: VerifyOtpResult; zone: Zone }
-  | { name: "done" };
+  | { name: "done"; session: Session };
 
-// Consent toggles (SPEC.md §8 step 1) are deferred to Phase 2 — they depend on
-// `categories`, which the Question Feeder Engine hasn't created yet.
+const LOCALE = "kn";
+
+// Consent toggles now live in the Vault tab (Phase 2) — deferred no longer,
+// `categories` exists once the Question Feeder Engine's migration lands.
 export function OnboardingFlow() {
   const [step, setStep] = useState<Step>({ name: "loading" });
 
   useEffect(() => {
     loadSession().then((session) => {
-      setStep(session ? { name: "done" } : { name: "phone" });
+      setStep(session ? { name: "done", session } : { name: "phone" });
     });
   }, []);
 
   switch (step.name) {
     case "loading":
       return (
-        <View style={styles.done}>
+        <View style={styles.center}>
           <ActivityIndicator />
         </View>
       );
     case "phone":
-      return (
-        <PhoneEntryScreen
-          onSent={(phoneE164) => setStep({ name: "otp", phoneE164 })}
-        />
-      );
+      return <PhoneEntryScreen onSent={(phoneE164) => setStep({ name: "otp", phoneE164 })} />;
     case "otp":
       return (
         <OtpVerifyScreen
@@ -57,28 +56,23 @@ export function OnboardingFlow() {
           displayAlias={step.auth.displayAlias}
           zone={step.zone}
           onDone={async () => {
-            await saveSession({
+            const session: Session = {
               token: step.auth.token,
               aliasId: step.auth.aliasId,
               displayAlias: step.auth.displayAlias,
               zoneId: step.zone.id,
-            });
-            setStep({ name: "done" });
+              locale: LOCALE,
+            };
+            await saveSession(session);
+            setStep({ name: "done", session });
           }}
         />
       );
     case "done":
-      return (
-        <View style={styles.done}>
-          <Text style={styles.doneTitle}>You're in.</Text>
-          <Text style={styles.doneSubtitle}>Home, Pulse, and Snap land in Phase 2.</Text>
-        </View>
-      );
+      return <MainApp session={step.session} />;
   }
 }
 
 const styles = StyleSheet.create({
-  done: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
-  doneTitle: { fontSize: 24, fontWeight: "700" },
-  doneSubtitle: { fontSize: 14, color: "#666", marginTop: 8 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" },
 });

@@ -13,6 +13,45 @@ export const PulseAnswerDtoSchema = z.object({
 });
 export type PulseAnswerDto = z.infer<typeof PulseAnswerDtoSchema>;
 
+/** POST /v1/pulse/answers — batch envelope; the offline outbox flushes many at once. */
+export const PulseAnswersBatchDtoSchema = z.object({
+  answers: z.array(PulseAnswerDtoSchema).min(1).max(20),
+});
+export type PulseAnswersBatchDto = z.infer<typeof PulseAnswersBatchDtoSchema>;
+
+/** POST /v1/snaps — idempotent by clientMsgId, same discipline as pulse answers. */
+export const SnapDtoSchema = z.object({
+  clientMsgId: z.string().uuid(),
+  imageBase64: z.string().min(1),
+  categoryId: z.number().int().positive().optional(),
+  capturedAt: z.string().datetime(),
+});
+export type SnapDto = z.infer<typeof SnapDtoSchema>;
+
+/** POST /v1/voice/transcribe — audio is transcribed and discarded, never persisted. */
+export const VoiceTranscribeDtoSchema = z.object({
+  audioBase64: z.string().min(1),
+  language: z.string().min(2).max(10),
+});
+export type VoiceTranscribeDto = z.infer<typeof VoiceTranscribeDtoSchema>;
+
+/** PUT /v1/vault/consents/:categoryId */
+export const ConsentUpdateDtoSchema = z.object({
+  granted: z.boolean(),
+});
+export type ConsentUpdateDto = z.infer<typeof ConsentUpdateDtoSchema>;
+
+/** POST /v1/admin/question-topics — registers a Question Feeder Engine topic (SPEC.md §14). */
+export const QuestionTopicDtoSchema = z.object({
+  slug: z.string().min(1).max(60),
+  name: z.string().min(1).max(120),
+  categoryId: z.number().int().positive(),
+  generatorKind: z.enum(["template", "llm_assisted"]),
+  config: z.record(z.unknown()),
+  scheduleCron: z.string().optional(),
+});
+export type QuestionTopicDto = z.infer<typeof QuestionTopicDtoSchema>;
+
 /** Vault POST /register — phone + name never leave Vault. */
 export const RegisterDtoSchema = z.object({
   phoneE164: z.string().regex(/^\+[1-9]\d{6,14}$/),

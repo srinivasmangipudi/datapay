@@ -86,9 +86,18 @@ importers:
       expo:
         specifier: ~51.0.28
         version: 51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1)
+      expo-camera:
+        specifier: ~15.0.16
+        version: 15.0.16(expo@51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1))
+      expo-crypto:
+        specifier: ~13.0.2
+        version: 13.0.2(expo@51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1))
       expo-secure-store:
         specifier: ~13.0.2
         version: 13.0.2(expo@51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1))
+      expo-sqlite:
+        specifier: ~14.0.6
+        version: 14.0.6(expo@51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1))
       expo-status-bar:
         specifier: ~1.12.1
         version: 1.12.1
@@ -1238,6 +1247,9 @@ packages:
       react: '*'
       react-native: '*'
 
+  '@expo/websql@1.0.1':
+    resolution: {integrity: sha512-H9/t1V7XXyKC343FJz/LwaVBfDhs6IqhDtSYWpt8LNSQDVjf5NvVJLc5wp+KCpRidZx8+0+YeHJN45HOXmqjFA==}
+
   '@expo/xcpretty@4.4.4':
     resolution: {integrity: sha512-4aQzz9vgxcNXFfo/iyNgDDYfsU5XGKKxWxZopw0cVotHiW+U8IJbIxMaxsINs6bHhtkG3StKNPcOrn3eBuxKPw==}
     hasBin: true
@@ -2191,6 +2203,9 @@ packages:
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
 
+  argsarray@0.0.1:
+    resolution: {integrity: sha512-u96dg2GcAKtpTrBdDoFIM7PjcBA+6rSP0OR94MOReNRyUECL6MtQt5XXmRr4qrftYaef9+l5hcpO5te7sML1Cg==}
+
   array-buffer-byte-length@1.0.2:
     resolution: {integrity: sha512-LHE+8BuR7RYGDKvnrmcuSq3tDcKv9OFEXQt/HpbZhY7V6h0zlUXutnAD82GiFx9rdieCMjkvtcsPqBwgUl1Iiw==}
     engines: {node: '>= 0.4'}
@@ -3039,8 +3054,18 @@ packages:
     peerDependencies:
       expo: '*'
 
+  expo-camera@15.0.16:
+    resolution: {integrity: sha512-FLE02DMqkjwsb7IugKAqQvBe6s+TCQeb5LupO1+r//wAhBwmHncOrc6zV95ZEC2f9PTPK34nFH/s8CDGiVzIAA==}
+    peerDependencies:
+      expo: '*'
+
   expo-constants@16.0.2:
     resolution: {integrity: sha512-9tNY3OVO0jfiMzl7ngb6IOyR5VFzNoN5OOazUWoeGfmMqVB5kltTemRvKraK9JRbBKIw+SOYLEmF0sEqgFZ6OQ==}
+    peerDependencies:
+      expo: '*'
+
+  expo-crypto@13.0.2:
+    resolution: {integrity: sha512-7f/IMPYJZkBM21LNEMXGrNo/0uXSVfZTwufUdpNKedJR0fm5fH4DCSN79ZddlV26nF90PuXjK2inIbI6lb0qRA==}
     peerDependencies:
       expo: '*'
 
@@ -3068,6 +3093,11 @@ packages:
 
   expo-secure-store@13.0.2:
     resolution: {integrity: sha512-3QYgoneo8p8yeeBPBiAfokNNc2xq6+n8+Ob4fAlErEcf4H7Y72LH+K/dx0nQyWau2ZKZUXBxyyfuHFyVKrEVLg==}
+    peerDependencies:
+      expo: '*'
+
+  expo-sqlite@14.0.6:
+    resolution: {integrity: sha512-T3YNx7LT7lM4UQRgi8ml+cj0Wf3Ep09+B4CVaWtUCjdyYJIZjsHDT65hypKG+r6btTLLEd11hjlrstNQhzt5gQ==}
     peerDependencies:
       expo: '*'
 
@@ -3455,6 +3485,9 @@ packages:
     resolution: {integrity: sha512-rH+46sQJ2dlwfjfhCyNx5thzrv+dtmBIhPHk0zgRUukHzZ/kRueTJXoYYsclBaKcSMBWuGbOFXtioLpzTb5euw==}
     engines: {node: '>=16.x'}
     hasBin: true
+
+  immediate@3.3.0:
+    resolution: {integrity: sha512-HR7EVodfFUdQCTIeySw+WDRFJlPcLOJbXfwwZ7Oom6tjsvZ3bOkCDJHehQC3nxJrv7+f9XecwazynjU8e4Vw3Q==}
 
   import-fresh@2.0.0:
     resolution: {integrity: sha512-eZ5H8rcgYazHbKC3PG4ClHNykCSxtAhxSSEM+2mb+7evD2CKF5V7c0dNum7AdpDh0ZdICwZY9sRSn8f+KH96sg==}
@@ -4428,6 +4461,9 @@ packages:
     resolution: {integrity: sha512-LN4fydt9TqhZhThkZIVQnF9cwjU3qmUH9h78Mx/K7d3VvfRqqwthLwJEUOEL0QPZ0XQmNN7be5Ggit5+4dq3Bw==}
     engines: {node: '>=0.12.0'}
 
+  noop-fn@1.0.0:
+    resolution: {integrity: sha512-pQ8vODlgXt2e7A3mIbFDlizkr46r75V+BJxVAyat8Jl7YmI513gG5cfyRL0FedKraoZ+VAouI1h4/IWpus5pcQ==}
+
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
@@ -4736,6 +4772,9 @@ packages:
   postgres-interval@1.2.0:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
+
+  pouchdb-collections@1.0.1:
+    resolution: {integrity: sha512-31db6JRg4+4D5Yzc2nqsRqsA2oOkZS8DpFav3jf/qVNBxusKa2ClkEIZ2bJNpaDbMfWtnuSq59p6Bn+CipPMdg==}
 
   pretty-bytes@5.6.0:
     resolution: {integrity: sha512-FFw039TmrBqFK8ma/7OL3sDz/VytdtJr044/QUJtH0wK9lb9jLq9tJyIxUwtQJHwar2BqtiA4iCWSwo9JLkzFg==}
@@ -5483,6 +5522,9 @@ packages:
 
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
+
+  tiny-queue@0.2.1:
+    resolution: {integrity: sha512-EijGsv7kzd9I9g0ByCl6h42BWNGUZrlCSejfrb3AKeHC33SGbASu1VDf5O3rRiiUOhAC9CHdZxFPbZu0HmR70A==}
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
@@ -7400,6 +7442,14 @@ snapshots:
       react: 18.2.0
       react-native: 0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1)
 
+  '@expo/websql@1.0.1':
+    dependencies:
+      argsarray: 0.0.1
+      immediate: 3.3.0
+      noop-fn: 1.0.0
+      pouchdb-collections: 1.0.1
+      tiny-queue: 0.2.1
+
   '@expo/xcpretty@4.4.4':
     dependencies:
       '@babel/code-frame': 7.29.7
@@ -8691,6 +8741,8 @@ snapshots:
 
   argparse@2.0.1: {}
 
+  argsarray@0.0.1: {}
+
   array-buffer-byte-length@1.0.2:
     dependencies:
       call-bound: 1.0.4
@@ -9663,6 +9715,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  expo-camera@15.0.16(expo@51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1)):
+    dependencies:
+      expo: 51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1)
+      invariant: 2.2.4
+
   expo-constants@16.0.2(expo@51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1))(supports-color@8.1.1):
     dependencies:
       '@expo/config': 9.0.4(supports-color@8.1.1)
@@ -9670,6 +9727,11 @@ snapshots:
       expo: 51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
+
+  expo-crypto@13.0.2(expo@51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1)):
+    dependencies:
+      base64-js: 1.5.1
+      expo: 51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1)
 
   expo-file-system@17.0.1(expo@51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1)):
     dependencies:
@@ -9700,6 +9762,11 @@ snapshots:
 
   expo-secure-store@13.0.2(expo@51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1)):
     dependencies:
+      expo: 51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1)
+
+  expo-sqlite@14.0.6(expo@51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1)):
+    dependencies:
+      '@expo/websql': 1.0.1
       expo: 51.0.39(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(react-native@0.74.5(@babel/core@7.29.7(supports-color@8.1.1))(@babel/preset-env@7.29.7(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@18.3.31)(react@18.2.0)(supports-color@8.1.1))(react@18.2.0)(supports-color@8.1.1)
 
   expo-status-bar@1.12.1: {}
@@ -10217,6 +10284,8 @@ snapshots:
   image-size@1.2.1:
     dependencies:
       queue: 6.0.2
+
+  immediate@3.3.0: {}
 
   import-fresh@2.0.0:
     dependencies:
@@ -11466,6 +11535,8 @@ snapshots:
 
   node-stream-zip@1.15.0: {}
 
+  noop-fn@1.0.0: {}
+
   normalize-path@3.0.0: {}
 
   npm-package-arg@11.0.3:
@@ -11757,6 +11828,8 @@ snapshots:
   postgres-interval@1.2.0:
     dependencies:
       xtend: 4.0.2
+
+  pouchdb-collections@1.0.1: {}
 
   pretty-bytes@5.6.0: {}
 
@@ -12597,6 +12670,8 @@ snapshots:
       xtend: 4.0.2
 
   through@2.3.8: {}
+
+  tiny-queue@0.2.1: {}
 
   tinybench@2.9.0: {}
 

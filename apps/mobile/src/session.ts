@@ -7,6 +7,7 @@ export interface Session {
   aliasId: string;
   displayAlias: string;
   zoneId: string;
+  locale: string;
 }
 
 export async function saveSession(session: Session): Promise<void> {

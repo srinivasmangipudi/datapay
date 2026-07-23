@@ -7,6 +7,7 @@
 > 1. The profile↔registry link stays **one-way HMAC + an audited write-once lookup table in Vault** — no reversible-encryption key exists anywhere. §2 LAW 1 is unchanged; this is a confirmation, not a design change.
 > 2. **Only k-anonymized aggregates (cohort ≥ 50) ever leave Core** — individual demand-registry rows, even pseudonymous ones, are never published to suppliers or anyone else. §2 LAW 3 is unchanged; this is a confirmation, not a design change.
 > 3. The Question Engine becomes **admin-pluggable by topic**, with generated questions reviewed before they ever reach a member. This *is* new design — see **§14**.
+> 4. `token_ledger` must be built and operated with **payments-infrastructure rigor** — atomic earn transactions, database-enforced immutability, idempotency keyed to the same token as the source row, and lock-based double-spend protection on redemption. This hardens §5B/§6/§12 Phase 2; it does not change what Phase 2 delivers, only how solidly it must be built — see **§15**.
 
 ---
 
@@ -360,3 +361,66 @@ POST /v1/admin/questions/:id/approve | /reject
 `review_state = 'draft'` never appears in `GET /v1/pulse/today` for any member, under any audience
 rule, until an explicit `/approve` call flips it — proven with an integration test that seeds a draft,
 calls `/pulse/today`, asserts absence, approves, calls again, asserts presence.
+
+---
+
+## 15. THE TOKEN LEDGER IS PAYMENTS INFRASTRUCTURE — ADDENDUM (2026-07-23)
+
+Confirms and hardens §5B/§6/§12 Phase 2: `token_ledger` is not an activity log with a token count
+attached — it is the system's transactional core, and must be built with the same rigor as a bank
+ledger or payment gateway, because every token will eventually carry real monetary value (§6C's
+token-rate mechanism converts it to ₹ at redemption). This does not change what Phase 2 delivers —
+it changes how solidly the ledger inside Phase 2 must be built. Four properties are non-negotiable:
+
+**15A. Every earn is one atomic transaction, not two writes.** Answering a question, snapping a
+photo, or completing a voice note writes BOTH the source row (`responses`/`snaps`/etc.) AND the
+corresponding `token_ledger` entry inside a single database transaction. If the ledger write fails,
+the response write rolls back too — a member is never shown "answer recorded" while silently getting
+zero tokens, and never gets tokens without a traceable source row backing them. `ref_type`/`ref_id`
+on `token_ledger` isn't just for display, it's a foreign-key-shaped promise that every credited token
+can be traced to exactly one concrete action.
+
+**15B. The ledger is append-only, enforced at the database, not just by convention.** No code path
+may `UPDATE` or `DELETE` a `token_ledger` row, ever — corrections are new `adjustment` entries, never
+edits to history. Enforce this the same way a real ledger enforces it: the api's runtime DB role gets
+`INSERT`/`SELECT` but not `UPDATE`/`DELETE` on `token_ledger`, backed by a trigger that rejects any
+attempted mutation as defense in depth. This is the same posture as §10's portal-role restriction —
+a second instance of "the database enforces the promise, not just the application code."
+
+**15C. Idempotency is a first-class ledger property, not just an API nicety.** Offline members
+retry. `client_msg_id` already deduplicates `responses`/`snaps` rows (§5B) — the token_ledger entry
+earned from that action must key off the *same* idempotency token: a unique constraint on
+`(ref_type, ref_id)`, where `ref_id` is the response/snap's own id, which is itself unique-by-
+`client_msg_id`. Retrying a sync never double-credits, by construction, not by a client-side
+"don't tap twice" convention.
+
+**15D. Redemption is a lock-and-check against a live balance, not a check-then-write.** Two
+concurrent redemption attempts against the same balance is the textbook double-spend bug. The
+redemption gate (§6, LAW 2) must run inside a transaction that locks the member's balance
+(`SELECT ... FOR UPDATE` on a materialized balance row) before checking
+`tokens_redeemed <= balance`, and the constraint that balance never goes negative lives in the
+database, not just an application-level `if`. A member's balance is `members.token_balance`
+(materialized, updated transactionally alongside every ledger insert) reconciled nightly against
+`SUM(token_ledger.tokens) WHERE alias_id = ...` — the materialized column is a cache for fast reads,
+the ledger is the only source of truth, and a reconciliation job that finds drift is itself a
+paging-worthy incident, not a silent auto-correct.
+
+**Why this matters more than it looks like it does:** §11's compliance posture depends on tokens
+staying closed-loop and non-cashable to stay outside PPI/wallet licensing — but the moment tokens
+carry a real, engine-computed ₹ value (§6C) and redeem against real purchases, the ledger IS a
+payments ledger in every way that matters operationally, even though it isn't a regulated instrument
+legally. Building it with a bank's rigor now is cheaper than retrofitting it after Phase 2 ships with
+a naive `UPDATE members SET tokens = tokens + 5` and the answer to "why doesn't the balance add up"
+is "we don't know."
+
+**Data model addition to §5B:** `members` gains `token_balance INT NOT NULL DEFAULT 0 CHECK
+(token_balance >= 0)`. `token_ledger` gains a unique constraint on `(ref_type, ref_id)`.
+
+**Acceptance test additions (folds into Phase 2's existing bar, §12):**
+- A property test that no sequence of concurrent earn/redeem operations ever produces a negative
+  balance or a `SUM(token_ledger)` that disagrees with `members.token_balance`.
+- A test that two parallel redemption requests against a balance that can only satisfy one of them
+  produce exactly one success and one clean rejection — never both succeeding, never both failing.
+- A test that replaying a `client_msg_id` sync produces zero additional ledger entries.
+- A test that `UPDATE`/`DELETE` against `token_ledger` is rejected at the database level regardless
+  of which application role attempts it.

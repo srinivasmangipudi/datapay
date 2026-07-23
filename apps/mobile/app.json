@@ -7,10 +7,22 @@
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "org.datapay.mobile",
-      "minSdkVersion": 26
+      "minSdkVersion": 26,
+      "permissions": ["android.permission.CAMERA"]
     },
     "ios": {
-      "supportsTablet": false
-    }
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "DataPay needs the camera to snap what your household uses."
+      }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "DataPay needs the camera to snap what your household uses."
+        }
+      ]
+    ]
   }
 }

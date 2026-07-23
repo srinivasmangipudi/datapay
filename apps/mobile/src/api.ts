@@ -25,10 +25,66 @@ export interface MemberProfile {
   trustScore: number;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export interface PulseOption {
+  id: number;
+  labelEn: string;
+  labelKn: string | null;
+  sort: number;
+}
+
+export interface PulseQuestion {
+  id: number;
+  categoryId: number;
+  type: "single" | "multi" | "yesno" | "intent_window" | "numeric";
+  textEn: string;
+  textKn: string | null;
+  rewardTokens: number;
+  options: PulseOption[];
+}
+
+export interface PulseAnswerInput {
+  clientMsgId: string;
+  questionId: number;
+  optionIds?: number[];
+  numericValue?: number;
+  inputMode: "tap" | "voice" | "snap";
+  language: string;
+  answeredAt: string;
+}
+
+export interface PulseAnswerResult {
+  clientMsgId: string;
+  status: "credited" | "already_synced";
+}
+
+export interface TokensSummary {
+  balance: number;
+  history: {
+    entry: string;
+    tokens: number;
+    refType: string;
+    refId: string;
+    createdAt: string;
+  }[];
+}
+
+export interface ConsentCategory {
+  categoryId: number;
+  slug: string;
+  name: string;
+  nameKn: string | null;
+  granted: boolean;
+  updatedAt: string | null;
+}
+
+async function request<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init?.headers,
+    },
   });
   const data = await res.json();
   if (!res.ok) {
@@ -60,9 +116,67 @@ export function completeOnboarding(
   zoneId: string,
   locale: string
 ): Promise<MemberProfile> {
-  return request("/v1/me", {
-    method: "PUT",
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ zoneId, locale }),
-  });
+  return request(
+    "/v1/me",
+    { method: "PUT", body: JSON.stringify({ zoneId, locale }) },
+    token
+  );
+}
+
+export function getMe(token: string): Promise<MemberProfile> {
+  return request("/v1/me", {}, token);
+}
+
+export function getPulseToday(token: string): Promise<PulseQuestion[]> {
+  return request("/v1/pulse/today", {}, token);
+}
+
+export function submitPulseAnswers(
+  token: string,
+  answers: PulseAnswerInput[]
+): Promise<{ results: PulseAnswerResult[] }> {
+  return request(
+    "/v1/pulse/answers",
+    { method: "POST", body: JSON.stringify({ answers }) },
+    token
+  );
+}
+
+export function submitSnap(
+  token: string,
+  dto: { clientMsgId: string; imageBase64: string; categoryId?: number; capturedAt: string }
+): Promise<{ status: "credited" | "already_synced"; snapId?: number }> {
+  return request("/v1/snaps", { method: "POST", body: JSON.stringify(dto) }, token);
+}
+
+export function transcribeVoice(
+  token: string,
+  audioBase64: string,
+  language: string
+): Promise<{ transcript: string }> {
+  return request(
+    "/v1/voice/transcribe",
+    { method: "POST", body: JSON.stringify({ audioBase64, language }) },
+    token
+  );
+}
+
+export function getTokens(token: string): Promise<TokensSummary> {
+  return request("/v1/tokens", {}, token);
+}
+
+export function getConsents(token: string): Promise<ConsentCategory[]> {
+  return request("/v1/vault/consents", {}, token);
+}
+
+export function setConsent(
+  token: string,
+  categoryId: number,
+  granted: boolean
+): Promise<{ categoryId: number; granted: boolean }> {
+  return request(
+    `/v1/vault/consents/${categoryId}`,
+    { method: "PUT", body: JSON.stringify({ granted }) },
+    token
+  );
 }
