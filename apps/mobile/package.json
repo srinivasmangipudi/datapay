@@ -12,12 +12,14 @@
   "dependencies": {
     "@datapay/shared": "workspace:*",
     "expo": "~51.0.28",
+    "expo-secure-store": "~13.0.2",
     "expo-status-bar": "~1.12.1",
     "react": "18.2.0",
     "react-native": "0.74.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@types/node": "^20.14.15",
     "@types/react": "^18.3.3",
     "typescript": "^5.5.4"
   }

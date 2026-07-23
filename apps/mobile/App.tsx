@@ -1,20 +1,11 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
+import { OnboardingFlow } from "./src/onboarding/OnboardingFlow";
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>DataPay — onboarding lands in Phase 1</Text>
+    <>
+      <OnboardingFlow />
       <StatusBar style="auto" />
-    </View>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

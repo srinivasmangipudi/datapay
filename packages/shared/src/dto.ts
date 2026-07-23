@@ -26,3 +26,11 @@ export const VerifyOtpDtoSchema = z.object({
   otp: z.string().length(6),
 });
 export type VerifyOtpDto = z.infer<typeof VerifyOtpDtoSchema>;
+
+/** Core PUT /v1/me — completes onboarding once an alias exists. Never carries a phone. */
+export const CompleteOnboardingDtoSchema = z.object({
+  zoneId: z.string().uuid(),
+  householdSizeBand: z.string().optional(),
+  locale: z.string().min(2).max(10).default("kn"),
+});
+export type CompleteOnboardingDto = z.infer<typeof CompleteOnboardingDtoSchema>;
