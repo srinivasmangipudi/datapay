@@ -77,6 +77,19 @@ export interface ConsentCategory {
   updatedAt: string | null;
 }
 
+export interface FundBalance {
+  zoneId: string;
+  balancePaise: number;
+}
+
+export interface FundProject {
+  id: number;
+  title: string;
+  titleKn: string | null;
+  estimatePaise: number;
+  status: "proposed" | "voting" | "approved" | "funded" | "done";
+}
+
 async function request<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -177,6 +190,26 @@ export function setConsent(
   return request(
     `/v1/vault/consents/${categoryId}`,
     { method: "PUT", body: JSON.stringify({ granted }) },
+    token
+  );
+}
+
+export function getFundBalance(token: string): Promise<FundBalance> {
+  return request("/v1/fund", {}, token);
+}
+
+export function getFundProjects(token: string): Promise<FundProject[]> {
+  return request("/v1/fund/projects", {}, token);
+}
+
+export function voteFundProject(
+  token: string,
+  projectId: number,
+  vote: "yes" | "no"
+): Promise<{ ok: true }> {
+  return request(
+    `/v1/fund/projects/${projectId}/vote`,
+    { method: "POST", body: JSON.stringify({ vote }) },
     token
   );
 }

@@ -455,3 +455,33 @@ guarantee.
 **Acceptance test (folds into Phase 4's existing bar, §12):** a `resolve-relay` call for a token
 with no matching `relay_map` row (never registered, or already past its 30-day purge window)
 returns 404, never a partial or default address.
+
+---
+
+## 17. FUND ACCRUAL NEEDED A CONCRETE TRIGGER — ADDENDUM (2026-07-23, Phase 5)
+
+Phase 5's acceptance line — "fund accrues from completed offers" — doesn't say what "completed"
+means mechanically, or how much accrues. Two concrete decisions were made to make it real:
+
+**17A. "Completed" = a member confirms delivery.** `POST /v1/offers/:id/join` already covers
+joining; nothing yet advanced an `offer_participation` to `delivered`. A new endpoint, `POST
+/v1/offers/:id/confirm-delivery`, does that — the same action §8's Offers screen already describes
+("collect and confirm in-app" at the PACS node, FIG. 4). Confirming is idempotent: a repeat call
+returns `already_confirmed` and never accrues twice, via the same `UNIQUE(ref_type, ref_id)`
+discipline `token_ledger` already uses (§15C), applied here to `fund_ledger`.
+
+**17B. The accrual amount is 20% of the realised per-unit savings.** `(market_price_paise -
+collective_price_paise) × qty × 0.2`. The 20% figure comes from the pitch deck's 50/20/30 split
+(tokens / community fund / operations) — a business and legal decision, not something the code
+should quietly invent as fact. It lives as one named constant
+(`FUND_ACCRUAL_RATE` in `apps/api/src/fund/fund.service.ts`), not copy-pasted across call sites, so
+it can be revisited without a hunt.
+
+**17C. `fund_ledger` gets the full §15 treatment, not a lighter one.** It's real rupees, not
+closed-loop tokens — if anything that argues for *more* rigor than `token_ledger`, not less. Same
+append-only trigger (`reject_fund_ledger_mutation`, rejecting UPDATE/DELETE regardless of role),
+same `UNIQUE(ref_type, ref_id)` idempotency key.
+
+**Acceptance test (folds into Phase 5's existing bar, §12):** confirming delivery on an
+already-`delivered` participation is a clean no-op — `already_confirmed`, zero additional
+`fund_ledger` rows, zone balance unchanged.

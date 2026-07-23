@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { Session } from "../session";
+import { CommunityScreen } from "./CommunityScreen";
 import { HomeScreen } from "./HomeScreen";
 import { PulseScreen } from "./PulseScreen";
 import { SnapScreen } from "./SnapScreen";
@@ -14,6 +15,7 @@ const TABS = [
   { key: "home", label: "Home" },
   { key: "pulse", label: "Pulse" },
   { key: "snap", label: "Snap" },
+  { key: "community", label: "Community" },
   { key: "vault", label: "Vault" },
 ] as const;
 
@@ -28,6 +30,7 @@ export function MainApp({ session }: Props) {
         {tab === "home" && <HomeScreen session={session} />}
         {tab === "pulse" && <PulseScreen session={session} />}
         {tab === "snap" && <SnapScreen session={session} />}
+        {tab === "community" && <CommunityScreen session={session} />}
         {tab === "vault" && <VaultScreen session={session} />}
       </View>
       <View style={styles.tabBar}>

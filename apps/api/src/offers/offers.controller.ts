@@ -1,13 +1,17 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { JoinOfferDtoSchema } from "@datapay/shared";
 import { AliasAuthGuard, AliasRequest } from "../auth/alias-auth.guard";
+import { FundService } from "../fund/fund.service";
 import { parseOrThrow } from "../zod.util";
 import { OffersService } from "./offers.service";
 
 @Controller("v1/offers")
 @UseGuards(AliasAuthGuard)
 export class OffersController {
-  constructor(private readonly offers: OffersService) {}
+  constructor(
+    private readonly offers: OffersService,
+    private readonly fund: FundService
+  ) {}
 
   @Get()
   list(@Query("zone") zone?: string) {
@@ -23,5 +27,13 @@ export class OffersController {
   @Delete(":id/join")
   leave(@Req() req: AliasRequest, @Param("id", ParseIntPipe) id: number) {
     return this.offers.leave(req.aliasId, id);
+  }
+
+  // Confirming pickup at the PACS node (§7/§8) is also the fund's accrual
+  // trigger (§12 Phase 5: "fund accrues from completed offers") — one
+  // member action, two systems reacting atomically inside FundService.
+  @Post(":id/confirm-delivery")
+  confirmDelivery(@Req() req: AliasRequest, @Param("id", ParseIntPipe) id: number) {
+    return this.fund.confirmDelivery(req.aliasId, id);
   }
 }

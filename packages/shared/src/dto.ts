@@ -121,3 +121,18 @@ export const ResolveRelayRequestDtoSchema = z.object({
   relayToken: z.string().uuid(),
 });
 export type ResolveRelayRequestDto = z.infer<typeof ResolveRelayRequestDtoSchema>;
+
+/** POST /v1/fund/projects/:id/vote — 1 member, 1 vote (SPEC.md §12 Phase 5). */
+export const FundVoteDtoSchema = z.object({
+  vote: z.enum(["yes", "no"]),
+});
+export type FundVoteDto = z.infer<typeof FundVoteDtoSchema>;
+
+/** POST /v1/admin/fund-projects — ops proposes a project for a zone's fund. */
+export const CreateFundProjectDtoSchema = z.object({
+  zoneId: z.string().uuid(),
+  title: z.string().min(1).max(200),
+  titleKn: z.string().max(200).optional(),
+  estimatePaise: z.number().int().positive(),
+});
+export type CreateFundProjectDto = z.infer<typeof CreateFundProjectDtoSchema>;
