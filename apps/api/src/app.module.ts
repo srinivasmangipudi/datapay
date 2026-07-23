@@ -1,14 +1,17 @@
 import { Module } from "@nestjs/common";
+import { AggregationModule } from "./aggregation/aggregation.module";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuthModule } from "./auth/auth.module";
 import { ConsentsModule } from "./consents/consents.module";
 import { DbModule } from "./db/db.module";
+import { JobsModule } from "./jobs/bullmq.module";
 import { LedgerModule } from "./ledger/ledger.module";
 import { MeModule } from "./me/me.module";
 import { PulseModule } from "./pulse/pulse.module";
 import { QuestionFeederModule } from "./question-feeder/question-feeder.module";
 import { SnapsModule } from "./snaps/snaps.module";
+import { TokenRateModule } from "./token-rate/token-rate.module";
 import { TokensModule } from "./tokens/tokens.module";
 import { VoiceModule } from "./voice/voice.module";
 import { ZonesModule } from "./zones/zones.module";
@@ -16,6 +19,7 @@ import { ZonesModule } from "./zones/zones.module";
 @Module({
   imports: [
     DbModule,
+    JobsModule,
     AuthModule,
     MeModule,
     ZonesModule,
@@ -26,6 +30,8 @@ import { ZonesModule } from "./zones/zones.module";
     TokensModule,
     ConsentsModule,
     QuestionFeederModule,
+    AggregationModule,
+    TokenRateModule,
   ],
   controllers: [AppController],
   providers: [AppService],
