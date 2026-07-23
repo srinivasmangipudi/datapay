@@ -1,0 +1,17 @@
+{
+  "name": "@datapay/infra",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "migrate:vault:up": "node migrate.mjs vault up",
+    "migrate:vault:down": "node migrate.mjs vault down",
+    "migrate:core:up": "node migrate.mjs core up",
+    "migrate:core:down": "node migrate.mjs core down"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-pg-migrate": "^7.6.1",
+    "pg": "^8.12.0"
+  }
+}

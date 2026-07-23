@@ -1,0 +1,38 @@
+services:
+  vault-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${VAULT_DB_USER:-vault_app}
+      POSTGRES_PASSWORD: ${VAULT_DB_PASSWORD:-vault_dev_pw}
+      POSTGRES_DB: ${VAULT_DB_NAME:-vault_db}
+    ports:
+      - "${VAULT_DB_PORT:-5433}:5432"
+    volumes:
+      - vault_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${VAULT_DB_USER:-vault_app} -d ${VAULT_DB_NAME:-vault_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  core-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${CORE_DB_USER:-core_app}
+      POSTGRES_PASSWORD: ${CORE_DB_PASSWORD:-core_dev_pw}
+      POSTGRES_DB: ${CORE_DB_NAME:-core_db}
+    ports:
+      - "${CORE_DB_PORT:-5434}:5432"
+    volumes:
+      - core_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CORE_DB_USER:-core_app} -d ${CORE_DB_NAME:-core_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  vault_db_data:
+  core_db_data:
