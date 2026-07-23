@@ -27,6 +27,21 @@ class FakeDriveProvider implements DriveProvider {
   }
 }
 
+// Simulates the real GoogleDriveProvider's behavior for a folder that
+// exists but was never actually shared with the service account (SPEC.md
+// §20H) — files.list degrades silently for an inaccessible parent, so the
+// real provider checks folder access first and throws a named error.
+class UnsharedFolderDriveProvider implements DriveProvider {
+  async listFiles(): Promise<DriveFile[]> {
+    throw new Error(
+      "Folder fake-unshared-folder isn't accessible to this service account. Share it (Viewer) with test@example.iam.gserviceaccount.com in Google Drive, then sync again."
+    );
+  }
+  async getFileText(): Promise<string> {
+    throw new Error("unreachable — listFiles always throws first");
+  }
+}
+
 class FakeLlmProvider implements LlmProvider {
   constructor(private readonly response: string) {}
   async complete(): Promise<string> {
@@ -83,19 +98,20 @@ describe("Area intelligence — documents → understanding → grounded questio
     await pool.end();
   });
 
-  async function cleanupZoneIntelligence() {
-    await pool.query(
-      `DELETE FROM intelligence_documents WHERE source_id IN
-         (SELECT id FROM intelligence_sources WHERE zone_id = $1)`,
-      [MELUKOTE_ZONE_ID]
-    );
-    await pool.query(`DELETE FROM intelligence_sources WHERE zone_id = $1`, [MELUKOTE_ZONE_ID]);
-    await pool.query(`DELETE FROM zone_understanding WHERE zone_id = $1`, [MELUKOTE_ZONE_ID]);
+  // Deletes ONLY the specific rows a test created, by id — never a blanket
+  // "everything for this zone" wipe. This zone (Melukote) is real pilot
+  // geography, not a test-only fixture; a zone-wide delete here would nuke
+  // whatever a real operator connected through the running app, which is
+  // exactly what happened before this file was fixed to do it this way.
+  async function deleteSource(sourceId: number) {
+    await pool.query(`DELETE FROM intelligence_documents WHERE source_id = $1`, [sourceId]);
+    await pool.query(`DELETE FROM intelligence_sources WHERE id = $1`, [sourceId]);
   }
 
-  afterEach(async () => {
-    await cleanupZoneIntelligence();
-  });
+  async function deleteUnderstanding(...ids: number[]) {
+    if (ids.length === 0) return;
+    await pool.query(`DELETE FROM zone_understanding WHERE id = ANY($1)`, [ids]);
+  }
 
   it("§20C: sync ingests supported files, skips-and-names unsupported ones, and is idempotent on unchanged content", async () => {
     const { id: sourceId } = await sourcesService.connectSource(
@@ -127,6 +143,27 @@ describe("Area intelligence — documents → understanding → grounded questio
     expect(resync.unchanged).toBe(1);
 
     sourcesService.driveOverride = null;
+    await deleteSource(sourceId);
+  });
+
+  it("§20H: a folder that exists but isn't shared with the service account fails with a named, actionable error — not a silent 'zero documents'", async () => {
+    const { id: sourceId } = await sourcesService.connectSource(
+      MELUKOTE_ZONE_ID,
+      "fake-unshared-folder",
+      "Unshared test source"
+    );
+    sourcesService.driveOverride = new UnsharedFolderDriveProvider();
+
+    await expect(sourcesService.sync(sourceId)).rejects.toThrow(/isn't accessible/);
+
+    const httpRes = await request(app.getHttpServer())
+      .post(`/v1/admin/intelligence-sources/${sourceId}/sync`)
+      .send();
+    expect(httpRes.status).toBe(400);
+    expect(httpRes.body.message).toMatch(/isn't accessible/);
+
+    sourcesService.driveOverride = null;
+    await deleteSource(sourceId);
   });
 
   it("§20B: refresh builds a real understanding from ingested documents, and a second refresh adds a new row rather than overwriting", async () => {
@@ -152,17 +189,24 @@ describe("Area intelligence — documents → understanding → grounded questio
     understandingService.llmOverride = null;
 
     const { rows } = await pool.query(
-      `SELECT count(*) FROM zone_understanding WHERE zone_id = $1`,
-      [MELUKOTE_ZONE_ID]
+      `SELECT count(*) FROM zone_understanding WHERE id = ANY($1)`,
+      [[first.id, second.id]]
     );
     expect(Number(rows[0].count)).toBe(2); // both kept — history, not overwritten
 
     const latest = await understandingService.getLatest(MELUKOTE_ZONE_ID);
     expect(latest?.id).toBe(second.id);
+
+    await deleteSource(sourceId);
+    await deleteUnderstanding(first.id, second.id);
   });
 
-  it("refresh fails clearly with no ingested documents, rather than calling the LLM with nothing", async () => {
-    await expect(understandingService.refresh(MELUKOTE_ZONE_ID)).rejects.toThrow(
+  it("refresh fails clearly when the zone has no ingested documents, rather than calling the LLM with nothing", async () => {
+    // A zone this test file never otherwise touches — real Melukote zone
+    // data (or another test's leftovers) could otherwise make this
+    // assertion depend on execution order.
+    const emptyZoneId = "00000000-0000-0000-0000-000000000002"; // Melukote Hobli
+    await expect(understandingService.refresh(emptyZoneId)).rejects.toThrow(
       /No ingested documents/
     );
   });
@@ -185,7 +229,7 @@ describe("Area intelligence — documents → understanding → grounded questio
     sourcesService.driveOverride = null;
 
     understandingService.llmOverride = new FakeLlmProvider(VALID_UNDERSTANDING_RESPONSE);
-    await understandingService.refresh(MELUKOTE_ZONE_ID);
+    const understanding = await understandingService.refresh(MELUKOTE_ZONE_ID);
     understandingService.llmOverride = null;
 
     const { id: topicId } = await questionFeeder.createTopic({
@@ -217,6 +261,8 @@ describe("Area intelligence — documents → understanding → grounded questio
     await pool.query(`DELETE FROM questions WHERE generation_run_id = $1`, [result.runId]);
     await pool.query(`DELETE FROM question_generation_runs WHERE id = $1`, [result.runId]);
     await pool.query(`DELETE FROM question_topics WHERE id = $1`, [topicId]);
+    await deleteSource(sourceId);
+    await deleteUnderstanding(understanding.id);
   });
 
   it("§20D: malformed LLM output fails the run cleanly — no partial drafts", async () => {
@@ -237,7 +283,7 @@ describe("Area intelligence — documents → understanding → grounded questio
     sourcesService.driveOverride = null;
 
     understandingService.llmOverride = new FakeLlmProvider(VALID_UNDERSTANDING_RESPONSE);
-    await understandingService.refresh(MELUKOTE_ZONE_ID);
+    const understanding = await understandingService.refresh(MELUKOTE_ZONE_ID);
     understandingService.llmOverride = null;
 
     const { id: topicId } = await questionFeeder.createTopic({
@@ -267,6 +313,8 @@ describe("Area intelligence — documents → understanding → grounded questio
 
     await pool.query(`DELETE FROM question_generation_runs WHERE topic_id = $1`, [topicId]);
     await pool.query(`DELETE FROM question_topics WHERE id = $1`, [topicId]);
+    await deleteSource(sourceId);
+    await deleteUnderstanding(understanding.id);
   });
 
   it("§20D: a document_grounded topic with no zone_id fails clearly instead of silently picking one", async () => {
@@ -299,10 +347,6 @@ describe("Area intelligence — documents → understanding → grounded questio
     expect(listRes.status).toBe(200);
     expect(listRes.body.some((s: { id: number }) => s.id === connectRes.body.id)).toBe(true);
 
-    const understandingRes = await request(app.getHttpServer()).get(
-      `/v1/admin/zones/${MELUKOTE_ZONE_ID}/understanding`
-    );
-    expect(understandingRes.status).toBe(200);
-    expect(understandingRes.body.message).toMatch(/No understanding/);
+    await deleteSource(connectRes.body.id);
   });
 });

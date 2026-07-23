@@ -741,3 +741,40 @@ overwritten row; a `document_grounded` topic with no `zone_id`, or whose zone ha
 yet, fails with a clear message; malformed LLM JSON output fails the generation run with zero
 partial questions persisted; every successfully generated draft has `review_state = 'draft'` and
 `source = 'plugin_generated'`, identical to a template-generated draft.
+
+---
+
+## 21. A QUESTION-AUTHORING WIZARD, NOT JUST GENERATOR TOPICS — ADDENDUM (2026-07-24)
+
+§14's `template` topics let an admin hand-author question *variants* inside a topic's JSON
+`config` — real, but not something a non-technical ops person would want to hand-edit. This adds
+the missing piece: `POST /v1/admin/questions` creates one question directly, no topic or
+generation run involved, surfaced in the portal as a guided form (`/questions`) — pick a category,
+write the question, pick how members answer it.
+
+**21A. The answer-type menu is exactly §5's five `type` values, reframed as UI patterns a
+non-technical admin recognizes** — nothing new was added to the data model. Single choice → radio
+buttons; multiple choice → checkboxes; yes/no → a plain two-way toggle; buying intent → the
+existing `intent_window` mechanic (LAW 2's demand-declaration path), with a timeframe picker
+instead of raw JSON; number → `numeric`, no options at all. "Voice" and "photo" — floated early as
+candidate answer types — deliberately aren't among them: voice is already a general input-capture
+method (`responses.input_mode`), not a property of a *question*, and "photo" is the existing Snap
+feature, which has its own category-tagging and isn't a Pulse question. Reusing what exists instead
+of adding parallel machinery for the same two concepts.
+
+**21B. `intent_window`'s options are never taken from the request body.** `PulseService`'s
+strength-detection logic (§6C's redemption gate depends on it) hard-codes checking for
+`label_en === 'yes'`/`'maybe'` — so `createDirectQuestion` always inserts the fixed
+`Yes`/`Maybe`/`No` triplet for this type, silently ignoring any `options` an admin's request
+happened to include, rather than letting a custom label set quietly break demand declaration.
+
+**21C. Authoring directly skips the draft queue, not the discipline behind it.** `source =
+'admin_authored'` and `review_state = 'approved'` are set at creation — the admin typing the
+question in *is* the review, the same rule §14 already stated for hand-authored template variants.
+It's immediately selectable via `GET /v1/pulse/today`, verified live: no separate approval call
+needed, unlike every `plugin_generated` draft from a topic's generation run.
+
+**Acceptance test (folds into §14's existing bar):** creating a `single`/`multi`/`yesno` question
+with fewer than 2 options is rejected; creating an `intent_window` question with no `intentWindow`
+is rejected; a successfully created question has `review_state = 'approved'` immediately and
+appears in a fresh member's `GET /v1/pulse/today` without any additional admin action.

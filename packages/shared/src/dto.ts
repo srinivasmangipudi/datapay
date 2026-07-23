@@ -58,6 +58,46 @@ export const QuestionTopicDtoSchema = z.object({
 });
 export type QuestionTopicDto = z.infer<typeof QuestionTopicDtoSchema>;
 
+const QuestionOptionInputSchema = z.object({
+  labelEn: z.string().min(1).max(120),
+  labelKn: z.string().max(120).optional(),
+});
+
+/**
+ * POST /v1/admin/questions — an admin authors one question directly (no
+ * generator topic involved). Cross-field rules enforced here, not left to
+ * the database: single/multi/yesno need ≥2 options; intent_window needs a
+ * window. The admin typing this in IS the review (SPEC.md §14), so it's
+ * created straight into review_state='approved' — never 'draft'.
+ */
+export const CreateQuestionDtoSchema = z
+  .object({
+    categoryId: z.number().int().positive(),
+    textEn: z.string().min(1).max(300),
+    textKn: z.string().max(300).optional(),
+    type: z.enum(["single", "multi", "yesno", "intent_window", "numeric"]),
+    rewardTokens: z.number().int().positive().default(4),
+    options: z.array(QuestionOptionInputSchema).optional(),
+    intentWindow: z.enum(["1m", "3m", "6m", "12m"]).optional(),
+  })
+  .superRefine((val, ctx) => {
+    if (["single", "multi", "yesno"].includes(val.type) && (val.options?.length ?? 0) < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["options"],
+        message: `type '${val.type}' needs at least 2 options`,
+      });
+    }
+    if (val.type === "intent_window" && !val.intentWindow) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["intentWindow"],
+        message: "type 'intent_window' requires an intentWindow",
+      });
+    }
+  });
+export type CreateQuestionDto = z.infer<typeof CreateQuestionDtoSchema>;
+
 /** POST /v1/admin/intelligence-sources — connects a Drive folder to a zone (SPEC.md §20). */
 export const ConnectIntelligenceSourceDtoSchema = z.object({
   zoneId: z.string().uuid(),

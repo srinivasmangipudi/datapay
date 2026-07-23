@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { QuestionTopicDto } from "@datapay/shared";
+import type { CreateQuestionDto, QuestionTopicDto } from "@datapay/shared";
 import { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import { PG_POOL } from "../db/db.module";
@@ -155,6 +155,74 @@ export class QuestionFeederService {
       }
       return count;
     });
+  }
+
+  /**
+   * An admin authoring a question directly — no generator topic, no draft
+   * review step, because typing it in IS the review (SPEC.md §14/§21). Same
+   * one-transaction question+options insert every generator kind already
+   * uses, just with source='admin_authored' and review_state='approved'
+   * from the start instead of 'draft'.
+   */
+  async createDirectQuestion(dto: CreateQuestionDto): Promise<{ id: number }> {
+    // intent_window's options are a fixed three-way contract PulseService's
+    // strength-detection logic depends on (label_en === 'yes'/'maybe') — not
+    // admin-editable, so they're never taken from the request body.
+    const options =
+      dto.type === "intent_window"
+        ? [
+            { labelEn: "Yes", labelKn: "ಹೌದು" },
+            { labelEn: "Maybe", labelKn: "ಬಹುಶಃ" },
+            { labelEn: "No", labelKn: "ಇಲ್ಲ" },
+          ]
+        : (dto.options ?? []);
+
+    return withTransaction(this.pool, async (client: PoolClient) => {
+      const { rows } = await client.query<{ id: number }>(
+        `INSERT INTO questions
+           (category_id, type, text_en, text_kn, reward_tokens, source, review_state, intent_window)
+         VALUES ($1, $2, $3, $4, $5, 'admin_authored', 'approved', $6)
+         RETURNING id`,
+        [
+          dto.categoryId,
+          dto.type,
+          dto.textEn,
+          dto.textKn ?? null,
+          dto.rewardTokens,
+          dto.type === "intent_window" ? dto.intentWindow : null,
+        ]
+      );
+      const questionId = rows[0].id;
+
+      for (const [i, opt] of options.entries()) {
+        await client.query(
+          `INSERT INTO question_options (question_id, label_en, label_kn, sort) VALUES ($1, $2, $3, $4)`,
+          [questionId, opt.labelEn, opt.labelKn ?? null, i]
+        );
+      }
+
+      return { id: questionId };
+    });
+  }
+
+  async listRecentQuestions(filter: { source?: string; reviewState?: string } = {}) {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    if (filter.source) {
+      params.push(filter.source);
+      conditions.push(`source = $${params.length}`);
+    }
+    if (filter.reviewState) {
+      params.push(filter.reviewState);
+      conditions.push(`review_state = $${params.length}`);
+    }
+    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    const { rows } = await this.pool.query(
+      `SELECT id, category_id, type, text_en, text_kn, reward_tokens, source, review_state, active_from
+       FROM questions ${where} ORDER BY id DESC LIMIT 20`,
+      params
+    );
+    return rows;
   }
 
   async getRun(runId: number) {

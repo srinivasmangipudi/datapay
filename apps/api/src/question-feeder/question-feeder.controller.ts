@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post, Query } from "@nestjs/common";
-import { QuestionTopicDtoSchema } from "@datapay/shared";
+import { CreateQuestionDtoSchema, QuestionTopicDtoSchema } from "@datapay/shared";
 import { parseOrThrow } from "../zod.util";
 import { QuestionFeederService } from "./question-feeder.service";
 
@@ -26,8 +26,18 @@ export class QuestionFeederController {
   }
 
   @Get("questions")
-  listQuestions(@Query("review_state") reviewState?: string) {
+  listQuestions(
+    @Query("review_state") reviewState?: string,
+    @Query("source") source?: string
+  ) {
+    if (source) return this.feeder.listRecentQuestions({ source, reviewState });
     return this.feeder.listQuestionsByReviewState(reviewState ?? "draft");
+  }
+
+  @Post("questions")
+  createQuestion(@Body() body: unknown) {
+    const dto = parseOrThrow(CreateQuestionDtoSchema, body);
+    return this.feeder.createDirectQuestion(dto);
   }
 
   @Post("questions/:id/approve")

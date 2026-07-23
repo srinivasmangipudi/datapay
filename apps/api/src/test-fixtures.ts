@@ -58,6 +58,41 @@ export async function deleteTestMemberFromVault(vaultPool: Pool, aliasId: string
   await vaultPool.query(`DELETE FROM users WHERE id = $1`, [rows[0].user_id]);
 }
 
+/**
+ * Checks the exact business rule PulseService.today() applies to a single
+ * question (review_state, active window, not-already-answered-today,
+ * consent) — WITHOUT that query's own `LIMIT 5`. A test asserting "this
+ * question became selectable" should mean *that*, not "it happened to win
+ * one of five rotating daily slots" — real admin-authored questions
+ * (SPEC.md §21) accumulate permanently and can already occupy every slot
+ * regardless of what any one test just did.
+ */
+export async function isEligibleForPulseToday(
+  pool: Pool,
+  aliasId: string,
+  questionId: number
+): Promise<boolean> {
+  const { rows } = await pool.query<{ eligible: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM questions q
+       WHERE q.id = $2
+         AND q.review_state = 'approved'
+         AND q.active_from <= now()
+         AND (q.active_to IS NULL OR q.active_to > now())
+         AND NOT EXISTS (
+           SELECT 1 FROM responses r
+           WHERE r.question_id = q.id AND r.alias_id = $1 AND r.answered_at::date = now()::date
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM consents co
+           WHERE co.category_id = q.category_id AND co.alias_id = $1 AND co.granted = false
+         )
+     ) AS eligible`,
+    [aliasId, questionId]
+  );
+  return rows[0].eligible;
+}
+
 export async function deleteTestMember(pool: Pool, aliasId: string): Promise<void> {
   // token_ledger rows for this alias, if any, are RESTRICTed from deletion by
   // design (§15B) — this is test data, so we just leave the ledger trail and

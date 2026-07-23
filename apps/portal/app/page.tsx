@@ -22,7 +22,7 @@ export default async function PortalHome(): Promise<JSX.Element> {
         could reach this screen. This portal's database role has no grant on member-level tables.
       </p>
       <p className="navLink">
-        <a href="/intelligence">Area intelligence &amp; question review →</a>
+        <a href="/questions">New question →</a> · <a href="/intelligence">Area intelligence &amp; question review →</a>
       </p>
 
       <div className="tiles">

@@ -52,7 +52,7 @@ export default async function IntelligencePage({
         queue below before any member ever sees it.
       </p>
       <p className="navLink">
-        <a href="/">← Demand &amp; token rate</a>
+        <a href="/">← Demand &amp; token rate</a> · <a href="/questions">New question →</a>
       </p>
 
       {searchParams.error && (

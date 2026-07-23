@@ -88,7 +88,15 @@ export class IntelligenceSourcesService {
     );
     if (!sourceRows[0]) throw new NotFoundException(`Source ${sourceId} not found`);
 
-    const files: DriveFile[] = await this.drive.listFiles(sourceRows[0].external_ref);
+    let files: DriveFile[];
+    try {
+      files = await this.drive.listFiles(sourceRows[0].external_ref);
+    } catch (err) {
+      // Same reasoning as the `drive` getter above — a folder-not-accessible
+      // error needs to reach the portal as a readable message, not NestJS's
+      // generic 500 for an unrecognized Error.
+      throw new BadRequestException((err as Error).message);
+    }
     let synced = 0;
     let unchanged = 0;
     let skipped = 0;

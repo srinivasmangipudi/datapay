@@ -21,6 +21,7 @@ const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
 // requested.
 export class GoogleDriveProvider implements DriveProvider {
   private readonly drive;
+  private readonly serviceAccountEmail: string;
 
   constructor() {
     const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
@@ -35,6 +36,7 @@ export class GoogleDriveProvider implements DriveProvider {
     } catch {
       throw new Error("GOOGLE_SERVICE_ACCOUNT_KEY is not valid JSON");
     }
+    this.serviceAccountEmail = credentials.client_email ?? "(unknown — no client_email in key)";
     const auth = new google.auth.GoogleAuth({
       credentials,
       scopes: ["https://www.googleapis.com/auth/drive.readonly"],
@@ -43,6 +45,20 @@ export class GoogleDriveProvider implements DriveProvider {
   }
 
   async listFiles(folderId: string): Promise<DriveFile[]> {
+    // `files.list`'s `q` filter degrades silently to an empty result set for
+    // a folder ID the caller can't see — indistinguishable from "the folder
+    // is genuinely empty" unless checked separately. Fetching the folder
+    // itself surfaces the real 404/403 instead of masking a sharing problem
+    // as "0 documents found."
+    try {
+      await this.drive.files.get({ fileId: folderId, fields: "id" });
+    } catch {
+      throw new Error(
+        `Folder ${folderId} isn't accessible to this service account. Share it (Viewer) with ` +
+          `${this.serviceAccountEmail} in Google Drive, then sync again.`
+      );
+    }
+
     const res = await this.drive.files.list({
       q: `'${folderId}' in parents and trashed = false`,
       fields: "files(id, name, mimeType)",
