@@ -2,13 +2,15 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
   Inject,
   NotFoundException,
+  Post,
   Put,
   Req,
   UseGuards,
 } from "@nestjs/common";
-import { CompleteOnboardingDtoSchema } from "@datapay/shared";
+import { CompleteOnboardingDtoSchema, SetDeliveryAddressDtoSchema } from "@datapay/shared";
 import { Pool } from "pg";
 import { PG_POOL } from "../db/db.module";
 import { AliasAuthGuard, AliasRequest } from "../auth/alias-auth.guard";
@@ -70,5 +72,25 @@ export class MeController {
       [req.aliasId, req.displayAlias, dto.zoneId, dto.householdSizeBand ?? null, dto.locale]
     );
     return toMemberResponse(rows[0]);
+  }
+
+  // A thin proxy, same posture as /v1/auth/otp/* (FIG.3): the address itself
+  // never touches core_db, it goes straight to Vault. Needed so the relay
+  // flow (§7) has somewhere to deliver to — not one of §5A's original four
+  // Vault endpoints, documented as an addition in SPEC.md §16.
+  @Post("delivery-address")
+  async setDeliveryAddress(@Req() req: AliasRequest, @Body() body: unknown) {
+    const dto = parseOrThrow(SetDeliveryAddressDtoSchema, body);
+    const vaultUrl = process.env.VAULT_INTERNAL_URL;
+    if (!vaultUrl) throw new Error("Missing VAULT_INTERNAL_URL");
+
+    const res = await fetch(`${vaultUrl}/delivery-address`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ aliasId: req.aliasId, address: dto.address, zoneHint: dto.zoneHint }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new HttpException(data, res.status);
+    return data;
   }
 }

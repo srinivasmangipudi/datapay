@@ -73,3 +73,51 @@ export const CompleteOnboardingDtoSchema = z.object({
   locale: z.string().min(2).max(10).default("kn"),
 });
 export type CompleteOnboardingDto = z.infer<typeof CompleteOnboardingDtoSchema>;
+
+/**
+ * Core POST /v1/me/delivery-address, proxied to Vault's internal
+ * /delivery-address (SPEC.md §7) — needed so the relay flow has an address
+ * to resolve. Not one of §5A's original four endpoints; documented in §16.
+ */
+export const SetDeliveryAddressDtoSchema = z.object({
+  address: z.string().min(4).max(500),
+  zoneHint: z.string().max(120).optional(),
+});
+export type SetDeliveryAddressDto = z.infer<typeof SetDeliveryAddressDtoSchema>;
+
+/** Vault-internal POST /delivery-address — Core supplies aliasId, never a user_id. */
+export const VaultSetDeliveryAddressDtoSchema = SetDeliveryAddressDtoSchema.extend({
+  aliasId: z.string().length(64),
+});
+export type VaultSetDeliveryAddressDto = z.infer<typeof VaultSetDeliveryAddressDtoSchema>;
+
+/** Vault-internal POST /relay-map — registers a relay_token → address mapping at offer-join time. */
+export const VaultRegisterRelayMapDtoSchema = z.object({
+  aliasId: z.string().length(64),
+  relayToken: z.string().uuid(),
+  offerRef: z.string().min(1),
+  expiresAt: z.string().datetime(),
+});
+export type VaultRegisterRelayMapDto = z.infer<typeof VaultRegisterRelayMapDtoSchema>;
+
+/** Vault-internal POST /resolve-relay — the PACS node's only window into Vault. */
+export const VaultResolveRelayDtoSchema = z.object({
+  relayToken: z.string().uuid(),
+});
+export type VaultResolveRelayDto = z.infer<typeof VaultResolveRelayDtoSchema>;
+
+/**
+ * POST /v1/offers/:id/join — LAW 2's redemption gate lives behind
+ * tokensToRedeem: omit or 0 to just join without redeeming.
+ */
+export const JoinOfferDtoSchema = z.object({
+  qty: z.number().int().positive().default(1),
+  tokensToRedeem: z.number().int().min(0).default(0),
+});
+export type JoinOfferDto = z.infer<typeof JoinOfferDtoSchema>;
+
+/** Node operator app POST /v1/relay/resolve — proxied straight through to Vault. */
+export const ResolveRelayRequestDtoSchema = z.object({
+  relayToken: z.string().uuid(),
+});
+export type ResolveRelayRequestDto = z.infer<typeof ResolveRelayRequestDtoSchema>;

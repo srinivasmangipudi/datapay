@@ -424,3 +424,34 @@ is "we don't know."
 - A test that replaying a `client_msg_id` sync produces zero additional ledger entries.
 - A test that `UPDATE`/`DELETE` against `token_ledger` is rejected at the database level regardless
   of which application role attempts it.
+
+---
+
+## 16. VAULT'S SURFACE GREW BY TWO ENDPOINTS — ADDENDUM (2026-07-23, Phase 4)
+
+§5A said Vault exposes *exactly* four internal endpoints. Building the relay flow (§7) for real
+surfaced a gap that framing didn't account for: nothing in the original four ever *writes* a
+delivery address, and nothing registers a `relay_token → address` mapping ahead of a PACS node
+asking to resolve one. Two endpoints were added to close it:
+
+- **`POST /delivery-address`** — `{aliasId, address, zoneHint}`. Resolves `aliasId` to `user_id`
+  via `alias_map`, encrypts the address (AES-256-GCM, reversible by design — unlike the alias's
+  one-way HMAC, a delivery address must be decryptable at dispatch), and stores it. Returns `{ok:
+  true}` — never PII back to the caller.
+- **`POST /relay-map`** — `{aliasId, relayToken, offerRef, expiresAt}`. Called by Core at
+  offer-join time, *before* any PACS node can ask to resolve anything. Looks up the member's most
+  recent delivery address and writes the `relay_map` row Vault will later answer `resolve-relay`
+  against. This is deliberately a register-then-resolve design, not "trust whatever alias Core
+  asserts at resolve time" — Vault controls the mapping independently, so a compromised or buggy
+  Core caller can't make Vault decrypt an arbitrary member's address by asserting the wrong alias
+  at pickup time.
+
+Both endpoints keep the original discipline intact: single-purpose, no general "get user," no PII
+in the response body, every `resolve-relay` call logged to `vault_access_log`. §5A's "exactly four"
+should be read as "exactly these, plus what §7's relay flow needs to function" — the guarantee that
+matters (no general read access to identity) is unchanged; the literal endpoint count isn't the
+guarantee.
+
+**Acceptance test (folds into Phase 4's existing bar, §12):** a `resolve-relay` call for a token
+with no matching `relay_map` row (never registered, or already past its 30-day purge window)
+returns 404, never a partial or default address.

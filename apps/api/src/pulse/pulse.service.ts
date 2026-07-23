@@ -76,8 +76,14 @@ export class PulseService {
 
     for (const answer of answers) {
       const result = await withTransaction(this.pool, async (client) => {
-        const { rows: qRows } = await client.query<{ reward_tokens: number }>(
-          `SELECT reward_tokens FROM questions WHERE id = $1 AND review_state = 'approved'`,
+        const { rows: qRows } = await client.query<{
+          reward_tokens: number;
+          type: string;
+          category_id: number;
+          intent_window: string | null;
+        }>(
+          `SELECT reward_tokens, type, category_id, intent_window
+           FROM questions WHERE id = $1 AND review_state = 'approved'`,
           [answer.questionId]
         );
         if (!qRows[0]) throw new NotFoundException(`Question ${answer.questionId} not found`);
@@ -112,6 +118,31 @@ export class PulseService {
           refType: "response",
           refId: inserted[0].id,
         });
+
+        // §5B/§6/Phase 4: an intent_window answer of "yes"/"maybe" IS a declared
+        // demand — this is the row LAW 2's redemption gate checks for later.
+        // A "no" (or anything else) declares nothing.
+        if (qRows[0].type === "intent_window" && qRows[0].intent_window && answer.optionIds?.length) {
+          const { rows: optRows } = await client.query<{ label_en: string }>(
+            `SELECT label_en FROM question_options WHERE id = $1`,
+            [answer.optionIds[0]]
+          );
+          const strength = optRows[0]?.label_en?.toLowerCase() === "yes"
+            ? "yes"
+            : optRows[0]?.label_en?.toLowerCase() === "maybe"
+              ? "maybe"
+              : null;
+
+          if (strength) {
+            const months = { "1m": 1, "3m": 3, "6m": 6, "12m": 12 }[qRows[0].intent_window] ?? 1;
+            await client.query(
+              `INSERT INTO intents (alias_id, product_category_id, window, strength, expires_at)
+               VALUES ($1, $2, $3, $4, now() + ($5 || ' months')::interval)`,
+              [aliasId, qRows[0].category_id, qRows[0].intent_window, strength, months]
+            );
+          }
+        }
+
         return "credited" as const;
       });
 
