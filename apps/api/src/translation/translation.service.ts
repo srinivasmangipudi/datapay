@@ -1,7 +1,11 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const DEFAULT_MODEL = "gemini-2.5-flash";
+// A rolling alias Google maintains to always point at their current
+// recommended flash model — pinned version names (e.g. "gemini-2.5-flash")
+// get deprecated for new API keys/projects even while still listed in the
+// model catalog; confirmed by testing directly against this key.
+const DEFAULT_MODEL = "gemini-flash-latest";
 
 const LANGUAGE_NAMES: Record<string, string> = {
   kn: "Kannada",

@@ -20,7 +20,11 @@ export class DevNoopAsrProvider implements AsrProvider {
   }
 }
 
-const DEFAULT_MODEL = "gemini-2.5-flash";
+// A rolling alias Google maintains to always point at their current
+// recommended flash model — pinned version names (e.g. "gemini-2.5-flash")
+// get deprecated for new API keys/projects even while still listed in the
+// model catalog; confirmed by testing directly against this key.
+const DEFAULT_MODEL = "gemini-flash-latest";
 
 // The real thing — Bhashini was ruled out as too bureaucratic to integrate
 // for the pilot; Gemini's native audio understanding does transcription and
