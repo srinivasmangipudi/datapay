@@ -2,6 +2,9 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -9,6 +12,8 @@ import {
   View,
 } from "react-native";
 import { requestOtp } from "../api";
+import { DataPayMark } from "../brand/DataPayLogo";
+import { colors } from "../theme";
 
 interface Props {
   onSent: (phoneE164: string, name: string) => void;
@@ -35,59 +40,73 @@ export function PhoneEntryScreen({ onSent }: Props) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome to DataPay</Text>
-      <Text style={styles.subtitle}>Your phone number stays sealed in the vault — never shared.</Text>
-
-      <Text style={styles.label}>Name</Text>
-      <TextInput
-        style={styles.input}
-        value={name}
-        onChangeText={setName}
-        placeholder="Your name"
-        autoCapitalize="words"
-      />
-
-      <Text style={styles.label}>Phone number</Text>
-      <TextInput
-        style={styles.input}
-        value={phone}
-        onChangeText={setPhone}
-        placeholder="9876543210"
-        keyboardType="phone-pad"
-      />
-
-      <TouchableOpacity
-        style={[styles.button, !canSubmit && styles.buttonDisabled]}
-        disabled={!canSubmit || loading}
-        onPress={handleSubmit}
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Send OTP</Text>}
-      </TouchableOpacity>
-    </View>
+        <View style={styles.logoRow}>
+          <DataPayMark size={40} />
+        </View>
+        <Text style={styles.title}>Welcome to DataPay</Text>
+        <Text style={styles.subtitle}>Your phone number stays sealed in the vault — never shared.</Text>
+
+        <Text style={styles.label}>Name</Text>
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          placeholder="Your name"
+          autoCapitalize="words"
+        />
+
+        <Text style={styles.label}>Phone number</Text>
+        <TextInput
+          style={styles.input}
+          value={phone}
+          onChangeText={setPhone}
+          placeholder="9876543210"
+          keyboardType="phone-pad"
+        />
+
+        <TouchableOpacity
+          style={[styles.button, !canSubmit && styles.buttonDisabled]}
+          disabled={!canSubmit || loading}
+          onPress={handleSubmit}
+        >
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Send OTP</Text>}
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: "center", backgroundColor: "#fff" },
-  title: { fontSize: 24, fontWeight: "700", marginBottom: 8 },
-  subtitle: { fontSize: 14, color: "#666", marginBottom: 32 },
-  label: { fontSize: 13, color: "#444", marginBottom: 6, marginTop: 16 },
+  flex: { flex: 1, backgroundColor: colors.paper },
+  container: { flexGrow: 1, padding: 24, justifyContent: "center", backgroundColor: colors.paper },
+  logoRow: { marginBottom: 24 },
+  title: { fontSize: 24, fontWeight: "700", marginBottom: 8, color: colors.ink },
+  subtitle: { fontSize: 14, color: colors.subtle, marginBottom: 32 },
+  label: { fontSize: 13, color: colors.subtle, marginBottom: 6, marginTop: 16 },
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
+    color: colors.ink,
   },
   button: {
     marginTop: 32,
-    backgroundColor: "#0E7A5C",
+    backgroundColor: colors.teal,
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: "center",
   },
-  buttonDisabled: { backgroundColor: "#B7D9CD" },
-  buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+  buttonDisabled: { backgroundColor: colors.tealSoft },
+  buttonText: { color: colors.onDark, fontWeight: "600", fontSize: 16 },
 });

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getPulseToday, getTokens, TokensSummary } from "../api";
 import { Bilingual } from "../components/Bilingual";
 import { Card } from "../components/Card";
+import { DataPayMark } from "../brand/DataPayLogo";
 import { strings } from "../i18n/strings";
 import type { Session } from "../session";
 import { colors, spacing, type } from "../theme";
@@ -51,7 +52,10 @@ export function HomeScreen({ session, onNavigate }: Props) {
       contentContainerStyle={{ paddingTop: insets.top + spacing.md, paddingBottom: spacing.xl }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal} />}
     >
-      <Text style={styles.greeting}>{session.displayAlias}</Text>
+      <View style={styles.header}>
+        <DataPayMark size={22} />
+        <Text style={styles.greeting}>{session.displayAlias}</Text>
+      </View>
 
       <Card variant="dark" style={styles.balanceCard}>
         <Bilingual {...strings.home.yourTokens} tone="onDarkSubtle" size={11.5} weight="700" style={type.label as any} />
@@ -101,7 +105,8 @@ export function HomeScreen({ session, onNavigate }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper, paddingHorizontal: spacing.lg },
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.paper },
-  greeting: { fontSize: 13, color: colors.faint, marginBottom: spacing.base, fontWeight: "500" },
+  header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.base },
+  greeting: { fontSize: 13, color: colors.faint, fontWeight: "500" },
   balanceCard: { marginBottom: spacing.md },
   balance: { color: colors.brassOnDark, fontSize: 34, fontWeight: "700", marginTop: spacing.sm },
   pulseCard: {

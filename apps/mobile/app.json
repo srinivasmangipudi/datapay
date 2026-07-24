@@ -5,17 +5,26 @@
     "version": "0.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "primaryColor": "#0E7A5C",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#101418"
+    },
     "android": {
       "package": "org.datapay.mobile",
       "minSdkVersion": 26,
       "permissions": [
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "ios": {
       "supportsTablet": false,
       "infoPlist": {
-        "NSCameraUsageDescription": "DataPay needs the camera to snap what your household uses."
+        "NSCameraUsageDescription": "DataPay needs the camera to snap what your household uses.",
+        "NSMicrophoneUsageDescription": "DataPay needs the microphone to record voice notes on your answers."
       }
     },
     "plugins": [
@@ -23,6 +32,18 @@
         "expo-camera",
         {
           "cameraPermission": "DataPay needs the camera to snap what your household uses."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "DataPay needs the camera to attach a photo to your answer."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "DataPay needs the microphone to record voice notes on your answers."
         }
       ]
     ]

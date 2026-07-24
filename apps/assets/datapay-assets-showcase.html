@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DataPay — Asset Library</title>
+<script>document.documentElement.classList.add('js');</script>
+<link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,700,500&f[]=switzer@400,500,600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{--ink:#101418;--ink2:#1A2027;--porc:#F6F5F1;--porc2:#EFEDE6;--jade:#0E7A5C;--jadeb:#12946F;--brass:#B98F2F;--brassb:#D4AA45;--mist:#8A939B;--hair:rgba(138,147,155,.28);--haird:rgba(246,245,241,.14);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Switzer',system-ui,sans-serif;background:var(--porc);color:var(--ink);-webkit-font-smoothing:antialiased;}
+.mono{font-family:'Spline Sans Mono',monospace;}
+.wrap{max-width:1160px;margin:0 auto;padding:0 28px;}
+section{padding:64px 0;border-bottom:1px solid var(--hair);}
+.eyebrow{font-family:'Spline Sans Mono',monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--jade);display:flex;align-items:center;gap:12px;margin-bottom:26px;}
+.eyebrow::before{content:"";width:30px;height:1px;background:var(--jade);}
+h1,h2,h3{font-family:'Cabinet Grotesk';font-weight:800;letter-spacing:-.02em;}
+.hero{background:var(--ink);color:var(--porc);border:none;min-height:70vh;display:flex;align-items:center;}
+.hero-lock{display:flex;align-items:center;gap:26px;flex-wrap:wrap;}
+.mk{flex:0 0 auto;}
+.wm{font-family:'Cabinet Grotesk';font-weight:800;font-size:clamp(3rem,8vw,5.2rem);letter-spacing:-.03em;line-height:1;}
+.wm .pay{color:var(--brassb);display:inline-block;transform:skewX(-9deg);}
+.hero p{color:var(--mist);margin-top:30px;max-width:520px;font-size:1.1rem;}
+.hero .tag{font-family:'Spline Sans Mono';font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--mist);margin-bottom:36px;}
+.grid{display:grid;gap:18px;margin-top:12px;}
+.g3{grid-template-columns:repeat(3,1fr);} .g4{grid-template-columns:repeat(4,1fr);} .g2{grid-template-columns:repeat(2,1fr);}
+@media(max-width:820px){.g3,.g4{grid-template-columns:1fr 1fr;}} @media(max-width:520px){.g2,.g3,.g4{grid-template-columns:1fr;}}
+.card{border:1px solid var(--hair);border-radius:16px;overflow:hidden;background:#fff;}
+.card .stage{min-height:150px;display:flex;align-items:center;justify-content:center;padding:28px;background:var(--porc2);}
+.card .stage.dark{background:var(--ink);} .card .stage.jade{background:var(--jade);}
+.card .cap{padding:12px 16px;font-family:'Spline Sans Mono';font-size:10.5px;letter-spacing:.06em;color:var(--mist);border-top:1px solid var(--hair);}
+.sec-title{font-size:clamp(1.5rem,3.2vw,2.1rem);} .sec-sub{color:#4A545C;max-width:640px;margin-top:10px;}
+.taglogo{display:flex;flex-direction:column;gap:6px;align-items:flex-start;}
+.taglogo .wm2{font-family:'Cabinet Grotesk';font-weight:800;font-size:2.1rem;letter-spacing:-.03em;}
+.taglogo .wm2 .pay{color:var(--brass);display:inline-block;transform:skewX(-9deg);}
+.taglogo .tl{font-family:'Spline Sans Mono';font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mist);padding-left:2px;}
+.dark .taglogo .wm2{color:var(--porc);} .dark .taglogo .wm2 .pay{color:var(--brassb);}
+.swrow{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:8px;}
+@media(max-width:820px){.swrow{grid-template-columns:repeat(3,1fr);}}
+.sw{border-radius:12px;overflow:hidden;border:1px solid var(--hair);}
+.sw .c{height:70px;} .sw .m{padding:10px 12px;background:#fff;} .sw .n{font-size:12px;font-weight:600;} .sw .h{font-family:'Spline Sans Mono';font-size:10.5px;color:var(--mist);text-transform:uppercase;}
+.token-pill{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:var(--brassb);font-family:'Spline Sans Mono';font-weight:600;font-size:14px;padding:9px 16px;border-radius:999px;}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;padding:11px 20px;border-radius:999px;border:none;cursor:pointer;font-family:inherit;}
+.btn-jade{background:var(--jade);color:var(--porc);} .btn-ghost{background:transparent;border:1px solid var(--hair);color:var(--ink);}
+.badge{display:inline-flex;align-items:center;gap:6px;font-family:'Spline Sans Mono';font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:6px 11px;border-radius:999px;font-weight:600;}
+.badge-jade{background:#E3EFEA;color:var(--jade);} .badge-brass{background:#F3E9D2;color:var(--brass);}
+.ogframe{border-radius:14px;overflow:hidden;border:1px solid var(--hair);}
+.ogframe img{display:block;width:100%;}
+.note{margin-top:26px;background:#E3EFEA;border-radius:14px;padding:20px 22px;font-size:14px;color:#1F3D33;}
+.note b{color:var(--jade);}
+footer{background:var(--ink);color:var(--mist);padding:44px 0;border:none;font-family:'Spline Sans Mono';font-size:12px;letter-spacing:.06em;}
+img.asset{max-width:100%;height:auto;}
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="tag">DataPay · Asset Library · v1.0</div>
+    <div class="hero-lock">
+      <span class="mk"><img class="asset" src="datapay-assets/mark-dark.svg" width="104" height="104" alt="DataPay mark"/></span>
+      <span class="wm">Data<span class="pay">Pay</span></span>
+    </div>
+    <p>The complete production kit — marks, app icons, favicons, lockups with taglines, social images, UI components, and the generative demand-field pattern. Every asset is real SVG. Two-tone circle-holds-square: the collective protects and pays.</p>
+  </div>
+</section>
+
+<!-- MARKS -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">01 · The mark</div>
+    <h2 class="sec-title">Circle holds square — the collective holds the record.</h2>
+    <p class="sec-sub">Ink half = custody. Brass half = value. Jade square = the individual's sealed data record. The exact inverse of a rounded-square-holding-a-circle.</p>
+    <div class="grid g4">
+      <div class="card"><div class="stage"><img class="asset" src="datapay-assets/mark-primary.svg" width="96" alt=""/></div><div class="cap">mark-primary.svg</div></div>
+      <div class="card"><div class="stage dark"><img class="asset" src="datapay-assets/mark-dark.svg" width="96" alt=""/></div><div class="cap">mark-dark.svg</div></div>
+      <div class="card"><div class="stage jade"><img class="asset" src="datapay-assets/mark-jade-bg.svg" width="96" alt=""/></div><div class="cap">mark-jade-bg.svg</div></div>
+      <div class="card"><div class="stage"><img class="asset" src="datapay-assets/mark-mono-ink.svg" width="96" alt=""/></div><div class="cap">mark-mono-ink.svg</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- LOCKUPS WITH TAGLINES -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">02 · Logo lockups & taglines</div>
+    <h2 class="sec-title">Nudged with the message.</h2>
+    <p class="sec-sub">The wordmark with each of the brand lines set as a mono kicker beneath — for hero sections, decks, and email footers.</p>
+    <div class="grid g2">
+      <div class="card"><div class="stage" style="justify-content:flex-start">
+        <div style="display:flex;align-items:center;gap:16px"><img class="asset" src="datapay-assets/mark-primary.svg" width="56"/><div class="taglogo"><span class="wm2">Data<span class="pay">Pay</span></span><span class="tl">Your data is your asset</span></div></div>
+      </div><div class="cap">logo-tagline-asset.svg</div></div>
+      <div class="card"><div class="stage" style="justify-content:flex-start">
+        <div style="display:flex;align-items:center;gap:16px"><img class="asset" src="datapay-assets/mark-primary.svg" width="56"/><div class="taglogo"><span class="wm2">Data<span class="pay">Pay</span></span><span class="tl">Make your data work for you</span></div></div>
+      </div><div class="cap">logo-tagline-work.svg</div></div>
+      <div class="card"><div class="stage dark" style="justify-content:flex-start">
+        <div style="display:flex;align-items:center;gap:16px"><img class="asset" src="datapay-assets/mark-dark.svg" width="56"/><div class="taglogo"><span class="wm2">Data<span class="pay">Pay</span></span><span class="tl">The strength of the collective</span></div></div>
+      </div><div class="cap">logo-tagline-collective.svg</div></div>
+      <div class="card"><div class="stage" style="justify-content:flex-start">
+        <div style="display:flex;align-items:center;gap:16px"><img class="asset" src="datapay-assets/mark-primary.svg" width="56"/><div class="taglogo"><span class="wm2">Data<span class="pay">Pay</span></span><span class="tl">ಒಗ್ಗಟ್ಟೇ ಬಲ · unity is strength</span></div></div>
+      </div><div class="cap">logo-tagline-kannada.svg</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- APP ICONS -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">03 · App icons & favicons</div>
+    <h2 class="sec-title">Store-ready, down to 16px.</h2>
+    <div class="grid g4">
+      <div class="card"><div class="stage dark"><img class="asset" src="datapay-assets/appicon-512.png" width="110" style="border-radius:24px"/></div><div class="cap">appicon · ink · 1024/512/192/180</div></div>
+      <div class="card"><div class="stage"><img class="asset" src="datapay-assets/appicon-jade-512.png" width="110" style="border-radius:24px"/></div><div class="cap">appicon-jade</div></div>
+      <div class="card"><div class="stage dark"><img class="asset" src="datapay-assets/appicon-porcelain-512.png" width="110" style="border-radius:24px"/></div><div class="cap">appicon-porcelain</div></div>
+      <div class="card"><div class="stage"><span style="display:flex;gap:14px;align-items:center">
+        <img src="datapay-assets/favicon-48.png" width="48" style="border-radius:10px"/>
+        <img src="datapay-assets/favicon-32.png" width="32" style="border-radius:8px"/>
+        <img src="datapay-assets/favicon-16.png" width="16" style="border-radius:4px"/>
+      </span></div><div class="cap">favicon · 48/32/16</div></div>
+    </div>
+    <div class="note"><b>Note:</b> the favicon uses a simplified seamless mark — the split-circle detail muddies below ~24px, so the favicon drops the seam and keeps the circle + square + implied dot, which stays crisp at 16px.</div>
+  </div>
+</section>
+
+<!-- COLOR + TYPE -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">04 · Colour & type</div>
+    <div class="swrow">
+      <div class="sw"><div class="c" style="background:#101418"></div><div class="m"><div class="n">Ink</div><div class="h">#101418</div></div></div>
+      <div class="sw"><div class="c" style="background:#F6F5F1"></div><div class="m"><div class="n">Porcelain</div><div class="h">#F6F5F1</div></div></div>
+      <div class="sw"><div class="c" style="background:#0E7A5C"></div><div class="m"><div class="n">Jade</div><div class="h">#0E7A5C</div></div></div>
+      <div class="sw"><div class="c" style="background:#B98F2F"></div><div class="m"><div class="n">Brass</div><div class="h">#B98F2F</div></div></div>
+      <div class="sw"><div class="c" style="background:#E3EFEA"></div><div class="m"><div class="n">Jade soft</div><div class="h">#E3EFEA</div></div></div>
+      <div class="sw"><div class="c" style="background:#8A939B"></div><div class="m"><div class="n">Mist</div><div class="h">#8A939B</div></div></div>
+    </div>
+    <div style="margin-top:28px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-family:'Cabinet Grotesk';font-weight:800;font-size:2.2rem;letter-spacing:-.02em">Cabinet Grotesk — display</div>
+      <div style="font-size:1.15rem">Switzer — body text for the interface and long-form.</div>
+      <div class="mono" style="font-size:1.15rem">Spline Sans Mono — ◈ 482 · ₹0.24/token · KAVERI HERON 47</div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPONENTS -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">05 · UI components</div>
+    <h2 class="sec-title">Shared across app, admin & web.</h2>
+    <div class="grid g3">
+      <div class="card"><div class="stage" style="gap:10px;flex-wrap:wrap"><button class="btn btn-jade">Join the collective</button><button class="btn btn-ghost">Learn more</button></div><div class="cap">buttons</div></div>
+      <div class="card"><div class="stage" style="gap:10px;flex-wrap:wrap"><span class="badge badge-jade">✓ Identity sealed</span><span class="badge badge-brass">◈ Verified</span></div><div class="cap">badges</div></div>
+      <div class="card"><div class="stage"><span class="token-pill">◈ 482 tokens</span></div><div class="cap">token balance</div></div>
+      <div class="card"><div class="stage dark"><div style="color:#fff"><div class="mono" style="font-size:9.5px;letter-spacing:.16em;color:#8A939B">THIS MONTH'S TOKENS</div><div class="mono" style="font-size:2rem;color:#D4AA45;font-weight:600">◈ 482</div></div></div><div class="cap">stat card</div></div>
+      <div class="card"><div class="stage"><div style="width:100%"><div class="mono" style="font-size:11px;color:#4A545C;display:flex;justify-content:space-between;margin-bottom:7px"><span>884 joined</span><span>opens at 1,000</span></div><div style="height:8px;border-radius:99px;background:#E9E6DD;overflow:hidden"><div style="height:100%;width:88%;background:#0E7A5C"></div></div></div></div><div class="cap">collective-buy progress</div></div>
+      <div class="card"><div class="stage" style="padding:0"><img class="asset" src="datapay-assets/token-filled.svg" width="70"/><img class="asset" src="datapay-assets/token-line.svg" width="70"/></div><div class="cap">token glyph ◈</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">06 · Social / OG images</div>
+    <div class="grid g2">
+      <div class="ogframe"><img src="datapay-assets/og-image.png" alt="Your data is your asset"/></div>
+      <div class="ogframe"><img src="datapay-assets/og-image-work.png" alt="Make your data work for you"/></div>
+    </div>
+  </div>
+</section>
+
+<!-- PATTERN -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">07 · The demand field</div>
+    <h2 class="sec-title">Generative texture.</h2>
+    <p class="sec-sub">Scattered data points aggregating into sealed clusters. For portal headers, empty states, and loading screens.</p>
+    <div class="ogframe" style="margin-top:22px"><img src="datapay-assets/pattern-field.svg" alt="demand field pattern"/></div>
+  </div>
+</section>
+
+<footer><div class="wrap" style="display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap"><span>DATAPAY · ASSET LIBRARY · 2026</span><span>YOUR DATA IS YOUR ASSET</span></div></footer>
+</body>
+</html>

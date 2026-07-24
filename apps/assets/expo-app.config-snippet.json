@@ -1,0 +1,30 @@
+{
+  "_comment": "DataPay · Expo config. Merge the `expo` block into your app.json / app.config.js. Copy everything in /expo-assets into your project's ./assets folder (adjust paths below to match).",
+  "expo": {
+    "name": "DataPay",
+    "slug": "datapay",
+    "scheme": "datapay",
+    "primaryColor": "#0E7A5C",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#101418"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "org.datapay.app"
+    },
+    "android": {
+      "package": "org.datapay.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#101418"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

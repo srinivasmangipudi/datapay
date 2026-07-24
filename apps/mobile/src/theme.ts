@@ -1,28 +1,30 @@
-// Single source for color/spacing/type tokens — pulled from what already
-// emerged consistently across Home/Pulse/Snap/Community/Vault (dark
-// near-black + gold for value + deep teal for action) rather than inventing
-// a new palette. Centralizing it here so every screen stops re-deriving its
-// own #8A939B/#666/#999 soup of near-identical grays.
+// Single source for color/spacing/type tokens. Values are the DataPay brand
+// system (SPEC.md §28, apps/assets/tokens.ts) — this file predates that
+// package and had independently converged on nearly the same palette
+// (ink/teal already matched exactly); brass and the tint colors below are
+// now corrected to the canonical hex, not just "close."
 export const colors = {
-  ink: "#101418", // primary text, dark surfaces (tab bar, token card)
+  ink: "#101418", // primary text, dark surfaces (tab bar, token card) — brand "ink"
   subtle: "#5B6672", // secondary text on light surfaces
   faint: "#9AA2AC", // tertiary text, captions, placeholders
+  mist: "#8A939B", // brand's canonical secondary-text tone, where subtle/faint's two-tier split isn't needed
   onDark: "#FFFFFF",
   onDarkSubtle: "rgba(255,255,255,0.72)",
   onDarkFaint: "rgba(255,255,255,0.5)",
 
-  paper: "#FBFAF7", // app background — warm off-white, not stark white
+  paper: "#F6F5F1", // app background — brand "porcelain"
   surface: "#FFFFFF", // cards on top of paper
   border: "#E7E4DC",
 
-  brass: "#C99A2E", // token/value accent on light surfaces
-  brassOnDark: "#D4AA45", // lighter variant reads better on dark surfaces
+  brass: "#B98F2F", // token/value accent on light surfaces — brand "brass"; value/money only, never body text
+  brassOnDark: "#D4AA45", // brand "brassBright" — brass on dark
   brassTint: "#FBF2DD",
 
-  teal: "#0E7A5C", // primary action / growth
+  teal: "#0E7A5C", // primary action / growth — brand "jade"
   tealDeep: "#0B6249",
+  tealBright: "#12946F", // brand "jadeBright" — teal on dark
   tealSoft: "#B7D9CD", // disabled state
-  tealTint: "#E4F2ED", // selected-chip / highlight background
+  tealTint: "#E3EFEA", // brand "jadeSoft" — selected-chip / highlight background
 
   danger: "#8C3A34",
   dangerTint: "#F3E4E2",
