@@ -38,6 +38,14 @@ export class AnthropicLlmProvider implements LlmProvider {
     if (!textBlock) {
       throw new Error("Anthropic response contained no text block");
     }
+    // A response cut off mid-output (e.g. a JSON reply truncated mid-string)
+    // fails downstream with a confusing parse error rather than naming the
+    // real cause — surface it here instead, per §11's "flag, don't fake".
+    if (res.stop_reason === "max_tokens") {
+      throw new Error(
+        `Anthropic response was truncated at the ${opts?.maxTokens ?? 4096}-token limit before finishing`
+      );
+    }
     return textBlock.text;
   }
 }

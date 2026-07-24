@@ -104,8 +104,20 @@ export class ZoneUnderstandingService {
       );
     }
 
-    const raw = await this.llm.complete(buildPrompt(docs), { maxTokens: 4096 });
-    const parsed = UnderstandingResponseSchema.parse(JSON.parse(stripCodeFences(raw)));
+    let raw: string;
+    try {
+      raw = await this.llm.complete(buildPrompt(docs), { maxTokens: 8192 });
+    } catch (err) {
+      throw new BadRequestException((err as Error).message);
+    }
+    let parsed: z.infer<typeof UnderstandingResponseSchema>;
+    try {
+      parsed = UnderstandingResponseSchema.parse(JSON.parse(stripCodeFences(raw)));
+    } catch (err) {
+      throw new BadRequestException(
+        `Couldn't parse the model's response as the expected JSON shape: ${(err as Error).message}`
+      );
+    }
 
     const modelUsed = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
     const { rows } = await this.pool.query<{ id: number; generated_at: Date }>(

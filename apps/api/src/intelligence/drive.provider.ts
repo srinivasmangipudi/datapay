@@ -1,4 +1,7 @@
 import { google } from "googleapis";
+import { PDFParse } from "pdf-parse";
+import JSZip from "jszip";
+import { XMLParser } from "fast-xml-parser";
 
 export interface DriveFile {
   id: string;
@@ -14,6 +17,49 @@ export interface DriveProvider {
 }
 
 const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
+const GOOGLE_SLIDES_MIME = "application/vnd.google-apps.presentation";
+const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+
+// Recursively collects every DrawingML text-run value ("a:t") out of a
+// parsed slide XML tree — walking the tree (rather than a flat regex over
+// the raw XML) copes with however deeply text runs end up nested inside
+// shapes/groups/tables without assuming one fixed structure.
+function collectSlideText(node: unknown, out: string[]): void {
+  if (node == null) return;
+  if (Array.isArray(node)) {
+    for (const item of node) collectSlideText(item, out);
+    return;
+  }
+  if (typeof node === "object") {
+    const record = node as Record<string, unknown>;
+    if (typeof record["a:t"] === "string") {
+      out.push(record["a:t"]);
+    } else if ("a:t" in record) {
+      collectSlideText(record["a:t"], out);
+    }
+    for (const key of Object.keys(record)) {
+      if (key === "a:t") continue;
+      collectSlideText(record[key], out);
+    }
+  }
+}
+
+async function extractPptxText(buffer: Buffer): Promise<string> {
+  const zip = await JSZip.loadAsync(buffer);
+  const slideFiles = Object.keys(zip.files)
+    .filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
+    .sort((a, b) => Number(a.match(/(\d+)/)![1]) - Number(b.match(/(\d+)/)![1]));
+
+  const parser = new XMLParser({ ignoreAttributes: true });
+  const slideTexts: string[] = [];
+  for (const name of slideFiles) {
+    const xml = await zip.files[name].async("text");
+    const texts: string[] = [];
+    collectSlideText(parser.parse(xml), texts);
+    slideTexts.push(texts.join(" "));
+  }
+  return slideTexts.join("\n\n");
+}
 
 // The real thing — the user explicitly chose a service account over OAuth.
 // Auth: share the target Drive folder with the service account's own email
@@ -86,9 +132,39 @@ export class GoogleDriveProvider implements DriveProvider {
       );
       return res.data as unknown as string;
     }
-    // PDFs, Google Sheets/Slides, images, etc. — not implemented in this
-    // pass. Thrown, not silently skipped-without-a-trace; the sync service
-    // catches this per-file and records it, per §11's "flag, don't fake" rule.
+    if (file.mimeType === "application/pdf") {
+      const res = await this.drive.files.get(
+        { fileId: file.id, alt: "media" },
+        { responseType: "arraybuffer" }
+      );
+      const parser = new PDFParse({ data: Buffer.from(res.data as ArrayBuffer) });
+      try {
+        const { text } = await parser.getText();
+        // PDF text extraction can surface embedded NUL control characters
+        // (font/glyph artifacts) that Postgres' UTF8 text columns reject
+        // outright — strip them rather than let the whole sync 500.
+        return text.replace(/\u0000/g, "");
+      } finally {
+        await parser.destroy();
+      }
+    }
+    if (file.mimeType === GOOGLE_SLIDES_MIME) {
+      const res = await this.drive.files.export(
+        { fileId: file.id, mimeType: "text/plain" },
+        { responseType: "text" }
+      );
+      return res.data as unknown as string;
+    }
+    if (file.mimeType === PPTX_MIME) {
+      const res = await this.drive.files.get(
+        { fileId: file.id, alt: "media" },
+        { responseType: "arraybuffer" }
+      );
+      return extractPptxText(Buffer.from(res.data as ArrayBuffer));
+    }
+    // Google Sheets, images, etc. — not implemented in this pass. Thrown,
+    // not silently skipped-without-a-trace; the sync service catches this
+    // per-file and records it, per §11's "flag, don't fake" rule.
     throw new Error(`Unsupported mime type for text extraction: ${file.mimeType}`);
   }
 }

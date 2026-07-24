@@ -102,6 +102,7 @@ export class IntelligenceSourcesService {
     let skipped = 0;
     const skippedFiles: string[] = [];
 
+    const nulByte = String.fromCharCode(0);
     for (const file of files) {
       let text: string;
       try {
@@ -111,6 +112,11 @@ export class IntelligenceSourcesService {
         skippedFiles.push(`${file.name} (${file.mimeType})`);
         continue;
       }
+      // PDF/pptx extraction can surface embedded NUL control characters
+      // (font/glyph artifacts) that Postgres' UTF8 text columns reject
+      // outright — strip them here, once, for every extractor rather than
+      // per file-type branch in the Drive provider.
+      text = text.split(nulByte).join("");
 
       const hash = createHash("sha256").update(text).digest("hex");
       const { rows: existing } = await this.pool.query<{ id: number; content_hash: string | null }>(
