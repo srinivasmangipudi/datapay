@@ -1,12 +1,14 @@
-// §10 boundary: this app, and every route added under it, may only ever query
-// demand_aggregates / offers / linkages via the portal's restricted DB role.
-// It must have no code path to responses, snaps, members, or Vault.
-import { getDemandAggregates, getTokenRateHistory } from "./data";
-import { TokenRateChart } from "./TokenRateChart";
+import { getDemandAggregates, getTokenRateHistory } from "../data";
+import { TokenRateChart } from "../TokenRateChart";
+import { runAggregationAction, runTokenRateAction } from "./actions";
 
-export const dynamic = "force-dynamic"; // ops dashboard — always current, never cached
+export const dynamic = "force-dynamic";
 
-export default async function PortalHome(): Promise<JSX.Element> {
+export default async function TokenEconomyPage({
+  searchParams,
+}: {
+  searchParams: { error?: string; ran?: string };
+}): Promise<JSX.Element> {
   const [tokenRateHistory, aggregates] = await Promise.all([
     getTokenRateHistory(),
     getDemandAggregates(),
@@ -16,29 +18,43 @@ export default async function PortalHome(): Promise<JSX.Element> {
   return (
     <main className="page">
       <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Demand &amp; token rate</h1>
+      <h1>Token economy</h1>
       <p className="lede">
-        Aggregates only — every row below cleared the k-anonymity floor (cohort ≥ 50) before it
-        could reach this screen. This portal's database role has no grant on member-level tables.
+        The token rate is fixed on a scheduled cadence (§6C, every 3 days by default) and demand
+        aggregates refresh hourly — both scheduled jobs already run unattended. These buttons trigger
+        an out-of-cycle run right now, same computation either way.
       </p>
+
+      {searchParams.error && (
+        <div className="errorBanner">
+          <strong>Run failed:</strong> {searchParams.error}
+        </div>
+      )}
+      {searchParams.ran === "token-rate" && <div className="successBanner">Token rate recomputed.</div>}
+      {searchParams.ran === "aggregation" && <div className="successBanner">Aggregation run completed.</div>}
 
       <div className="tiles">
         <div className="tile">
           <span className="tileLabel">Current token rate</span>
-          <span className="tileValue value">
-            {current ? `₹${(current.ratePaise / 100).toFixed(2)}` : "—"}
-          </span>
+          <span className="tileValue value">{current ? `₹${(current.ratePaise / 100).toFixed(2)}` : "—"}</span>
         </div>
         <div className="tile">
           <span className="tileLabel">Published aggregates</span>
           <span className="tileValue">{aggregates.length}</span>
         </div>
-        <div className="tile">
-          <span className="tileLabel">Rate last computed</span>
-          <span className="tileValue small">
-            {current ? new Date(current.computedAt).toLocaleString() : "—"}
-          </span>
-        </div>
+      </div>
+
+      <div className="actions">
+        <form action={runTokenRateAction}>
+          <button type="submit" className="submitBtn">
+            Run token rate now
+          </button>
+        </form>
+        <form action={runAggregationAction}>
+          <button type="submit" className="submitBtn">
+            Run aggregation now
+          </button>
+        </form>
       </div>
 
       <section className="section">
@@ -49,7 +65,7 @@ export default async function PortalHome(): Promise<JSX.Element> {
       <section className="section">
         <h2>Demand aggregates</h2>
         {aggregates.length === 0 ? (
-          <p className="empty">No aggregates published yet — run the aggregation job.</p>
+          <p className="empty">No aggregates published yet.</p>
         ) : (
           <div className="tableWrap">
             <table>

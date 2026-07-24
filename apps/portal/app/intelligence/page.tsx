@@ -51,10 +51,6 @@ export default async function IntelligencePage({
         candidate Pulse questions grounded in it — every draft still lands in the same review
         queue below before any member ever sees it.
       </p>
-      <p className="navLink">
-        <a href="/">← Demand &amp; token rate</a> · <a href="/questions">New question →</a>
-      </p>
-
       {searchParams.error && (
         <div className="errorBanner">
           <strong>Action failed:</strong> {searchParams.error}
@@ -247,38 +243,14 @@ export default async function IntelligencePage({
       </section>
 
       {/* dangerouslySetInnerHTML — see layout.tsx for why a plain <style>{`...`}</style>
-          with a quoted value inside causes a hydration mismatch. */}
+          with a quoted value inside causes a hydration mismatch. Only this page's
+          own unique classes live here — everything shared moved to globals.css. */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        .page { max-width: 960px; margin: 0 auto; padding: 48px 24px 80px; }
-        .eyebrow { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #2a78d6; font-weight: 700; margin: 0 0 8px; }
-        h1 { font-size: 1.8rem; margin: 0 0 12px; }
-        .lede { color: #52514e; max-width: 68ch; margin: 0 0 12px; font-size: 14px; line-height: 1.6; }
-        .navLink { margin: 0 0 28px; }
-        .navLink a { color: #2a78d6; font-size: 13.5px; font-weight: 600; text-decoration: none; }
-        .navLink a:hover { text-decoration: underline; }
-        .errorBanner { background: #f3e4e2; border: 1px solid #8c3a34; color: #8c3a34; border-radius: 6px; padding: 12px 16px; font-size: 13px; margin-bottom: 28px; }
-        .errorBanner strong { font-weight: 700; }
-        .zonePicker { display: flex; align-items: center; gap: 10px; margin-bottom: 36px; font-size: 13.5px; }
-        .zonePicker select { padding: 6px 10px; border-radius: 6px; border: 1px solid #d8d7cf; background: #fcfcfb; }
-        .zonePicker button, .connectForm button, .understanding + form button { padding: 6px 14px; border-radius: 6px; border: 1px solid #2a78d6; background: #2a78d6; color: #fff; font-size: 13px; cursor: pointer; }
-        .section { margin-bottom: 44px; }
-        .section h2 { font-size: 1.1rem; margin: 0 0 16px; }
-        .tableWrap { overflow-x: auto; border: 1px solid #e1e0d9; border-radius: 6px; margin-bottom: 16px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-        th { text-align: left; padding: 10px 14px; background: #f9f9f7; color: #52514e; font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #e1e0d9; }
-        td { padding: 10px 14px; border-bottom: 1px solid #e1e0d9; vertical-align: top; }
-        tr:last-child td { border-bottom: none; }
-        .muted { color: #898781; }
-        .small { font-size: 12px; }
-        .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
-        .empty { color: #898781; font-size: 13px; }
-        .hint { color: #898781; font-size: 12px; margin-top: 8px; }
-        .hint code { font-family: ui-monospace, Menlo, Consolas, monospace; }
         .connectForm { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
         .connectForm input { flex: 1; min-width: 180px; padding: 8px 10px; border-radius: 6px; border: 1px solid #d8d7cf; background: #fcfcfb; font-size: 13px; }
-        .linkBtn { background: none; border: none; color: #2a78d6; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; }
+        .connectForm button, .understanding + form button { padding: 6px 14px; border-radius: 6px; border: 1px solid #2a78d6; background: #2a78d6; color: #fff; font-size: 13px; cursor: pointer; }
         .documents { margin-top: 20px; font-size: 13px; }
         .documents summary { cursor: pointer; color: #2a78d6; font-weight: 600; margin-bottom: 12px; }
         .understanding { border: 1px solid #e1e0d9; border-radius: 6px; padding: 20px; margin-bottom: 16px; }
@@ -288,17 +260,11 @@ export default async function IntelligencePage({
         .knowledgeCard { background: #f9f9f7; border-radius: 6px; padding: 12px 14px; }
         .knowledgeLabel { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: #898781; font-weight: 700; margin-bottom: 8px; }
         .knowledgeCard ul { margin: 0; padding-left: 16px; font-size: 12.5px; line-height: 1.6; }
-        .actions { display: flex; gap: 8px; }
-        .approveBtn { background: #0e7a5c; color: #fff; border: none; border-radius: 999px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
-        .rejectBtn { background: #8c3a34; color: #fff; border: none; border-radius: 999px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
         @media (prefers-color-scheme: dark) {
-          .lede, .summaryKn { color: #c3c2b7; }
-          .zonePicker select, .connectForm input { background: #1a1a19; border-color: #2c2c2a; color: #fff; }
-          .tableWrap, .understanding { border-color: #2c2c2a; }
-          th { background: #14161b; color: #c3c2b7; border-bottom-color: #2c2c2a; }
-          td { border-bottom-color: #2c2c2a; }
+          .summaryKn { color: #c3c2b7; }
+          .connectForm input { background: #1a1a19; border-color: #2c2c2a; color: #fff; }
+          .understanding { border-color: #2c2c2a; }
           .knowledgeCard { background: #14161b; }
-          .errorBanner { background: #2e1f1e; border-color: #d98a83; color: #d98a83; }
         }
       `,
         }}

@@ -1,13 +1,26 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createQuestionAction } from "./actions";
+import { createQuestionAction, translateToKannada } from "./actions";
 import type { AnswerType } from "./core-api";
 
 interface Category {
   id: number;
   name: string;
 }
+
+interface Zone {
+  id: string;
+  name: string;
+  level: string;
+}
+
+const LEVEL_INDENT: Record<string, string> = {
+  constituency: "",
+  hobli: "— ",
+  panchayat: "—— ",
+  village: "——— ",
+};
 
 interface OptionRow {
   labelEn: string;
@@ -24,6 +37,7 @@ const ANSWER_TYPES: { value: AnswerType; label: string; hint: string }[] = [
     hint: "Yes / Maybe / No over a timeframe — the answer becomes a declared demand (LAW 2)",
   },
   { value: "numeric", label: "Number", hint: "Member types a number — no options needed" },
+  { value: "free_text", label: "Free text", hint: "Member types their own answer — no options needed" },
 ];
 
 const INTENT_WINDOWS: { value: "1m" | "3m" | "6m" | "12m"; label: string }[] = [
@@ -37,16 +51,41 @@ function emptyOptions(count: number): OptionRow[] {
   return Array.from({ length: count }, () => ({ labelEn: "", labelKn: "" }));
 }
 
-export function QuestionWizard({ categories }: { categories: Category[] }): JSX.Element {
-  const [categoryId, setCategoryId] = useState<number | "">(categories[0]?.id ?? "");
+export function QuestionWizard({
+  categories,
+  zones,
+}: {
+  categories: Category[];
+  zones: Zone[];
+}): JSX.Element {
+  const [categoryName, setCategoryName] = useState(categories[0]?.name ?? "");
   const [textEn, setTextEn] = useState("");
   const [textKn, setTextKn] = useState("");
   const [type, setType] = useState<AnswerType>("single");
   const [options, setOptions] = useState<OptionRow[]>(emptyOptions(2));
   const [intentWindow, setIntentWindow] = useState<"1m" | "3m" | "6m" | "12m">("1m");
   const [rewardTokens, setRewardTokens] = useState(4);
+  const [zoneId, setZoneId] = useState<string>("");
   const [clientError, setClientError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  async function handleTranslate() {
+    if (!textEn.trim()) {
+      setClientError("Type the English question first.");
+      return;
+    }
+    setClientError(null);
+    setIsTranslating(true);
+    try {
+      const translated = await translateToKannada(textEn.trim());
+      setTextKn(translated);
+    } catch (err) {
+      setClientError((err as Error).message);
+    } finally {
+      setIsTranslating(false);
+    }
+  }
 
   function selectType(next: AnswerType) {
     setType(next);
@@ -78,8 +117,8 @@ export function QuestionWizard({ categories }: { categories: Category[] }): JSX.
     e.preventDefault();
     setClientError(null);
 
-    if (!categoryId) {
-      setClientError("Pick a category.");
+    if (!categoryName.trim()) {
+      setClientError("Pick or type a category.");
       return;
     }
     if (!textEn.trim()) {
@@ -96,7 +135,7 @@ export function QuestionWizard({ categories }: { categories: Category[] }): JSX.
 
     startTransition(() => {
       createQuestionAction({
-        categoryId: Number(categoryId),
+        categoryName: categoryName.trim(),
         textEn: textEn.trim(),
         textKn: textKn.trim() || undefined,
         type,
@@ -107,6 +146,7 @@ export function QuestionWizard({ categories }: { categories: Category[] }): JSX.
               .map((o) => ({ labelEn: o.labelEn.trim(), labelKn: o.labelKn.trim() || undefined }))
           : undefined,
         intentWindow: type === "intent_window" ? intentWindow : undefined,
+        zoneId: zoneId || undefined,
       });
     });
   }
@@ -117,13 +157,21 @@ export function QuestionWizard({ categories }: { categories: Category[] }): JSX.
 
       <div className="step">
         <span className="stepLabel">1. Category &amp; question</span>
-        <select value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))}>
+        <input
+          list="categoryOptions"
+          placeholder="Category — pick existing or type a new one"
+          value={categoryName}
+          onChange={(e) => setCategoryName(e.target.value)}
+        />
+        <datalist id="categoryOptions">
           {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
+            <option key={c.id} value={c.name} />
           ))}
-        </select>
+        </datalist>
+        <p className="hint">
+          Typing a name that doesn't exist yet creates it — no need to visit Zones &amp; Categories
+          first (SPEC.md §26).
+        </p>
         <input
           placeholder="Question text (English)"
           value={textEn}
@@ -134,6 +182,13 @@ export function QuestionWizard({ categories }: { categories: Category[] }): JSX.
           value={textKn}
           onChange={(e) => setTextKn(e.target.value)}
         />
+        <button type="button" className="linkBtn" onClick={handleTranslate} disabled={isTranslating}>
+          {isTranslating ? "Translating…" : "Translate to Kannada →"}
+        </button>
+        <p className="hint">
+          Auto-translated by Gemini — always a starting draft, review and edit before creating the
+          question (SPEC.md §27).
+        </p>
       </div>
 
       <div className="step">
@@ -204,7 +259,24 @@ export function QuestionWizard({ categories }: { categories: Category[] }): JSX.
       )}
 
       <div className="step">
-        <span className="stepLabel">4. Reward</span>
+        <span className="stepLabel">4. Region</span>
+        <select value={zoneId} onChange={(e) => setZoneId(e.target.value)}>
+          <option value="">Global — every member, everywhere</option>
+          {zones.map((z) => (
+            <option key={z.id} value={z.id}>
+              {LEVEL_INDENT[z.level] ?? ""}
+              {z.name}
+            </option>
+          ))}
+        </select>
+        <p className="hint">
+          Scoping to a zone reaches that zone and every zone beneath it (e.g. a constituency
+          reaches every village in it) — never a sibling zone at the same level.
+        </p>
+      </div>
+
+      <div className="step">
+        <span className="stepLabel">5. Reward</span>
         <input
           type="number"
           min={1}
