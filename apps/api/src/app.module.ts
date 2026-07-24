@@ -4,6 +4,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuditModule } from "./audit/audit.module";
 import { AuthModule } from "./auth/auth.module";
+import { CategoriesModule } from "./categories/categories.module";
 import { ConsentsModule } from "./consents/consents.module";
 import { DbModule } from "./db/db.module";
 import { FraudModule } from "./fraud/fraud.module";
@@ -21,6 +22,7 @@ import { RelayModule } from "./relay/relay.module";
 import { SnapsModule } from "./snaps/snaps.module";
 import { TokenRateModule } from "./token-rate/token-rate.module";
 import { TokensModule } from "./tokens/tokens.module";
+import { TranslationModule } from "./translation/translation.module";
 import { VoiceModule } from "./voice/voice.module";
 import { ZonesModule } from "./zones/zones.module";
 
@@ -31,6 +33,7 @@ import { ZonesModule } from "./zones/zones.module";
     AuthModule,
     MeModule,
     ZonesModule,
+    CategoriesModule,
     LedgerModule,
     PulseModule,
     SnapsModule,
@@ -48,6 +51,7 @@ import { ZonesModule } from "./zones/zones.module";
     FraudModule,
     AuditModule,
     IntelligenceModule,
+    TranslationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

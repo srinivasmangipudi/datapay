@@ -33,7 +33,15 @@ describe("Aggregation — the k-anonymity floor is enforced, not assumed (SPEC.m
 
   afterAll(async () => {
     await pool.query(`DELETE FROM demand_aggregates WHERE category_id = $1`, [isolatedCategoryId]);
-    await pool.query(`DELETE FROM responses WHERE alias_id = ANY($1)`, [createdAliasIds]);
+    // Scoped by category (this test's own isolation boundary), not the
+    // in-memory createdAliasIds array — a process killed mid-run (e.g. under
+    // the resource contention full test-suite parallelism can cause) never
+    // reaches this afterAll at all, but a SURVIVING run's cleanup should
+    // still be robust rather than trust a JS array to be complete.
+    await pool.query(
+      `DELETE FROM responses WHERE question_id IN (SELECT id FROM questions WHERE category_id = $1)`,
+      [isolatedCategoryId]
+    );
     await pool.query(`DELETE FROM question_options WHERE question_id IN (SELECT id FROM questions WHERE category_id = $1)`, [isolatedCategoryId]);
     await pool.query(`DELETE FROM questions WHERE category_id = $1`, [isolatedCategoryId]);
     await pool.query(`DELETE FROM members WHERE alias_id = ANY($1)`, [createdAliasIds]).catch(() => {});

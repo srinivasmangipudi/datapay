@@ -12,7 +12,7 @@ import { z } from "zod";
 export const QuestionVariantSchema = z.object({
   textEn: z.string().min(1),
   textKn: z.string().optional(),
-  type: z.enum(["single", "multi", "yesno", "intent_window", "numeric"]),
+  type: z.enum(["single", "multi", "yesno", "intent_window", "numeric", "free_text"]),
   rewardTokens: z.number().int().positive().default(4),
   options: z
     .array(z.object({ labelEn: z.string().min(1), labelKn: z.string().optional() }))

@@ -8,9 +8,17 @@ import request from "supertest";
 import { AppModule } from "../app.module";
 import { PG_POOL } from "../db/db.module";
 import { createTestMember, deleteTestMember, TestMember } from "../test-fixtures";
+import { AsrProvider } from "./asr.provider";
+import { VoiceService } from "./voice.service";
 
 const CORE_MIGRATIONS_DIR = join(__dirname, "../../../../infra/migrations/core");
 const AUDIO_COLUMN_DECLARATION = /["']?\baudio[a-z0-9_]*["']?\s*:/i;
+
+class FakeAsrProvider implements AsrProvider {
+  async transcribe(): Promise<{ text: string; translatedText?: string }> {
+    return { text: "ಪುಟ್ಟ ಅಂಗಡಿಯಿಂದ", translatedText: "from the small shop" };
+  }
+}
 
 describe("Voice — audio is transcribed and discarded, never persisted (SPEC.md §8/§9)", () => {
   let app: INestApplication;
@@ -27,6 +35,7 @@ describe("Voice — audio is transcribed and discarded, never persisted (SPEC.md
     pool = app.get(PG_POOL);
     const jwt = app.get(JwtService);
     member = await createTestMember(pool, jwt);
+    app.get(VoiceService).asrOverride = new FakeAsrProvider();
   });
 
   afterAll(async () => {

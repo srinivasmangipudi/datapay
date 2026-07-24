@@ -2,6 +2,9 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -32,32 +35,41 @@ export function OtpVerifyScreen({ phoneE164, onVerified }: Props) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Enter the code</Text>
-      <Text style={styles.subtitle}>Sent to {phoneE164}</Text>
-
-      <TextInput
-        style={styles.input}
-        value={otp}
-        onChangeText={setOtp}
-        placeholder="000000"
-        keyboardType="number-pad"
-        maxLength={6}
-      />
-
-      <TouchableOpacity
-        style={[styles.button, otp.length !== 6 && styles.buttonDisabled]}
-        disabled={otp.length !== 6 || loading}
-        onPress={handleSubmit}
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Verify</Text>}
-      </TouchableOpacity>
-    </View>
+        <Text style={styles.title}>Enter the code</Text>
+        <Text style={styles.subtitle}>Sent to {phoneE164}</Text>
+
+        <TextInput
+          style={styles.input}
+          value={otp}
+          onChangeText={setOtp}
+          placeholder="000000"
+          keyboardType="number-pad"
+          maxLength={6}
+        />
+
+        <TouchableOpacity
+          style={[styles.button, otp.length !== 6 && styles.buttonDisabled]}
+          disabled={otp.length !== 6 || loading}
+          onPress={handleSubmit}
+        >
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Verify</Text>}
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: "center", backgroundColor: "#fff" },
+  flex: { flex: 1, backgroundColor: "#fff" },
+  container: { flexGrow: 1, padding: 24, justifyContent: "center", backgroundColor: "#fff" },
   title: { fontSize: 24, fontWeight: "700", marginBottom: 8 },
   subtitle: { fontSize: 14, color: "#666", marginBottom: 32 },
   input: {

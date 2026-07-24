@@ -1,12 +1,19 @@
 import { z } from "zod";
-import { INPUT_MODES } from "./constants";
+import { INPUT_MODES, ZONE_LEVELS } from "./constants";
 
-/** POST /v1/pulse/answers — idempotent by clientMsgId (offline outbox). */
+/**
+ * POST /v1/pulse/answers — idempotent by clientMsgId (offline outbox).
+ * `textValue`/`photoBase64` are supplementary evidence available on every
+ * question regardless of type — additive to, never a replacement for, the
+ * question's own required structured answer (optionIds/numericValue).
+ */
 export const PulseAnswerDtoSchema = z.object({
   clientMsgId: z.string().uuid(),
   questionId: z.number().int().positive(),
   optionIds: z.array(z.number().int().positive()).optional(),
   numericValue: z.number().optional(),
+  textValue: z.string().min(1).max(2000).optional(),
+  photoBase64: z.string().min(1).optional(),
   inputMode: z.enum(INPUT_MODES).default("tap"),
   language: z.string().min(2).max(10),
   answeredAt: z.string().datetime(),
@@ -75,10 +82,14 @@ export const CreateQuestionDtoSchema = z
     categoryId: z.number().int().positive(),
     textEn: z.string().min(1).max(300),
     textKn: z.string().max(300).optional(),
-    type: z.enum(["single", "multi", "yesno", "intent_window", "numeric"]),
+    type: z.enum(["single", "multi", "yesno", "intent_window", "numeric", "free_text"]),
     rewardTokens: z.number().int().positive().default(4),
     options: z.array(QuestionOptionInputSchema).optional(),
     intentWindow: z.enum(["1m", "3m", "6m", "12m"]).optional(),
+    // Omit for a global question (every member sees it). Set to scope it to
+    // a zone and every zone beneath it in the hierarchy — never sideways to
+    // a sibling zone (SPEC.md §23).
+    zoneId: z.string().uuid().optional(),
   })
   .superRefine((val, ctx) => {
     if (["single", "multi", "yesno"].includes(val.type) && (val.options?.length ?? 0) < 2) {
@@ -97,6 +108,42 @@ export const CreateQuestionDtoSchema = z
     }
   });
 export type CreateQuestionDto = z.infer<typeof CreateQuestionDtoSchema>;
+
+/**
+ * POST /v1/admin/categories (SPEC.md §25/§26). Find-or-create by slug, not a
+ * strict insert — an admin typing a brand-new category name inline (e.g. in
+ * the question wizard) shouldn't need to visit a separate screen first, and
+ * retrying the same name twice must never fail on a duplicate-slug error.
+ * `slug` is optional and derived from `name` when omitted.
+ */
+export const CreateCategoryDtoSchema = z.object({
+  name: z.string().min(1).max(120),
+  slug: z.string().min(1).max(60).optional(),
+  nameKn: z.string().max(120).optional(),
+  // §2: no health/religion/caste/political categories — 'none' means "no
+  // sensitivity concerns," there is no sensitive tier by design.
+  sensitivity: z.enum(["standard", "none"]).default("standard"),
+});
+export type CreateCategoryDto = z.infer<typeof CreateCategoryDtoSchema>;
+
+/** POST /v1/admin/zones (SPEC.md §25). */
+export const CreateZoneDtoSchema = z.object({
+  name: z.string().min(1).max(120),
+  nameKn: z.string().max(120).optional(),
+  level: z.enum(ZONE_LEVELS),
+  parentId: z.string().uuid().optional(),
+});
+export type CreateZoneDto = z.infer<typeof CreateZoneDtoSchema>;
+
+/**
+ * POST /v1/admin/translate (SPEC.md §27) — a starting draft, never the
+ * system of record; the admin edits before anything is saved.
+ */
+export const TranslateDtoSchema = z.object({
+  text: z.string().min(1).max(500),
+  targetLang: z.enum(["kn"]).default("kn"),
+});
+export type TranslateDto = z.infer<typeof TranslateDtoSchema>;
 
 /** POST /v1/admin/intelligence-sources — connects a Drive folder to a zone (SPEC.md §20). */
 export const ConnectIntelligenceSourceDtoSchema = z.object({

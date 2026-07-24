@@ -102,6 +102,14 @@ export class ProducerPayoutsService {
     return { batchId, candidates: candidates.length, paid, failed, skipped, review };
   }
 
+  async list() {
+    const { rows } = await this.pool.query(
+      `SELECT id, alias_id, linkage_id, amount_paise, status, upi_ref, batch_id, initiated_at
+       FROM producer_payouts ORDER BY initiated_at DESC LIMIT 200`
+    );
+    return rows;
+  }
+
   private async resolveUpi(aliasId: string): Promise<string | null> {
     const vaultUrl = process.env.VAULT_INTERNAL_URL;
     if (!vaultUrl) throw new Error("Missing VAULT_INTERNAL_URL");

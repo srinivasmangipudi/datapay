@@ -28,14 +28,17 @@ ${config.focusAreas?.length ? `Focus especially on: ${config.focusAreas.join(", 
 ${config.toneNote ? `Tone: ${config.toneNote}` : ""}
 
 Generate exactly ${config.questionCount} candidate questions grounded in the specific local
-context above — not generic questions that could apply anywhere. Each question must be
-answerable with a single tap.
+context above — not generic questions that could apply anywhere. Prefer a question answerable
+with a single tap or a short number; only use "free_text" for something that genuinely needs
+the member's own words (an opinion, a description, a reason) and can't be reduced to a few
+tap options without losing what matters.
 
 Rules (non-negotiable):
 - Never ask about health, religion, caste, precise location/address, or political opinion —
   even if the source documents mention them.
 - Each question needs a clear, short "type": one of "single", "multi", "yesno",
-  "intent_window", "numeric". If "single"/"multi"/"yesno", include 2-5 short tap options.
+  "intent_window", "numeric", "free_text". If "single"/"multi"/"yesno", include 2-5 short tap
+  options. "numeric" and "free_text" need no options at all.
 - rewardTokens should be a small integer (3-6).
 
 Respond with ONLY a JSON array (no markdown fences, no commentary) matching exactly this shape:

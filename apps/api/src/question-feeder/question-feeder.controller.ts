@@ -15,6 +15,11 @@ export class QuestionFeederController {
     return this.feeder.createTopic(dto);
   }
 
+  @Get("question-topics")
+  listTopics() {
+    return this.feeder.listTopics();
+  }
+
   @Post("question-topics/:id/generate")
   generate(@Param("id", ParseIntPipe) id: number) {
     return this.feeder.generate(id);

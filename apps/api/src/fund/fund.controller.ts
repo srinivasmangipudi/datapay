@@ -37,6 +37,11 @@ export class FundController {
 export class FundAdminController {
   constructor(private readonly fund: FundService) {}
 
+  @Get()
+  list() {
+    return this.fund.listAllProjects();
+  }
+
   @Post()
   create(@Body() body: unknown) {
     const dto = parseOrThrow(CreateFundProjectDtoSchema, body);

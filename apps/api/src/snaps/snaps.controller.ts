@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { SnapDtoSchema } from "@datapay/shared";
 import { AliasAuthGuard, AliasRequest } from "../auth/alias-auth.guard";
 import { parseOrThrow } from "../zod.util";
@@ -28,8 +28,18 @@ export class SnapsController {
 export class AdminSnapsController {
   constructor(private readonly snaps: SnapsService) {}
 
+  @Get()
+  list(@Query("state") state?: string) {
+    return this.snaps.listAll(state);
+  }
+
   @Post(":id/verify")
   verify(@Param("id", ParseIntPipe) id: number) {
     return this.snaps.verify(id);
+  }
+
+  @Post(":id/reject")
+  reject(@Param("id", ParseIntPipe) id: number) {
+    return this.snaps.reject(id);
   }
 }

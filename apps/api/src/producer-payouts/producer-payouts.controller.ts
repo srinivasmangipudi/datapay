@@ -1,4 +1,4 @@
-import { Controller, Post } from "@nestjs/common";
+import { Controller, Get, Post } from "@nestjs/common";
 import { ProducerPayoutsService } from "./producer-payouts.service";
 
 // Same deliberately-deferred-auth posture as the aggregation/token-rate admin
@@ -10,5 +10,10 @@ export class ProducerPayoutsController {
   @Post("run")
   run() {
     return this.payouts.runPayouts();
+  }
+
+  @Get()
+  list() {
+    return this.payouts.list();
   }
 }

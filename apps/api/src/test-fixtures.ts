@@ -14,12 +14,16 @@ export interface TestMember {
 // apps/vault/src/auth/alias.util.ts) — this fixture mirrors that exact shape
 // so it exercises the same validation real aliases go through, rather than a
 // shorter fake format that only happens to work by accident.
-export async function createTestMember(pool: Pool, jwt: JwtService): Promise<TestMember> {
+export async function createTestMember(
+  pool: Pool,
+  jwt: JwtService,
+  zoneId: string = VILLAGE_ZONE_ID
+): Promise<TestMember> {
   const aliasId = createHash("sha256").update(randomUUID()).digest("hex");
   const displayAlias = `TEST MEMBER ${aliasId.slice(-6)}`;
   await pool.query(
     `INSERT INTO members (alias_id, display_alias, zone_id) VALUES ($1, $2, $3)`,
-    [aliasId, displayAlias, VILLAGE_ZONE_ID]
+    [aliasId, displayAlias, zoneId]
   );
   const token = await jwt.signAsync({ aliasId, displayAlias });
   return { aliasId, displayAlias, token };
@@ -60,12 +64,12 @@ export async function deleteTestMemberFromVault(vaultPool: Pool, aliasId: string
 
 /**
  * Checks the exact business rule PulseService.today() applies to a single
- * question (review_state, active window, not-already-answered-today,
- * consent) — WITHOUT that query's own `LIMIT 5`. A test asserting "this
- * question became selectable" should mean *that*, not "it happened to win
- * one of five rotating daily slots" — real admin-authored questions
- * (SPEC.md §21) accumulate permanently and can already occupy every slot
- * regardless of what any one test just did.
+ * question (review_state, active window, zone-cascade scoping, not-already-
+ * answered-today, consent) — WITHOUT that query's own `LIMIT 5`. A test
+ * asserting "this question became selectable" should mean *that*, not "it
+ * happened to win one of five rotating daily slots" — real admin-authored
+ * questions (SPEC.md §21) accumulate permanently and can already occupy
+ * every slot regardless of what any one test just did.
  */
 export async function isEligibleForPulseToday(
   pool: Pool,
@@ -73,12 +77,21 @@ export async function isEligibleForPulseToday(
   questionId: number
 ): Promise<boolean> {
   const { rows } = await pool.query<{ eligible: boolean }>(
-    `SELECT EXISTS (
+    `WITH RECURSIVE member_zone_chain AS (
+       SELECT z.id, z.parent_id FROM zones z
+       JOIN members m ON m.zone_id = z.id
+       WHERE m.alias_id = $1
+       UNION ALL
+       SELECT z.id, z.parent_id FROM zones z
+       JOIN member_zone_chain c ON z.id = c.parent_id
+     )
+     SELECT EXISTS (
        SELECT 1 FROM questions q
        WHERE q.id = $2
          AND q.review_state = 'approved'
          AND q.active_from <= now()
          AND (q.active_to IS NULL OR q.active_to > now())
+         AND (q.zone_id IS NULL OR q.zone_id IN (SELECT id FROM member_zone_chain))
          AND NOT EXISTS (
            SELECT 1 FROM responses r
            WHERE r.question_id = q.id AND r.alias_id = $1 AND r.answered_at::date = now()::date

@@ -31,6 +31,16 @@ export const strings = {
     moreTomorrow: { en: "More questions tomorrow.", kn: "ನಾಳೆ ಇನ್ನಷ್ಟು ಪ್ರಶ್ನೆಗಳು." },
     checkAgain: { en: "Check again", kn: "ಮತ್ತೆ ಪರಿಶೀಲಿಸಿ" },
     confirm: { en: "Confirm", kn: "ದೃಢೀಕರಿಸಿ" },
+    numericPlaceholder: { en: "Type a number", kn: "ಸಂಖ್ಯೆ ಟೈಪ್ ಮಾಡಿ" },
+    addNote: { en: "Add a note (optional)", kn: "ಟಿಪ್ಪಣಿ ಸೇರಿಸಿ (ಐಚ್ಛಿಕ)" },
+    freeTextPlaceholder: { en: "Type your answer", kn: "ನಿಮ್ಮ ಉತ್ತರವನ್ನು ಟೈಪ್ ಮಾಡಿ" },
+    recordVoiceNote: { en: "Record a voice note", kn: "ಧ್ವನಿ ಟಿಪ್ಪಣಿ ರೆಕಾರ್ಡ್ ಮಾಡಿ" },
+    recording: { en: "Recording… tap to stop", kn: "ರೆಕಾರ್ಡ್ ಆಗುತ್ತಿದೆ… ನಿಲ್ಲಿಸಲು ಟ್ಯಾಪ್ ಮಾಡಿ" },
+    transcribing: { en: "Transcribing…", kn: "ಬರೆಯುತ್ತಿದೆ…" },
+    transcribeFailedTitle: { en: "Couldn't transcribe", kn: "ಬರೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ" },
+    attachPhoto: { en: "Attach a photo", kn: "ಫೋಟೋ ಲಗತ್ತಿಸಿ" },
+    photoAttached: { en: "Photo attached", kn: "ಫೋಟೋ ಲಗತ್ತಿಸಲಾಗಿದೆ" },
+    removePhoto: { en: "Remove", kn: "ತೆಗೆದುಹಾಕಿ" },
   },
   snap: {
     hint: {

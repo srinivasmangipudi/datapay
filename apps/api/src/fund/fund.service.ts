@@ -129,6 +129,26 @@ export class FundService {
     return { ok: true };
   }
 
+  /**
+   * Ops-wide view across every zone at once, vote tallies included — unlike
+   * the member-facing listProjects(zoneId), which is scoped to the caller's
+   * own zone via AliasAuthGuard.
+   */
+  async listAllProjects() {
+    const { rows } = await this.pool.query(
+      `SELECT p.id, p.title, p.title_kn, p.estimate_paise, p.status, p.created_at,
+              p.zone_id, z.name AS zone_name,
+              COUNT(*) FILTER (WHERE v.vote = 'yes') AS yes_votes,
+              COUNT(*) FILTER (WHERE v.vote = 'no') AS no_votes
+       FROM fund_projects p
+       JOIN zones z ON z.id = p.zone_id
+       LEFT JOIN fund_votes v ON v.project_id = p.id
+       GROUP BY p.id, z.name
+       ORDER BY p.id DESC`
+    );
+    return rows;
+  }
+
   async createProject(zoneId: string, title: string, titleKn: string | undefined, estimatePaise: number) {
     const { rows } = await this.pool.query<{ id: number }>(
       `INSERT INTO fund_projects (zone_id, title, title_kn, estimate_paise) VALUES ($1, $2, $3, $4) RETURNING id`,

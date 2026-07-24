@@ -98,6 +98,24 @@ describe("Admin-authored questions skip the draft queue (SPEC.md §14/§21)", ()
     await deleteQuestion(res.body.id);
   });
 
+  it("creates a 'free_text' question with no options at all (SPEC.md §27)", async () => {
+    const res = await post({
+      categoryId: soapCategoryId,
+      textEn: "Why did you switch soap brands recently?",
+      type: "free_text",
+      rewardTokens: 3,
+    });
+    expect(res.status).toBe(201);
+
+    const { rows: optRows } = await pool.query(
+      `SELECT count(*) FROM question_options WHERE question_id = $1`,
+      [res.body.id]
+    );
+    expect(Number(optRows[0].count)).toBe(0);
+
+    await deleteQuestion(res.body.id);
+  });
+
   it("creates an 'intent_window' question with fixed, non-admin-editable Yes/Maybe/No options", async () => {
     const res = await post({
       categoryId: soapCategoryId,

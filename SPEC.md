@@ -778,3 +778,350 @@ needed, unlike every `plugin_generated` draft from a topic's generation run.
 with fewer than 2 options is rejected; creating an `intent_window` question with no `intentWindow`
 is rejected; a successfully created question has `review_state = 'approved'` immediately and
 appears in a fresh member's `GET /v1/pulse/today` without any additional admin action.
+
+---
+
+## 22. EVERY QUESTION CAN CARRY SUPPLEMENTARY EVIDENCE — ADDENDUM (2026-07-24)
+
+§21A drew a hard line: voice and photo are input-capture *methods*, not question *types*, so they
+were deliberately left out of the answer-type menu. That line still holds for what a question
+*requires* — but real usage on a physical device surfaced a gap on the other side of it: a member
+answering "how much would you pay for sugar" has no way to add the context that made them pick that
+answer, and `numeric`-type questions (e.g. document-grounded ones asking "how many kilograms of rice
+does your household use in a month?") had no input UI at all — silently unanswerable. This closes
+both gaps: every question, regardless of `type`, can now carry free text, a transcribed-and-translated
+voice note, and/or an attached photo as **supplementary evidence alongside its required structured
+answer** — additive, never a replacement for it, and never required.
+
+**22A. Three new nullable columns on `responses`, not a new `questions.type`.** `text_value`,
+`photo_storage_key` (migration `1738281600000_response_supplements`), plus `input_mode`'s CHECK
+constraint gains `'text'` alongside the existing `tap`/`voice`/`snap`. `input_mode` still describes
+the *primary* channel used for the question's required answer (almost always `'tap'`, since every
+current UI still taps/types a structured value) — the two new columns are independent of it and can
+be populated no matter what `input_mode` says.
+
+**22B. Voice notes are transcribed AND translated in one call, via Gemini, not Bhashini.** Bhashini
+was the original plan (§8/§9) but ruled out for the pilot as too bureaucratic to get real API access
+to in time. `GeminiAsrProvider` (`apps/api/src/voice/asr.provider.ts`) sends the recorded audio
+directly to Gemini's multimodal API with a transcribe-and-translate prompt — no separate GCP
+Speech-to-Text call needed. `POST /v1/voice/transcribe` now returns `{transcript, translatedText?}`;
+the mobile client drops whichever of the two is more useful straight into the free-text note field
+for the member to review before submitting. The existing "audio is transcribed and discarded, never
+persisted" guarantee (§8/§9, proven by `voice.integration.spec.ts`) is unchanged — only the *quality*
+of the transcription changed, not what happens to the audio bytes afterward.
+
+**22C. An attached photo reuses `SnapsService`'s `StorageProvider`, not the Snap feature itself.**
+A photo attached to a Pulse answer is supplementary context for that specific response — it does not
+go through Snap's product-recognition/ops-verification chain (`uploaded → recognized →
+member_confirmed → ops_verified`) or credit a separate `earn_snap` bonus on top of the question's own
+`reward_tokens`. It's stored via the same (currently dev-stub) `StorageProvider` Snap already uses,
+because it's the same underlying problem (store an image, get a key back) — not because it's the same
+*feature*. Real blob storage (GCS) is still not wired up for either use — "photo evidence" isn't a
+real claim for Pulse answers any more than it already wasn't for Snap (see `storage.provider.ts`).
+
+**22D. `numeric` questions finally have an answer UI.** `PulseScreen` previously rendered every
+question type as tap-chips, including `numeric` — which has no options, so those questions were
+unanswerable on the app despite passing every server-side check. This was found, not requested,
+while wiring up the supplementary-evidence UI in the same screen; fixing it was in scope because an
+unanswerable question type contradicts this addendum's own premise.
+
+**Acceptance test:** a response can be submitted with `textValue`/`photoBase64` set regardless of the
+question's `type`, and without either, exactly as before (both fully optional); a `numeric` question
+is answerable via a real input field on mobile; `voice.integration.spec.ts`'s audio-is-discarded
+guarantee still holds against the Gemini-backed provider.
+
+---
+
+## 23. REGION-SCOPED QUESTION DELIVERY — ADDENDUM (2026-07-24)
+
+Every question, from Phase 1 through §22, was implicitly global — `GET /v1/pulse/today` had no
+concept of *where* a member is relative to *what a question is about*. That stopped making sense the
+moment the Area Intelligence Question Engine (§20) started grounding questions in one specific zone's
+documents — a question drafted from Melukote's ingested reports has no business reaching a member in
+an unrelated part of the state, and an ops admin authoring a question by hand (§21) needs the same
+choice: "just this region" or "everywhere."
+
+**23A. `questions.zone_id` — nullable, cascades down, never sideways.** Migration
+`1738368000000_question_zone_scoping` adds one nullable FK column. `NULL` means global (every
+member sees it, identical to every question's behavior before this addendum). A non-null `zone_id`
+scopes the question to that zone **and every zone beneath it** in the `zones` hierarchy (village ⊂
+panchayat ⊂ hobli ⊂ constituency) — a question scoped to a constituency reaches every village under
+it, but a question scoped to one hobli never reaches a sibling hobli under the same constituency,
+even though they share a parent.
+
+**23B. The cascade is computed with a recursive CTE over the member's own zone, not the question's.**
+`PulseService.today()` walks *up* from the member's `zone_id` to the root, collecting every
+ancestor-or-self zone id, then admits a question if `zone_id IS NULL OR zone_id IN (that chain)`. This
+is the only direction that scales without precomputing anything: zones are a shallow, rarely-changing
+tree (4 levels in the pilot), so walking up from one member is cheap, while walking down from a
+question to "every descendant zone" would mean recomputing that set on every insert instead. The same
+rule is duplicated (deliberately — see `isEligibleForPulseToday` in `test-fixtures.ts`) for tests that
+need to assert eligibility without racing `today()`'s own `LIMIT 5`.
+
+**23C. Both question-creation paths thread the zone through, from two different sources.** A
+`document_grounded`/`template`/`llm_assisted` topic's own `zone_id` (already existed on
+`question_topics` for §20's document-grounded generation, previously unused by other generator kinds)
+becomes every question that topic's generation runs produce — set once on the topic, inherited by
+every draft. An admin authoring a question directly (§21's wizard) picks a region explicitly per
+question via a new optional `zoneId` field on `CreateQuestionDtoSchema`, defaulting to global if
+omitted — the portal's region picker at `/questions` lists every zone indented by level, with "Global
+— every member, everywhere" as the first option.
+
+**Acceptance test (`zone-scoping.integration.spec.ts`):** a question scoped to a hobli reaches a
+member in a village beneath it but not a member in a sibling hobli under the same constituency; a
+question scoped to the member's exact zone reaches them; a question with no zone reaches every
+region — all checked via `isEligibleForPulseToday`, not `today()`'s own rotation-limited output.
+
+---
+
+## 24. SCHEDULED GENERATION — THE ENGINE RUNS UNATTENDED — ADDENDUM (2026-07-24)
+
+§20/§21 built the generation *capability* (document-grounded drafts, hand-authored questions) and §23
+built *where they go* (region scoping). What was still missing is *when they run*: every generator —
+document-grounded, template, admin-authored — required an ops admin to click "Sync," "Refresh," or
+"Generate" by hand. `question_topics.schedule_cron` existed as a column since §20's original migration
+but nothing ever read it. This wires it up: an admin points a topic at a region's intelligence sources
+once, and generation keeps happening on its own from then on.
+
+**24A. Two independent scheduled jobs, not one.** Freshness and generation are different concerns on
+different clocks: `IntelligenceRefreshProcessor` runs **daily** for every zone with a connected source
+— re-syncs each `intelligence_source`, then rebuilds that zone's `zone_understanding` from whatever the
+sync produced — because stale ground truth makes every downstream draft stale regardless of how often
+it's generated. `QuestionGenerationProcessor` runs **per-topic**, on that topic's own `schedule_cron` —
+because one topic wanting daily drafts and another wanting weekly is a per-topic choice, not a platform-
+wide one. A scheduled generation run is functionally identical to an admin clicking "Generate" by hand:
+it produces `review_state='draft'` rows and nothing else. Automating the *trigger* never automates the
+*review* — §14's gate (a human approves before any member sees it) is untouched.
+
+**24B. `upsertJobScheduler`, not `queue.add(name, data, {repeat, jobId})`.** The latter *looks* like it
+dedupes by the given `jobId` (this codebase's two pre-existing scheduled jobs — aggregation, token-rate —
+both use exactly that pattern), but in BullMQ v5 it doesn't: the repeatable job's real identity is a hash
+of its options, invisible from the `jobId` field, and re-registering it on every app boot risks
+accumulating duplicate repeatable entries rather than safely no-op'ing. `upsertJobScheduler(id, repeatOpts,
+template)` is the API that's actually keyed by `id` — confirmed directly (`getJobScheduler(id)` returns
+what `upsertJobScheduler(id, ...)` created, and calling it twice with the same id updates instead of
+duplicating). Both new schedulers here use it. The two pre-existing ones were left as-is — this is a
+correctness gap worth fixing, not something to fix silently as a side effect of an unrelated feature.
+
+**24C. A bad `scheduleCron` is rejected before the topic ever exists.** `CronExpressionParser.parse()`
+(a direct dependency now, not reached into transitively through bullmq's own bundled `cron-parser`)
+validates the string synchronously, before the `INSERT INTO question_topics` — so an invalid cron can
+never leave an orphaned topic row with a schedule that silently never fires.
+
+**24D. One failing source or zone doesn't block the others in the same refresh run.** `sync()`/`refresh()`
+failures (revoked Drive sharing, no documents ingested yet) are caught per-source and per-zone inside
+`IntelligenceRefreshProcessor` — a single broken connection degrades to "that one zone's understanding
+didn't update today," not "nothing updated today."
+
+**Acceptance test (`scheduled-generation.integration.spec.ts`):** a topic created with an invalid
+`scheduleCron` is rejected with no row inserted; a topic created with a valid cron has a real,
+independently-verifiable job scheduler registered (`queue.getJobScheduler` returns it, matching pattern);
+a topic created with no cron registers no scheduler at all — manual `/generate` still works for it,
+exactly as before this addendum.
+
+**Known limitation, stated plainly:** there is no portal UI yet for creating a `question_topics` row (with
+or without a schedule) — topics are still created via a direct API call, same as before this addendum.
+The scheduling wiring is real and tested; the "point-and-click, no curl" ops experience for topic creation
+itself is not yet built.
+
+---
+
+## 25. THE COMPLETE ADMIN PORTAL — ADDENDUM (2026-07-24)
+
+Every phase before this one built a real admin/ops capability — snap verification, token-rate/
+aggregation triggers, fund projects, produce matching, payout batching, audit export, quality
+flags — but almost all of it was curl-only, reachable by nobody who wasn't reading this file. §21's
+question wizard and §20's intelligence page were the only two exceptions. This addendum puts a UI on
+top of everything else and gives the whole portal a front door.
+
+**25A. A shared password gate, not per-user auth.** Every `/v1/admin/*` write endpoint has been
+deliberately unauthenticated since §19E ("a later hardening pass") — that posture doesn't change
+here. What changes is that the *portal* now fronts all of it, and a portal with this much control
+sitting wide open the moment someone finds the URL is a different risk than an unauthenticated API
+nobody's indexed. `middleware.ts` gates every route except `/login` behind a single shared
+`PORTAL_SESSION_SECRET` cookie, set by `/login`'s server action after checking a separate
+`PORTAL_ADMIN_PASSWORD` — deliberately two different values, so a leaked cookie doesn't also leak the
+login secret. This is explicitly *not* role-based auth: everyone who knows the one password can do
+everything. That's the stated tradeoff, not an oversight.
+
+**25B. One shared layout, not ten copies of the same CSS.** Before this addendum, each of the
+portal's 3 pages hand-wrote its own `<style dangerouslySetInnerHTML>` block, independently
+reinventing `.eyebrow`/`.tableWrap`/`.errorBanner`/etc. with small inconsistencies each time.
+`globals.css` (imported once, in `layout.tsx`) now holds every class shared across pages; a page's
+local `<style>` block, where one still exists, holds only what's genuinely unique to that page
+(Area Intelligence's knowledge-map cards, for instance). `AdminNav` — one client component reading
+`usePathname()` to highlight the current section — replaces what used to be a hand-written
+`<a>`-per-page back-link paragraph on every screen.
+
+**25C. New admin endpoints, added because the portal needed them, not the other way round.** Several
+capabilities had a service but no route: categories and zones had no create endpoint at all (only
+ever seeded via migrations/test fixtures); snaps had no ops-wide list, only a single-item verify;
+question topics had no list endpoint; quality flags and trust scores had no read surface at all;
+produce listings and producer payouts had no admin-wide view. All of these were added as thin,
+unauthenticated (same §19E posture) reads/writes specifically to back a real portal page — not
+speculative API surface with no caller.
+
+**25D. Every page follows the same three-file shape** established by §20/§21: a `core-api.ts` (typed
+`apiFetch` wrappers, no direct DB access beyond the original §10 grants), an `actions.ts` (`"use
+server"`, catches errors and redirects with `?error=`), and a `page.tsx` (server component). A page
+needing user input adds a `"use client"` wizard component. The nine new pages this addendum adds:
+
+- **Topics** (`/topics`) — create a `template` or `document_grounded` generation topic (region,
+  schedule, category), list existing topics with last-run status, trigger "Generate now."
+- **Review queue** (`/review`) — every draft question across every zone in one list, not scoped to
+  whichever zone happens to be selected on the Area Intelligence page.
+- **Snap verification** (`/snaps`) — the ops queue for `uploaded → ops_verified/rejected`, filterable
+  by state. Added a `reject()` path to `SnapsService` that didn't exist before (only `verify()` did).
+- **Token economy** (`/token-economy`) — trigger an out-of-cycle token-rate/aggregation run; the
+  scheduled jobs (§6C, hourly/3-day) keep running regardless.
+- **Fund & governance** (`/fund`) — propose a zone-scoped fund project; members still vote on it in
+  the app, this page only ever proposes, never approves on their behalf.
+- **Produce & payouts** (`/produce`) — every listing across every producer with its latest linkage
+  state, trigger matching per-listing, trigger a payout batch run, view payout history.
+- **Audit & fraud** (`/audit`) — quality flags and trust scores (alias-only, LAW 1 holds), plus the
+  ledger CSV export proxied through the portal's own origin (`/audit/export`) rather than exposing
+  `CORE_API_INTERNAL_URL` to the browser directly.
+- **Zones & categories** (`/zones`) — the region hierarchy and category list finally have a create UI;
+  before this, both only ever existed via migrations or test fixtures.
+
+**Acceptance:** every route (`/`, `/questions`, `/topics`, `/review`, `/intelligence`, `/snaps`,
+`/token-economy`, `/fund`, `/produce`, `/audit`, `/zones`) renders 200 with a real `<h1>` behind a
+valid session cookie, and redirects to `/login` without one; `next build` compiles all 14 routes
+including middleware with no errors; every new admin endpoint returns real rows from the live
+database, not stubs.
+
+---
+
+## 26. CATEGORIES ARE FIND-OR-CREATE, NOT A SEPARATE SETUP STEP — ADDENDUM (2026-07-24)
+
+The question and topic wizards (§21/§25) originally required picking a category from a fixed
+dropdown — meaning an admin who wanted to ask about something new had to stop, go to Zones &
+Categories, create the category, then come back and start the wizard over. That's friction with no
+real purpose: a category is just a name and a slug, not something that needs a separate review step.
+
+**26A. `POST /v1/admin/categories` is now find-or-create, keyed by slug.** `slug` became optional on
+`CreateCategoryDtoSchema` — when omitted, `CategoriesService` derives one from `name` (lowercase,
+non-alphanumeric runs collapsed to a hyphen). The insert itself is `ON CONFLICT (slug) DO NOTHING
+RETURNING id`, falling back to a `SELECT` when the conflict fires — not a `SELECT` first, which would
+race two concurrent requests for the same brand-new name into one succeeding and one hitting the
+UNIQUE constraint. Calling it twice with the same name is safe either way: the second call returns
+`created: false` and the same `id`, never a duplicate row or an error.
+
+**26B. Both wizards now take free text, not a picklist.** `QuestionWizard` and `TopicWizard`'s category
+field is an `<input list=…>` bound to a `<datalist>` of existing category names — typing an existing
+name still autocompletes, but typing a brand-new one is just as valid. The wizard's own server action
+(`createQuestionAction`/`createTopicAction`) resolves the typed name to a category id via the
+find-or-create endpoint *before* creating the question/topic — the resolution is invisible to the
+admin, who never sees or thinks about a category id at all.
+
+**Acceptance:** creating a question/topic with a category name that doesn't exist yet creates that
+category and the question/topic in the same submission, with no separate setup step; submitting the
+same new name twice (e.g. two topics for one new category) resolves both to the same category row.
+
+---
+
+## 27. FREE-TEXT QUESTIONS, AND AUTO-TRANSLATE WITH EDIT CONTROL — ADDENDUM (2026-07-24)
+
+Two additions to the question-authoring wizards, requested together: a genuine open-ended answer
+type, and a faster way to fill in the Kannada text every question already carries.
+
+**27A. `free_text` is a sixth `questions.type`, not a repurposing of §22's `text_value`.** §22 gave
+every question a *supplementary* `text_value` — a note alongside whatever the question's real answer
+was. This is different: a `free_text` question's answer *is* the text_value, with no `option_ids` or
+`numeric_value` to fall back on, same as `numeric` needs no options. Migration
+`1738454400000_free_text_question_type` adds it to the `questions_type_check` CHECK constraint; the
+type appears everywhere the existing five already did — `CreateQuestionDtoSchema`,
+`QuestionVariantSchema` (so `template`/`document_grounded` topics can produce it too), the mobile
+`PulseQuestion` type, and both portal wizards' answer-type menus.
+
+**27B. Mobile reuses the existing note field as the primary answer, not a second text box.**
+`PulseScreen` already had a free-text `note` input for §22's supplementary evidence — for a
+`free_text` question, that same field becomes the *required* answer (placeholder changes from "Add a
+note (optional)" to "Type your answer", and `canSubmit` requires it non-empty) instead of adding a
+redundant second input. Voice-record and photo-attach stay available exactly as before — recording a
+voice note still transcribes into this same field, and an admin could equally read a member's
+free-text answer that started life as a spoken one.
+
+**27C. `aggregation.service.ts` needed no changes.** A `free_text` response's `option_ids` is NULL;
+the aggregation query's `LEFT JOIN question_options o ON o.id = ANY(r.option_ids)` already produces
+`o.label_en = NULL` for that row, and the existing `.filter(r => r.label_en !== null)` already drops
+it from the published `optionCounts` — confirmed by reading the query, not assumed. A free-text
+response still counts toward cohort sizing (correctly — it's still a real response), it just
+contributes nothing to a tap-option tally, which is the only thing that would ever have been wrong to
+publish anyway (free text isn't k-anonymizable the way a chosen option is).
+
+**27D. `POST /v1/admin/translate` — Gemini, EN→KN, always editable before saving.** A new
+`TranslationService` (same lazy-init-throws-if-missing-key posture as `GeminiAsrProvider`) wraps a
+single-purpose "translate this text" Gemini call. The portal wizards' Kannada field gets a "Translate
+to Kannada →" button next to it — the translation fills the field but the field stays a normal,
+editable `<input>`; nothing is ever submitted without the admin having had the chance to correct it.
+Deliberately scoped to English→Kannada only (matching the schema's actual `text_en`/`text_kn`
+columns) rather than a general multi-language selector — the schema and mobile app don't carry any
+other language today, so a "pick from many languages" UI would be decoration in front of a feature
+that doesn't exist yet.
+
+**Acceptance:** a `free_text` question can be created with zero options via either wizard, and is
+answerable end-to-end on mobile (required, not optional, unlike the same field's supplementary role on
+every other question type); the translate endpoint returns a real Gemini-produced translation when
+`GEMINI_API_KEY` is configured, and a clear `BadRequestException` (not a 500 or a silent fallback) when
+it isn't.
+
+---
+
+## 28. THE DATAPAY BRAND SYSTEM, WIRED INTO BOTH APPS — ADDENDUM (2026-07-24)
+
+The user dropped a brand asset package into `apps/assets/` (logo components, color tokens, app
+icons, favicons, an OG image) and asked for it applied throughout. What's actually in that folder is
+a *subset* of a larger documented package — `apps/assets/README.md`/`INSTALL.md` describe files
+(splash.png, adaptive-icon.png, individual favicon sizes, logo-horizontal, pattern tiles, custom
+font files) that were never included. Everything below uses only what's real; gaps are named, not
+papered over.
+
+**28A. The mobile app's existing palette had already independently converged on most of this.**
+`apps/mobile/src/theme.ts` predates the brand package and already had `ink` (#101418) and `teal`
+(#0E7A5C) at the *exact* canonical hex — `brass` was off by one shade (#C99A2E vs. the real
+#B98F2F) and has been corrected, along with two tint colors aligned to their canonical values
+(`paper`→ porcelain #F6F5F1, `tealTint` → jadeSoft #E3EFEA). A new `tealBright` (#12946F, brand
+"jadeBright") and `mist` (#8A939B) were added for parity with the full token set.
+
+**28B. The portal's primary accent was blue (#2a78d6) — not a brand color at all.** Every page's
+eyebrow text, nav links, active-nav highlight, and primary buttons used an ad hoc blue that predates
+this addendum and was never part of DataPay's actual identity. `globals.css` now defines the real
+palette as CSS custom properties (`--ink`, `--jade`, `--jade-bright`, `--jade-soft`, `--brass`,
+`--brass-bright`, `--mist`) and every one of those blue instances — light and dark mode — now
+resolves to jade instead.
+
+**28C. Brass is applied only to genuine value/money displays, per the brand's own rule ("value &
+money only — never body text").** Not a blanket recolor of every number: a new `.value` utility
+class went specifically onto the token-rate tile (₹), fund/produce ₹ amounts, and reward-token (◈)
+table cells — plain counts (cohort size, vote tallies, aggregate counts) stay the default text color
+because they aren't money.
+
+**28D. `DataPayMark`/`DataPayLogo` — copied in as provided, not reinvented.** Both are inline-SVG
+components (no image asset dependency for the small in-app placements) at
+`apps/mobile/src/brand/DataPayLogo.tsx` (React Native, needs `react-native-svg`, now installed) and
+`apps/portal/app/components/DataPayLogo.tsx` (web). Placed: the portal's `AdminNav` (mark, every
+page) and `/login` (full logo + tagline); the mobile app's onboarding welcome screen and the home
+screen header (mark next to the member's alias). The wordmark's custom display font (Cabinet
+Grotesk) isn't bundled — no font files were part of the asset drop — so it falls back to the system
+font everywhere; the brass "Pay" color and -9° skew still render correctly either way.
+
+**28E. App icons wired via each platform's real file convention, not hand-rolled metadata.** Next.js
+App Router auto-detects `app/favicon.ico`, `app/icon.png`, `app/apple-icon.png` — dropping the real
+files in was the entire integration, no manifest code needed. Expo's `app.json` gained `icon`
+(`./assets/icon.png`) and a `splash` block using the same source image (no dedicated splash asset was
+provided). Android's `adaptiveIcon` was deliberately **not** configured — the only square-icon asset
+available (`icon.png`) is opaque with the mark already inset, not the transparent, edge-to-edge
+foreground layer adaptive icons need; using it there would double-crop under Android's own mask.
+Real transparent foreground art would need to be added before that's wired up.
+
+**28F. The auth middleware needed a fix once real asset routes existed.** `middleware.ts`'s matcher
+only excluded `favicon.ico` from the §25 login gate — `icon.png`, `apple-icon.png`, `og-image.png`,
+and the copied SVGs were being redirected to `/login` (caught directly: curled each one, got 307s).
+Fixed by excluding all of them — a favicon or a shared-link preview has to load whether or not the
+viewer is signed in; nothing else in the matcher changed.
+
+**Acceptance:** every new icon/asset route (`/icon.png`, `/apple-icon.png`, `/favicon.ico`,
+`/og-image.png`, `/mark-primary.svg`) returns 200 with the correct content-type, unauthenticated;
+`AdminNav`'s rendered HTML contains the mark's actual SVG markup; `next build` and mobile's `tsc
+--noEmit` both pass clean with zero new errors.

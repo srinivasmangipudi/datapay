@@ -102,4 +102,56 @@ export class SnapsService {
       productCode: s.product_code,
     }));
   }
+
+  /**
+   * Ops-wide view across every member's snaps, optionally filtered to one
+   * state — the verification queue's list endpoint. `storage_key` is
+   * included as-is: still a dev-stub reference until real blob storage is
+   * wired up (see storage.provider.ts), never a real image URL yet.
+   */
+  async listAll(state?: string) {
+    const { rows } = await this.pool.query<
+      SnapRow & { alias_id: string; storage_key: string; category_id: number | null }
+    >(
+      state
+        ? `SELECT id, alias_id, state, storage_key, category_id, reward_tokens, captured_at, product_code
+           FROM snaps WHERE state = $1 ORDER BY captured_at DESC`
+        : `SELECT id, alias_id, state, storage_key, category_id, reward_tokens, captured_at, product_code
+           FROM snaps ORDER BY captured_at DESC`,
+      state ? [state] : []
+    );
+    return rows.map((s) => ({
+      id: s.id,
+      aliasId: s.alias_id,
+      state: s.state,
+      storageKey: s.storage_key,
+      categoryId: s.category_id,
+      rewardTokens: s.reward_tokens,
+      capturedAt: s.captured_at,
+      productCode: s.product_code,
+    }));
+  }
+
+  /**
+   * The other half of the uploaded→ops_verified fork — a snap ops decides
+   * isn't real evidence. No trust-score penalty here (only verification
+   * grants a bonus, §6) — rejecting just closes the item out of the queue.
+   */
+  async reject(snapId: number): Promise<{ aliasId: string }> {
+    return withTransaction(this.pool, async (client) => {
+      const { rows } = await client.query<{ alias_id: string; state: string }>(
+        `SELECT alias_id, state FROM snaps WHERE id = $1 FOR UPDATE`,
+        [snapId]
+      );
+      if (!rows[0]) throw new NotFoundException("Snap not found");
+      if (rows[0].state === "ops_verified" || rows[0].state === "rejected") {
+        throw new BadRequestException(`Snap is already '${rows[0].state}'`);
+      }
+
+      await client.query(`UPDATE snaps SET state = 'rejected' WHERE id = $1`, [snapId]);
+      await this.audit.record("admin", null, "reject_snap", `snap:${snapId}`, client);
+
+      return { aliasId: rows[0].alias_id };
+    });
+  }
 }

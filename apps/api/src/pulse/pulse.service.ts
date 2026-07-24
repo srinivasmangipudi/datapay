@@ -5,6 +5,7 @@ import { PG_POOL } from "../db/db.module";
 import { withTransaction } from "../db/tx.util";
 import { FraudService, VelocityCapExceededError } from "../fraud/fraud.service";
 import { LedgerService } from "../ledger/ledger.service";
+import { DevNoopStorageProvider, StorageProvider } from "../snaps/storage.provider";
 
 const PULSE_BATCH_SIZE = 5;
 
@@ -20,6 +21,8 @@ interface QuestionRow {
 
 @Injectable()
 export class PulseService {
+  private readonly storage: StorageProvider = new DevNoopStorageProvider();
+
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly ledger: LedgerService,
@@ -28,7 +31,21 @@ export class PulseService {
 
   async today(aliasId: string) {
     const { rows } = await this.pool.query<QuestionRow>(
-      `SELECT q.id, q.category_id, q.type, q.text_en, q.text_kn, q.reward_tokens,
+      // Region scoping (SPEC.md §23): walk UP from the member's own zone to
+      // the root, collecting every ancestor-or-self zone id. A question is
+      // visible if it's global (zone_id IS NULL) or scoped to any zone in
+      // that chain — so a question scoped to a constituency reaches every
+      // village under it, but a question scoped to one village never reaches
+      // a sibling village even under the same panchayat/hobli/constituency.
+      `WITH RECURSIVE member_zone_chain AS (
+         SELECT z.id, z.parent_id FROM zones z
+         JOIN members m ON m.zone_id = z.id
+         WHERE m.alias_id = $1
+         UNION ALL
+         SELECT z.id, z.parent_id FROM zones z
+         JOIN member_zone_chain c ON z.id = c.parent_id
+       )
+       SELECT q.id, q.category_id, q.type, q.text_en, q.text_kn, q.reward_tokens,
               COALESCE(
                 json_agg(
                   json_build_object('id', o.id, 'labelEn', o.label_en, 'labelKn', o.label_kn, 'sort', o.sort)
@@ -41,6 +58,7 @@ export class PulseService {
        WHERE q.review_state = 'approved'
          AND q.active_from <= now()
          AND (q.active_to IS NULL OR q.active_to > now())
+         AND (q.zone_id IS NULL OR q.zone_id IN (SELECT id FROM member_zone_chain))
          AND NOT EXISTS (
            SELECT 1 FROM responses r
            WHERE r.question_id = q.id AND r.alias_id = $1 AND r.answered_at::date = now()::date
@@ -86,6 +104,14 @@ export class PulseService {
     }
 
     for (const answer of answers) {
+      // Supplementary evidence (SPEC.md §9A) — additive to the question's own
+      // required structured answer, available regardless of question type.
+      // Stored before the transaction like SnapsService does: it's I/O against
+      // the storage provider, not the database.
+      const photoStorageKey = answer.photoBase64
+        ? (await this.storage.store(answer.photoBase64)).storageKey
+        : null;
+
       let result: "credited" | "already_synced" | "rejected_velocity_cap";
       try {
         result = await withTransaction(this.pool, async (client) => {
@@ -105,8 +131,9 @@ export class PulseService {
 
           const { rows: inserted } = await client.query<{ id: number }>(
             `INSERT INTO responses
-               (alias_id, question_id, option_ids, numeric_value, input_mode, language, answered_at, client_msg_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+               (alias_id, question_id, option_ids, numeric_value, text_value, photo_storage_key,
+                input_mode, language, answered_at, client_msg_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
              ON CONFLICT (client_msg_id) DO NOTHING
              RETURNING id`,
             [
@@ -114,6 +141,8 @@ export class PulseService {
               answer.questionId,
               answer.optionIds ?? null,
               answer.numericValue ?? null,
+              answer.textValue ?? null,
+              photoStorageKey,
               answer.inputMode,
               answer.language,
               answer.answeredAt,
@@ -128,7 +157,12 @@ export class PulseService {
           await this.ledger.creditTokens({
             client,
             aliasId,
-            entry: answer.inputMode === "voice" ? "earn_voice" : "earn_response",
+            entry:
+              answer.inputMode === "voice"
+                ? "earn_voice"
+                : answer.inputMode === "snap"
+                  ? "earn_snap"
+                  : "earn_response",
             tokens: qRows[0].reward_tokens,
             refType: "response",
             refId: inserted[0].id,

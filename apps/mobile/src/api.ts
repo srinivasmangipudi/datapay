@@ -35,7 +35,7 @@ export interface PulseOption {
 export interface PulseQuestion {
   id: number;
   categoryId: number;
-  type: "single" | "multi" | "yesno" | "intent_window" | "numeric";
+  type: "single" | "multi" | "yesno" | "intent_window" | "numeric" | "free_text";
   textEn: string;
   textKn: string | null;
   rewardTokens: number;
@@ -47,7 +47,9 @@ export interface PulseAnswerInput {
   questionId: number;
   optionIds?: number[];
   numericValue?: number;
-  inputMode: "tap" | "voice" | "snap";
+  textValue?: string;
+  photoBase64?: string;
+  inputMode: "tap" | "voice" | "snap" | "text";
   language: string;
   answeredAt: string;
 }
@@ -166,7 +168,7 @@ export function transcribeVoice(
   token: string,
   audioBase64: string,
   language: string
-): Promise<{ transcript: string }> {
+): Promise<{ transcript: string; translatedText?: string }> {
   return request(
     "/v1/voice/transcribe",
     { method: "POST", body: JSON.stringify({ audioBase64, language }) },

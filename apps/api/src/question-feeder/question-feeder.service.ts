@@ -1,10 +1,14 @@
+import { getQueueToken } from "@nestjs/bullmq";
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { CreateQuestionDto, QuestionTopicDto } from "@datapay/shared";
+import { Queue } from "bullmq";
+import { CronExpressionParser } from "cron-parser";
 import { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import { PG_POOL } from "../db/db.module";
 import { withTransaction } from "../db/tx.util";
 import { DocumentGroundedGeneratorService } from "../intelligence/document-grounded-generator.service";
+import { QUESTION_GENERATION_QUEUE } from "./question-generation-queue";
 import { QuestionVariantSchema } from "./question-variant.schema";
 
 export { QuestionVariantSchema };
@@ -19,10 +23,22 @@ const TemplateConfigSchema = z.object({
 export class QuestionFeederService {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
+    @Inject(getQueueToken(QUESTION_GENERATION_QUEUE)) private readonly queue: Queue,
     private readonly documentGrounded: DocumentGroundedGeneratorService
   ) {}
 
   async createTopic(dto: QuestionTopicDto) {
+    // Validated before the INSERT, not after — a bad cron string must never
+    // leave an orphaned topic row with a schedule that silently never runs
+    // (SPEC.md §24).
+    if (dto.scheduleCron) {
+      try {
+        CronExpressionParser.parse(dto.scheduleCron);
+      } catch (err) {
+        throw new BadRequestException(`Invalid scheduleCron: ${(err as Error).message}`);
+      }
+    }
+
     const { rows } = await this.pool.query<{ id: number }>(
       `INSERT INTO question_topics (slug, name, category_id, generator_kind, config, schedule_cron, zone_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -37,7 +53,31 @@ export class QuestionFeederService {
         dto.zoneId ?? null,
       ]
     );
-    return { id: rows[0].id };
+    const topicId = rows[0].id;
+
+    if (dto.scheduleCron) {
+      await this.queue.upsertJobScheduler(
+        `topic-${topicId}`,
+        { pattern: dto.scheduleCron },
+        { name: "generate", data: { topicId } }
+      );
+    }
+
+    return { id: topicId };
+  }
+
+  async listTopics() {
+    const { rows } = await this.pool.query(
+      `SELECT t.id, t.slug, t.name, t.generator_kind, t.schedule_cron, t.zone_id,
+              z.name AS zone_name, c.name AS category_name,
+              (SELECT status FROM question_generation_runs WHERE topic_id = t.id ORDER BY id DESC LIMIT 1) AS last_run_status,
+              (SELECT triggered_at FROM question_generation_runs WHERE topic_id = t.id ORDER BY id DESC LIMIT 1) AS last_run_at
+       FROM question_topics t
+       LEFT JOIN zones z ON z.id = t.zone_id
+       JOIN categories c ON c.id = t.category_id
+       ORDER BY t.id DESC`
+    );
+    return rows;
   }
 
   async generate(topicId: number) {
@@ -110,16 +150,20 @@ export class QuestionFeederService {
       variants = TemplateConfigSchema.parse(topic.config).variants;
     }
 
-    return this.persistVariants(topic.id, topic.category_id, runId, variants);
+    return this.persistVariants(topic.id, topic.category_id, topic.zone_id, runId, variants);
   }
 
   // Phase 2 of 2: draft questions + options are one transaction — if any
   // variant fails, NONE of this run's drafts persist (§14B, no partial batches).
   // Shared by every generator kind — a document-grounded draft gets exactly
-  // the same review-queue treatment a template draft does.
+  // the same review-queue treatment a template draft does. A topic's own
+  // zone_id (SPEC.md §23) becomes every question it generates' zone_id —
+  // null for a topic with no zone, which stays a global question exactly as
+  // every question behaved before region-scoping existed.
   private async persistVariants(
     topicId: number,
     categoryId: number,
+    zoneId: string | null,
     runId: number,
     variants: z.infer<typeof QuestionVariantSchema>[]
   ): Promise<number> {
@@ -128,8 +172,8 @@ export class QuestionFeederService {
       for (const variant of variants) {
         const { rows: qRows } = await client.query<{ id: number }>(
           `INSERT INTO questions
-             (category_id, type, text_en, text_kn, reward_tokens, source, generator_topic_id, generation_run_id, review_state)
-           VALUES ($1, $2, $3, $4, $5, 'plugin_generated', $6, $7, 'draft')
+             (category_id, type, text_en, text_kn, reward_tokens, source, generator_topic_id, generation_run_id, review_state, zone_id)
+           VALUES ($1, $2, $3, $4, $5, 'plugin_generated', $6, $7, 'draft', $8)
            RETURNING id`,
           [
             categoryId,
@@ -139,6 +183,7 @@ export class QuestionFeederService {
             variant.rewardTokens,
             topicId,
             runId,
+            zoneId,
           ]
         );
         const questionId = qRows[0].id;
@@ -180,8 +225,8 @@ export class QuestionFeederService {
     return withTransaction(this.pool, async (client: PoolClient) => {
       const { rows } = await client.query<{ id: number }>(
         `INSERT INTO questions
-           (category_id, type, text_en, text_kn, reward_tokens, source, review_state, intent_window)
-         VALUES ($1, $2, $3, $4, $5, 'admin_authored', 'approved', $6)
+           (category_id, type, text_en, text_kn, reward_tokens, source, review_state, intent_window, zone_id)
+         VALUES ($1, $2, $3, $4, $5, 'admin_authored', 'approved', $6, $7)
          RETURNING id`,
         [
           dto.categoryId,
@@ -190,6 +235,7 @@ export class QuestionFeederService {
           dto.textKn ?? null,
           dto.rewardTokens,
           dto.type === "intent_window" ? dto.intentWindow : null,
+          dto.zoneId ?? null,
         ]
       );
       const questionId = rows[0].id;
@@ -210,16 +256,20 @@ export class QuestionFeederService {
     const params: unknown[] = [];
     if (filter.source) {
       params.push(filter.source);
-      conditions.push(`source = $${params.length}`);
+      conditions.push(`q.source = $${params.length}`);
     }
     if (filter.reviewState) {
       params.push(filter.reviewState);
-      conditions.push(`review_state = $${params.length}`);
+      conditions.push(`q.review_state = $${params.length}`);
     }
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const { rows } = await this.pool.query(
-      `SELECT id, category_id, type, text_en, text_kn, reward_tokens, source, review_state, active_from
-       FROM questions ${where} ORDER BY id DESC LIMIT 20`,
+      `SELECT q.id, q.category_id, q.type, q.text_en, q.text_kn, q.reward_tokens, q.source,
+              q.review_state, q.active_from, q.zone_id, z.name AS zone_name
+       FROM questions q
+       LEFT JOIN zones z ON z.id = q.zone_id
+       ${where}
+       ORDER BY q.id DESC LIMIT 20`,
       params
     );
     return rows;
@@ -237,8 +287,11 @@ export class QuestionFeederService {
 
   async listQuestionsByReviewState(reviewState: string) {
     const { rows } = await this.pool.query(
-      `SELECT id, category_id, type, text_en, text_kn, reward_tokens, source, generation_run_id, review_state
-       FROM questions WHERE review_state = $1 ORDER BY id`,
+      `SELECT q.id, q.category_id, q.type, q.text_en, q.text_kn, q.reward_tokens, q.source,
+              q.generation_run_id, q.review_state, q.zone_id, z.name AS zone_name
+       FROM questions q
+       LEFT JOIN zones z ON z.id = q.zone_id
+       WHERE q.review_state = $1 ORDER BY q.id`,
       [reviewState]
     );
     return rows;
