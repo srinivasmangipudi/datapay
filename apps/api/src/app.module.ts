@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { AdminOverviewModule } from "./admin-overview/admin-overview.module";
 import { AggregationModule } from "./aggregation/aggregation.module";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -16,9 +17,11 @@ import { MeModule } from "./me/me.module";
 import { OffersModule } from "./offers/offers.module";
 import { ProduceModule } from "./produce/produce.module";
 import { ProducerPayoutsModule } from "./producer-payouts/producer-payouts.module";
+import { PublicModule } from "./public/public.module";
 import { PulseModule } from "./pulse/pulse.module";
 import { QuestionFeederModule } from "./question-feeder/question-feeder.module";
 import { RelayModule } from "./relay/relay.module";
+import { ReserveModule } from "./reserve/reserve.module";
 import { SnapsModule } from "./snaps/snaps.module";
 import { TokenRateModule } from "./token-rate/token-rate.module";
 import { TokensModule } from "./tokens/tokens.module";
@@ -52,6 +55,9 @@ import { ZonesModule } from "./zones/zones.module";
     AuditModule,
     IntelligenceModule,
     TranslationModule,
+    PublicModule,
+    ReserveModule,
+    AdminOverviewModule,
   ],
   controllers: [AppController],
   providers: [AppService],

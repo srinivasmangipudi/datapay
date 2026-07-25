@@ -2,16 +2,22 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from "@nes
 import { Pool } from "pg";
 import { PG_POOL } from "../db/db.module";
 import { withTransaction } from "../db/tx.util";
+import { ReserveService } from "../reserve/reserve.service";
 
 // The community's cut of the collective-buy savings on a delivered offer.
 // The 50/20/30 split (tokens/fund/operations) is a business & legal decision
 // documented in the pitch deck, not something this code invents as fact —
-// tunable here, deliberately not silently hardcoded three places.
+// tunable here, deliberately not silently hardcoded three places. The other
+// named slice (tokens, 50%) isn't a percentage of savings at all — it's a
+// 1:1 reserve against the tokens actually redeemed (SPEC.md §40, ReserveService).
 const FUND_ACCRUAL_RATE = 0.2;
 
 @Injectable()
 export class FundService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly reserve: ReserveService
+  ) {}
 
   /**
    * SPEC.md §12 Phase 5: "fund accrues from completed offers." Confirming
@@ -19,6 +25,14 @@ export class FundService {
    * transition (already-delivered is a clean no-op) and on the ledger write
    * (UNIQUE(ref_type, ref_id) — same discipline as §15's token_ledger,
    * applied here to real rupees instead of closed-loop tokens).
+   *
+   * SPEC.md §40 — the SAME event also realises whatever tokens this member
+   * redeemed joining this offer: until delivery is confirmed, a redeemed
+   * token is spent but not yet backed by an actual completed sale. Reserved
+   * amount is 1:1 against those tokens at the rate locked in for this offer
+   * (offer_token_terms.token_value_paise) — never the fluctuating current
+   * token_rate, which is a different offer's redemption could've happened at
+   * a different published rate entirely.
    */
   async confirmDelivery(aliasId: string, offerId: number) {
     return withTransaction(this.pool, async (client) => {
@@ -26,8 +40,9 @@ export class FundService {
         id: number;
         state: string;
         qty: number;
+        tokens_redeemed: number;
       }>(
-        `SELECT id, state, qty FROM offer_participation
+        `SELECT id, state, qty, tokens_redeemed FROM offer_participation
          WHERE offer_id = $1 AND alias_id = $2 FOR UPDATE`,
         [offerId, aliasId]
       );
@@ -43,8 +58,12 @@ export class FundService {
         zone_id: string;
         collective_price_paise: number;
         market_price_paise: number;
+        token_value_paise: number | null;
       }>(
-        `SELECT zone_id, collective_price_paise, market_price_paise FROM offers WHERE id = $1`,
+        `SELECT o.zone_id, o.collective_price_paise, o.market_price_paise, ott.token_value_paise
+         FROM offers o
+         LEFT JOIN offer_token_terms ott ON ott.offer_id = o.id
+         WHERE o.id = $1`,
         [offerId]
       );
       const offer = offerRows[0];
@@ -71,7 +90,18 @@ export class FundService {
         }
       }
 
-      return { status: "confirmed" as const, accruedPaise: accrualPaise };
+      let reservedPaise = 0;
+      if (partRows[0].tokens_redeemed > 0 && offer.token_value_paise != null) {
+        reservedPaise = partRows[0].tokens_redeemed * offer.token_value_paise;
+        await this.reserve.creditReserve({
+          client,
+          amountPaise: reservedPaise,
+          refType: "offer_participation",
+          refId: partRows[0].id,
+        });
+      }
+
+      return { status: "confirmed" as const, accruedPaise: accrualPaise, reservedPaise };
     });
   }
 
@@ -93,17 +123,33 @@ export class FundService {
     return { zoneId, balancePaise: Number(rows[0].balance) };
   }
 
-  async listProjects(zoneId: string) {
+  /**
+   * Member-facing list: scoped to the caller's own zone, and — unlike
+   * listAllProjects() — includes `myVote` so the mobile client can render the
+   * caller's own upvote/downvote state without depending on ephemeral local
+   * state that's lost on relaunch (SPEC.md §30).
+   */
+  async listProjects(zoneId: string, aliasId: string) {
     const { rows } = await this.pool.query<{
       id: number;
       title: string;
       title_kn: string | null;
       estimate_paise: number;
       status: string;
+      yes_votes: string;
+      no_votes: string;
+      my_vote: "yes" | "no" | null;
     }>(
-      `SELECT id, title, title_kn, estimate_paise, status FROM fund_projects
-       WHERE zone_id = $1 ORDER BY id DESC`,
-      [zoneId]
+      `SELECT p.id, p.title, p.title_kn, p.estimate_paise, p.status,
+              COUNT(*) FILTER (WHERE v.vote = 'yes') AS yes_votes,
+              COUNT(*) FILTER (WHERE v.vote = 'no') AS no_votes,
+              (SELECT vote FROM fund_votes WHERE project_id = p.id AND alias_id = $2) AS my_vote
+       FROM fund_projects p
+       LEFT JOIN fund_votes v ON v.project_id = p.id
+       WHERE p.zone_id = $1
+       GROUP BY p.id
+       ORDER BY p.id DESC`,
+      [zoneId, aliasId]
     );
     return rows.map((r) => ({
       id: r.id,
@@ -111,6 +157,9 @@ export class FundService {
       titleKn: r.title_kn,
       estimatePaise: r.estimate_paise,
       status: r.status,
+      yesVotes: Number(r.yes_votes),
+      noVotes: Number(r.no_votes),
+      myVote: r.my_vote,
     }));
   }
 
@@ -155,5 +204,57 @@ export class FundService {
       [zoneId, title, titleKn ?? null, estimatePaise]
     );
     return { id: rows[0].id };
+  }
+
+  /**
+   * Ops edit (SPEC.md §31) — partial update, so the admin table can save just
+   * a status change without re-sending the whole project. `RETURNING id` is
+   * also how a bad `:id` gets turned into a 404 instead of a silent no-op.
+   */
+  async updateProject(
+    id: number,
+    patch: { title?: string; titleKn?: string; estimatePaise?: number; status?: string }
+  ) {
+    const sets: string[] = [];
+    const values: unknown[] = [];
+    let i = 1;
+    if (patch.title !== undefined) {
+      sets.push(`title = $${i++}`);
+      values.push(patch.title);
+    }
+    if (patch.titleKn !== undefined) {
+      sets.push(`title_kn = $${i++}`);
+      values.push(patch.titleKn);
+    }
+    if (patch.estimatePaise !== undefined) {
+      sets.push(`estimate_paise = $${i++}`);
+      values.push(patch.estimatePaise);
+    }
+    if (patch.status !== undefined) {
+      sets.push(`status = $${i++}`);
+      values.push(patch.status);
+    }
+    values.push(id);
+    const { rows } = await this.pool.query<{ id: number }>(
+      `UPDATE fund_projects SET ${sets.join(", ")} WHERE id = $${i} RETURNING id`,
+      values
+    );
+    if (!rows[0]) throw new NotFoundException("Project not found");
+    return { id: rows[0].id };
+  }
+
+  /**
+   * Member-facing proposal (SPEC.md §30) — same insert as createProject(),
+   * just with the zone resolved from the caller's own membership rather than
+   * accepted as input, so a member can only ever propose into their own zone.
+   */
+  async proposeProject(
+    aliasId: string,
+    title: string,
+    titleKn: string | undefined,
+    estimatePaise: number
+  ) {
+    const zoneId = await this.getMemberZone(aliasId);
+    return this.createProject(zoneId, title, titleKn, estimatePaise);
   }
 }

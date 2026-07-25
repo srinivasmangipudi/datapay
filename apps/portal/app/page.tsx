@@ -1,15 +1,20 @@
 // §10 boundary: this app, and every route added under it, may only ever query
 // demand_aggregates / offers / linkages via the portal's restricted DB role.
-// It must have no code path to responses, snaps, members, or Vault.
+// It must have no code path to responses, snaps, members, or Vault — the one
+// exception is the token-economy overview tiles below, which go through
+// Core API's admin endpoint (SPEC.md §40), same as every other member-
+// adjacent read elsewhere in this app (questions, zones, fund-projects).
 import { getDemandAggregates, getTokenRateHistory } from "./data";
+import { getTokenEconomyOverview } from "./token-economy/core-api";
 import { TokenRateChart } from "./TokenRateChart";
 
 export const dynamic = "force-dynamic"; // ops dashboard — always current, never cached
 
 export default async function PortalHome(): Promise<JSX.Element> {
-  const [tokenRateHistory, aggregates] = await Promise.all([
+  const [tokenRateHistory, aggregates, overview] = await Promise.all([
     getTokenRateHistory(),
     getDemandAggregates(),
+    getTokenEconomyOverview(),
   ]);
   const current = tokenRateHistory[tokenRateHistory.length - 1] ?? null;
 
@@ -40,6 +45,33 @@ export default async function PortalHome(): Promise<JSX.Element> {
           </span>
         </div>
       </div>
+
+      <section className="section">
+        <h2>Token economics</h2>
+        <p className="lede">
+          Outstanding is what members can still redeem — an unbacked promise. A token becomes
+          realised, and gets a real rupee reserved 1:1 against it, only once the purchase it was
+          redeemed against is actually confirmed delivered (SPEC.md §40) — not at redemption itself.
+        </p>
+        <div className="tiles">
+          <div className="tile">
+            <span className="tileLabel">Members</span>
+            <span className="tileValue">{overview.totalMembers}</span>
+          </div>
+          <div className="tile">
+            <span className="tileLabel">◇ Outstanding tokens</span>
+            <span className="tileValue">{overview.outstandingTokens}</span>
+          </div>
+          <div className="tile">
+            <span className="tileLabel">◆ Realised tokens</span>
+            <span className="tileValue">{overview.realisedTokens}</span>
+          </div>
+          <div className="tile">
+            <span className="tileLabel">Reserved (real ₹)</span>
+            <span className="tileValue value">₹{(overview.reservedPaise / 100).toFixed(2)}</span>
+          </div>
+        </div>
+      </section>
 
       <section className="section">
         <h2>Token rate — history</h2>

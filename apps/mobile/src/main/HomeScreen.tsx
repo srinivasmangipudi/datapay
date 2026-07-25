@@ -14,6 +14,18 @@ interface Props {
   onNavigate: (tab: "pulse") => void;
 }
 
+function formatRelativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minute = 60_000;
+  const hour = 3_600_000;
+  const day = 86_400_000;
+  if (diffMs < minute) return "Just now";
+  if (diffMs < hour) return `${Math.floor(diffMs / minute)}m ago`;
+  if (diffMs < day) return `${Math.floor(diffMs / hour)}h ago`;
+  if (diffMs < 7 * day) return `${Math.floor(diffMs / day)}d ago`;
+  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+}
+
 export function HomeScreen({ session, onNavigate }: Props) {
   const [tokens, setTokens] = useState<TokensSummary | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
@@ -59,7 +71,18 @@ export function HomeScreen({ session, onNavigate }: Props) {
 
       <Card variant="dark" style={styles.balanceCard}>
         <Bilingual {...strings.home.yourTokens} tone="onDarkSubtle" size={11.5} weight="700" style={type.label as any} />
-        <Text style={styles.balance}>◈ {tokens.balance}</Text>
+        <View style={styles.balanceRow}>
+          <View style={styles.balanceStat}>
+            {/* Hollow diamond — earned, unspent, still just a promise (SPEC.md §40) */}
+            <Text style={styles.balance}>◇ {tokens.balance}</Text>
+            <Bilingual {...strings.home.outstanding} tone="onDarkSubtle" size={10.5} weight="600" />
+          </View>
+          <View style={styles.balanceStat}>
+            {/* Filled diamond — redeemed AND the purchase actually delivered, so a real rupee backs it */}
+            <Text style={styles.balanceRealised}>◆ {tokens.realisedTokens}</Text>
+            <Bilingual {...strings.home.realised} tone="onDarkSubtle" size={10.5} weight="600" />
+          </View>
+        </View>
       </Card>
 
       <TouchableOpacity activeOpacity={0.85} onPress={() => onNavigate("pulse")}>
@@ -86,7 +109,10 @@ export function HomeScreen({ session, onNavigate }: Props) {
         <View style={{ marginTop: spacing.md }}>
           {tokens.history.slice(0, 5).map((h, i) => (
             <View key={i} style={styles.row}>
-              <Text style={styles.rowLabel}>{h.entry.replace(/_/g, " ")}</Text>
+              <View style={styles.rowMain}>
+                <Bilingual en={h.label} kn={h.labelKn} size={13} weight="500" />
+                <Text style={styles.rowWhen}>{formatRelativeTime(h.createdAt)}</Text>
+              </View>
               <Text style={[styles.rowValue, h.tokens < 0 && styles.rowValueNegative]}>
                 {h.tokens > 0 ? "+" : ""}
                 {h.tokens} ◈
@@ -108,7 +134,10 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.base },
   greeting: { fontSize: 13, color: colors.faint, fontWeight: "500" },
   balanceCard: { marginBottom: spacing.md },
-  balance: { color: colors.brassOnDark, fontSize: 34, fontWeight: "700", marginTop: spacing.sm },
+  balanceRow: { flexDirection: "row", gap: spacing.xl, marginTop: spacing.sm },
+  balanceStat: { gap: 2 },
+  balance: { color: colors.brassOnDark, fontSize: 34, fontWeight: "700" },
+  balanceRealised: { color: colors.brassOnDark, fontSize: 34, fontWeight: "700", opacity: 0.55 },
   pulseCard: {
     marginBottom: spacing.md,
     flexDirection: "row",
@@ -121,11 +150,13 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
     paddingVertical: spacing.sm + 2,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  rowLabel: { fontSize: 13, color: colors.subtle, textTransform: "capitalize" },
-  rowValue: { fontSize: 13, fontWeight: "700", color: colors.teal },
+  rowMain: { flex: 1, marginRight: spacing.md },
+  rowWhen: { fontSize: 11, color: colors.faint, marginTop: 2 },
+  rowValue: { fontSize: 13, fontWeight: "700", color: colors.teal, marginTop: 1 },
   rowValueNegative: { color: colors.danger },
 });

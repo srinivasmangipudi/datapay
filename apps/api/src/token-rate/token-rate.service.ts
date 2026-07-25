@@ -20,15 +20,44 @@ export class TokenRateService {
   }
 
   /**
-   * SPEC.md §6C. realisedSalesVelocity and supplierCompetition both require
-   * offers + verified purchases, which don't exist until Phase 4 — 0 here is
-   * not a stand-in guess, it's the honest current value: no sales have
-   * happened yet, so the rate correctly sits at the floor until they do.
+   * SPEC.md §6C: "fraction of recent declared demand that converted to
+   * verified purchases." Recent = last 30 days of declared intent. Verified
+   * = the intent's fulfilling offer_participation actually reached
+   * 'delivered' (SPEC.md §40 — the same bar realising a token's reserve
+   * requires), not just redeemed-but-not-yet-confirmed.
+   */
+  private async computeRealisedSalesVelocity(): Promise<number> {
+    const { rows } = await this.pool.query<{ total: string; verified: string }>(
+      `SELECT
+         COUNT(*) AS total,
+         COUNT(*) FILTER (
+           WHERE i.fulfilled_offer_id IS NOT NULL
+             AND EXISTS (
+               SELECT 1 FROM offer_participation op
+               WHERE op.offer_id = i.fulfilled_offer_id
+                 AND op.alias_id = i.alias_id
+                 AND op.state = 'delivered'
+             )
+         ) AS verified
+       FROM intents i
+       WHERE i.declared_at > now() - interval '30 days'`
+    );
+    const total = Number(rows[0].total);
+    const verified = Number(rows[0].verified);
+    return total === 0 ? 0 : verified / total;
+  }
+
+  /**
+   * SPEC.md §6C. supplierCompetition requires a bidding mechanic — multiple
+   * suppliers competing to reach the same demand — which genuinely doesn't
+   * exist yet: an offer today has exactly one collective_price_paise, not
+   * competing bids. 0 here is still the honest current value, unlike
+   * realisedSalesVelocity above, which now has real data to compute from.
    */
   async computeAndPublish(): Promise<{ ratePaise: number; inputs: TokenRateInputs }> {
     const inputs: TokenRateInputs = {
       demandPressure: await this.computeDemandPressure(),
-      realisedSalesVelocity: 0,
+      realisedSalesVelocity: await this.computeRealisedSalesVelocity(),
       supplierCompetition: 0,
     };
     const ratePaise = computeTokenRate(inputs);

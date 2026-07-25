@@ -12,6 +12,7 @@ const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000; // SPEC.md §6C: "on a fixed cade
   imports: [AuthModule, BullModule.registerQueue({ name: TOKEN_RATE_QUEUE })],
   controllers: [TokenRateController, TokenRateAdminController],
   providers: [TokenRateService, TokenRateProcessor],
+  exports: [TokenRateService],
 })
 export class TokenRateModule implements OnModuleInit {
   constructor(@Inject(getQueueToken(TOKEN_RATE_QUEUE)) private readonly queue: Queue) {}
