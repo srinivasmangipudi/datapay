@@ -75,7 +75,7 @@ export function HomeScreen({ session, onNavigate }: Props) {
           <View style={styles.balanceStat}>
             {/* Hollow diamond — earned, unspent, still just a promise (SPEC.md §40) */}
             <Text style={styles.balance}>◇ {tokens.balance}</Text>
-            <Bilingual {...strings.home.outstanding} tone="onDarkSubtle" size={10.5} weight="600" />
+            <Bilingual {...strings.home.issued} tone="onDarkSubtle" size={10.5} weight="600" />
           </View>
           <View style={styles.balanceStat}>
             {/* Filled diamond — redeemed AND the purchase actually delivered, so a real rupee backs it */}

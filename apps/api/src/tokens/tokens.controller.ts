@@ -54,8 +54,8 @@ export class TokensController {
       `SELECT token_balance FROM members WHERE alias_id = $1`,
       [req.aliasId]
     );
-    // SPEC.md §40 — outstanding (token_balance, the empty-diamond amount
-    // still owed) vs. realised: tokens this member redeemed on an offer that
+    // SPEC.md §40 — issued (token_balance, the empty-diamond amount still
+    // owed) vs. realised: tokens this member redeemed on an offer that
     // actually reached 'delivered' — the same bar the reserve itself uses,
     // not just "redeemed."
     const { rows: realisedRows } = await this.pool.query<{ realised: string }>(

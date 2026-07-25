@@ -14,7 +14,7 @@ import {
 } from "../test-fixtures";
 import { startVaultForTest, stopVaultForTest } from "../test-vault-process";
 
-describe("GET /v1/tokens — balance is outstanding, realisedTokens only counts delivered redemptions (SPEC.md §40)", () => {
+describe("GET /v1/tokens — balance is the issued amount, realisedTokens only counts delivered redemptions (SPEC.md §40)", () => {
   let app: INestApplication;
   let pool: Pool;
   let vaultPool: Pool;

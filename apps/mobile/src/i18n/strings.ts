@@ -13,7 +13,7 @@ export const strings = {
   },
   home: {
     yourTokens: { en: "Your tokens", kn: "ನಿಮ್ಮ ಟೋಕನ್‌ಗಳು" },
-    outstanding: { en: "Outstanding", kn: "ಬಾಕಿ ಇರುವ" },
+    issued: { en: "Issued", kn: "ನೀಡಲಾದ" },
     realised: { en: "Realised", kn: "ವಾಸ್ತವಿಕಗೊಂಡ" },
     todaysPulse: { en: "Today's Pulse", kn: "ಇಂದಿನ ಪಲ್ಸ್" },
     recentActivity: { en: "Recent activity", kn: "ಇತ್ತೀಚಿನ ಚಟುವಟಿಕೆ" },

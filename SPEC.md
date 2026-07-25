@@ -1720,7 +1720,7 @@ pilot zones correctly auto-tagged `kn`); `pnpm build` clean on `packages/shared`
 new translations-persistence case in `create-question.integration.spec.ts`; full existing suite (112
 tests, 25 suites) still green.
 
-## 40. OUTSTANDING VS. REALISED TOKENS — THE RESERVE (2026-07-25)
+## 40. ISSUED VS. REALISED TOKENS — THE RESERVE (2026-07-25)
 
 Two related gaps closed together: (1) the ledger already distinguished earned vs. redeemed tokens,
 but nothing distinguished "redeemed" from "backed by an actual completed sale" — a real distinction
@@ -1730,7 +1730,7 @@ only ever had the fund's 20% slice built — the 50% tokens-backing slice didn't
 all. Both close with the same mechanism: a new **reserve**, credited at the same event that already
 triggers Fund accrual.
 
-**40A. A token is "outstanding" (hollow ◇) from the moment it's earned until it's spent, and
+**40A. A token is "issued" (hollow ◇) from the moment it's earned until it's spent, and
 "realised" (filled ◆) only once the specific offer it was redeemed against reaches DELIVERED — never
 at redemption itself.** A member can redeem tokens joining an offer (`offers.service.ts`'s `join()`)
 before the goods actually arrive; nothing about that moment proves a completed sale. Confirmed
@@ -1767,11 +1767,11 @@ it needs a competing-bids mechanic that genuinely doesn't exist yet (an offer to
 
 **40E. Surfaced in three places.** Member-facing `GET /v1/tokens` gains `realisedTokens` (this
 member's own delivered-redemption total) alongside the existing `balance`; `HomeScreen.tsx`'s balance
-card now shows both, hollow ◇ for outstanding and dimmed filled ◆ for realised, so the distinction the
+card now shows both, hollow ◇ for issued and dimmed filled ◆ for realised, so the distinction the
 member sees matches the one the ledger enforces. Ops-facing: a new `GET
 /v1/admin/token-economy/overview` (new `AdminOverviewModule`, no new business logic — it only reports
 what LedgerService/ReserveService/TokenRateService already recorded) returns total members,
-outstanding tokens, realised tokens, reserved paise, and the current published rate; the portal's home
+issued tokens, realised tokens, reserved paise, and the current published rate; the portal's home
 page (`page.tsx`, the actual "main company page") gained a "Token economics" section showing all five,
 fetched via Core API like every other member-adjacent portal read (§10's boundary — none of
 members/token_ledger/reserve_ledger are in the portal role's direct-read grant).
@@ -1783,7 +1783,7 @@ reserve when no tokens redeemed, append-only enforcement), `admin-overview.integ
 cases — full earn→redeem→deliver delta tracking, token-rate field presence), `tokens.integration.spec.ts`
 (1 case — balance drops at redemption, realisedTokens only appears at delivery). Full suite: 118
 tests, 28 suites, all green. Live-verified `GET /v1/admin/token-economy/overview` against the running
-dev API after restarting it with the new build — real data (1597 members, 61126 outstanding tokens,
+dev API after restarting it with the new build — real data (1597 members, 61126 issued tokens,
 current rate ₹0.50) returned in the exact shape the portal page consumes. The portal page itself was
 not click-tested in a browser — its session cookie is gated by a `PORTAL_SESSION_SECRET` set directly
 in the shell environment, not in any file this session had access to; confirmed instead that the live

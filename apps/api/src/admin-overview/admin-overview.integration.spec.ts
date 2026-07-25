@@ -81,7 +81,7 @@ describe("Admin overview — the 'main company page' numbers (SPEC.md §40)", ()
     expect(res.status).toBe(200);
     return res.body as {
       totalMembers: number;
-      outstandingTokens: number;
+      issuedTokens: number;
       realisedTokens: number;
       reservedPaise: number;
       currentTokenRatePaise: number | null;
@@ -89,13 +89,13 @@ describe("Admin overview — the 'main company page' numbers (SPEC.md §40)", ()
     };
   }
 
-  it("tracks a member's tokens as outstanding until redemption, then realised only once delivery is confirmed", async () => {
+  it("tracks a member's tokens as issued until redemption, then realised only once delivery is confirmed", async () => {
     const before = await overview();
 
     const member = await memberWithAddressAndTokens(100);
     const afterEarn = await overview();
     expect(afterEarn.totalMembers - before.totalMembers).toBe(1);
-    expect(afterEarn.outstandingTokens - before.outstandingTokens).toBe(100);
+    expect(afterEarn.issuedTokens - before.issuedTokens).toBe(100);
     expect(afterEarn.realisedTokens - before.realisedTokens).toBe(0);
     expect(afterEarn.reservedPaise - before.reservedPaise).toBe(0);
 
@@ -111,16 +111,16 @@ describe("Admin overview — the 'main company page' numbers (SPEC.md §40)", ()
       .send({ qty: 1, tokensToRedeem: 40 });
 
     const afterRedeem = await overview();
-    // Spent, so no longer outstanding — but not yet realised either, since
-    // delivery hasn't been confirmed (SPEC.md §40's whole point).
-    expect(afterRedeem.outstandingTokens - before.outstandingTokens).toBe(60);
+    // Spent, so no longer counted as issued-and-held — but not yet realised
+    // either, since delivery hasn't been confirmed (SPEC.md §40's whole point).
+    expect(afterRedeem.issuedTokens - before.issuedTokens).toBe(60);
     expect(afterRedeem.realisedTokens - before.realisedTokens).toBe(0);
     expect(afterRedeem.reservedPaise - before.reservedPaise).toBe(0);
 
     await request(app.getHttpServer()).post(`/v1/offers/${riceOfferId}/confirm-delivery`).set(auth);
 
     const afterDelivery = await overview();
-    expect(afterDelivery.outstandingTokens - before.outstandingTokens).toBe(60);
+    expect(afterDelivery.issuedTokens - before.issuedTokens).toBe(60);
     expect(afterDelivery.realisedTokens - before.realisedTokens).toBe(40);
     expect(afterDelivery.reservedPaise - before.reservedPaise).toBe(40 * TOKEN_VALUE_PAISE);
 

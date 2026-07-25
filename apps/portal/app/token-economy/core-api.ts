@@ -10,7 +10,7 @@ export function runAggregation() {
 
 export interface TokenEconomyOverview {
   totalMembers: number;
-  outstandingTokens: number;
+  issuedTokens: number;
   realisedTokens: number;
   reservedPaise: number;
   currentTokenRatePaise: number | null;

@@ -87,7 +87,7 @@ export interface PulseAnswerResult {
 }
 
 export interface TokensSummary {
-  // Outstanding — earned, unspent, still just a promise (SPEC.md §40).
+  // Issued — earned, unspent, still just a promise (SPEC.md §40).
   balance: number;
   // Realised — redeemed AND the underlying offer actually delivered, so a
   // real rupee has been reserved to back it. Never a duplicate of balance:

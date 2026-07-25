@@ -49,7 +49,7 @@ export default async function PortalHome(): Promise<JSX.Element> {
       <section className="section">
         <h2>Token economics</h2>
         <p className="lede">
-          Outstanding is what members can still redeem — an unbacked promise. A token becomes
+          Issued is what members can still redeem — an unbacked promise. A token becomes
           realised, and gets a real rupee reserved 1:1 against it, only once the purchase it was
           redeemed against is actually confirmed delivered (SPEC.md §40) — not at redemption itself.
         </p>
@@ -59,8 +59,8 @@ export default async function PortalHome(): Promise<JSX.Element> {
             <span className="tileValue">{overview.totalMembers}</span>
           </div>
           <div className="tile">
-            <span className="tileLabel">◇ Outstanding tokens</span>
-            <span className="tileValue">{overview.outstandingTokens}</span>
+            <span className="tileLabel">◇ Issued tokens</span>
+            <span className="tileValue">{overview.issuedTokens}</span>
           </div>
           <div className="tile">
             <span className="tileLabel">◆ Realised tokens</span>
