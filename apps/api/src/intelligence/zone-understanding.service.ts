@@ -3,7 +3,7 @@ import { Pool } from "pg";
 import { z } from "zod";
 import { PG_POOL } from "../db/db.module";
 import { stripCodeFences } from "./llm-json.util";
-import { AnthropicLlmProvider, LlmProvider } from "./llm.provider";
+import { GeminiLlmProvider, LlmProvider } from "./llm.provider";
 
 const KnowledgeMapSchema = z.object({
   economicActivities: z.array(z.string()).default([]),
@@ -68,8 +68,8 @@ export class ZoneUnderstandingService {
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
-  // Lazy on purpose — constructing AnthropicLlmProvider throws if
-  // ANTHROPIC_API_KEY is missing, and this feature is optional; the app
+  // Lazy on purpose — constructing GeminiLlmProvider throws if
+  // GEMINI_API_KEY is missing, and this feature is optional; the app
   // must still boot cleanly for anyone not using it. Config errors are
   // re-thrown as BadRequestException so ops sees the real reason in the
   // portal, not NestJS's generic 500 for an unrecognized Error.
@@ -77,7 +77,7 @@ export class ZoneUnderstandingService {
     if (this.llmOverride) return this.llmOverride;
     if (!this.llmInstance) {
       try {
-        this.llmInstance = new AnthropicLlmProvider();
+        this.llmInstance = new GeminiLlmProvider();
       } catch (err) {
         throw new BadRequestException((err as Error).message);
       }
@@ -119,7 +119,7 @@ export class ZoneUnderstandingService {
       );
     }
 
-    const modelUsed = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
+    const modelUsed = process.env.GEMINI_MODEL || "gemini-flash-latest";
     const { rows } = await this.pool.query<{ id: number; generated_at: Date }>(
       `INSERT INTO zone_understanding
          (zone_id, summary_en, summary_kn, knowledge_map, source_document_ids, model_used)

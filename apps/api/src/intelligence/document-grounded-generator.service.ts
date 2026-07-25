@@ -4,7 +4,7 @@ import { z } from "zod";
 import { PG_POOL } from "../db/db.module";
 import { QuestionVariantSchema } from "../question-feeder/question-variant.schema";
 import { stripCodeFences } from "./llm-json.util";
-import { AnthropicLlmProvider, LlmProvider } from "./llm.provider";
+import { GeminiLlmProvider, LlmProvider } from "./llm.provider";
 import { ZoneUnderstanding, ZoneUnderstandingService } from "./zone-understanding.service";
 
 const DocumentGroundedConfigSchema = z.object({
@@ -70,7 +70,7 @@ export class DocumentGroundedGeneratorService {
     if (this.llmOverride) return this.llmOverride;
     if (!this.llmInstance) {
       try {
-        this.llmInstance = new AnthropicLlmProvider();
+        this.llmInstance = new GeminiLlmProvider();
       } catch (err) {
         throw new BadRequestException((err as Error).message);
       }
