@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { LANGUAGE_NAMES } from "../lib/language-names";
 import { createZoneAction } from "./actions";
+import { ZoneCentroidMapModal } from "./ZoneCentroidMapModal";
 
 interface Zone {
   id: string;
@@ -16,6 +18,10 @@ export function ZoneWizard({ zones }: { zones: Zone[] }): JSX.Element {
   const [nameKn, setNameKn] = useState("");
   const [level, setLevel] = useState<(typeof LEVELS)[number]>("village");
   const [parentId, setParentId] = useState("");
+  const [centroidLat, setCentroidLat] = useState<number | null>(null);
+  const [centroidLng, setCentroidLng] = useState<number | null>(null);
+  const [languageCode, setLanguageCode] = useState("");
+  const [showMap, setShowMap] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -32,6 +38,9 @@ export function ZoneWizard({ zones }: { zones: Zone[] }): JSX.Element {
         nameKn: nameKn.trim() || undefined,
         level,
         parentId: parentId || undefined,
+        centroidLat: centroidLat ?? undefined,
+        centroidLng: centroidLng ?? undefined,
+        languageCode: languageCode || undefined,
       });
     });
   }
@@ -58,10 +67,45 @@ export function ZoneWizard({ zones }: { zones: Zone[] }): JSX.Element {
             </option>
           ))}
         </select>
+        <select value={languageCode} onChange={(e) => setLanguageCode(e.target.value)}>
+          <option value="">Local language — not set (leave for geocoding/ops to set later)</option>
+          {Object.entries(LANGUAGE_NAMES).map(([code, label]) => (
+            <option key={code} value={code}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="linkBtn" onClick={() => setShowMap(true)}>
+          {centroidLat !== null ? "Change centroid on map →" : "Set centroid on map — optional →"}
+        </button>
+        {centroidLat !== null && centroidLng !== null && (
+          <p className="hint mono">
+            {centroidLat.toFixed(5)}, {centroidLng.toFixed(5)}
+          </p>
+        )}
+        <p className="hint">
+          A representative point (e.g. the town center) — used only to match a member's phone GPS to
+          the nearest zone (SPEC.md §35), not a real boundary. Leave blank if unknown; it can be set
+          later.
+        </p>
         <button type="submit" className="submitBtn" disabled={isPending}>
           {isPending ? "Creating…" : "Create zone"}
         </button>
       </div>
+
+      {showMap && (
+        <ZoneCentroidMapModal
+          zoneName={name.trim() || "new zone"}
+          initialLat={centroidLat}
+          initialLng={centroidLng}
+          onSave={(lat, lng) => {
+            setCentroidLat(lat);
+            setCentroidLng(lng);
+            setShowMap(false);
+          }}
+          onClose={() => setShowMap(false)}
+        />
+      )}
     </form>
   );
 }

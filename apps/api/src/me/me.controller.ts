@@ -25,6 +25,8 @@ interface MemberRow {
   joined_at: Date;
   status: string;
   trust_score: string;
+  zone_confirmed: boolean;
+  requested_area_note: string | null;
 }
 
 function toMemberResponse(m: MemberRow) {
@@ -37,6 +39,8 @@ function toMemberResponse(m: MemberRow) {
     joinedAt: m.joined_at,
     status: m.status,
     trustScore: Number(m.trust_score),
+    zoneConfirmed: m.zone_confirmed,
+    requestedAreaNote: m.requested_area_note,
   };
 }
 
@@ -62,14 +66,25 @@ export class MeController {
   async upsert(@Req() req: AliasRequest, @Body() body: unknown) {
     const dto = parseOrThrow(CompleteOnboardingDtoSchema, body);
     const { rows } = await this.pool.query<MemberRow>(
-      `INSERT INTO members (alias_id, display_alias, zone_id, household_size_band, locale)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO members
+         (alias_id, display_alias, zone_id, household_size_band, locale, zone_confirmed, requested_area_note)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (alias_id) DO UPDATE SET
          zone_id = EXCLUDED.zone_id,
          household_size_band = EXCLUDED.household_size_band,
-         locale = EXCLUDED.locale
+         locale = EXCLUDED.locale,
+         zone_confirmed = EXCLUDED.zone_confirmed,
+         requested_area_note = EXCLUDED.requested_area_note
        RETURNING *`,
-      [req.aliasId, req.displayAlias, dto.zoneId, dto.householdSizeBand ?? null, dto.locale]
+      [
+        req.aliasId,
+        req.displayAlias,
+        dto.zoneId,
+        dto.householdSizeBand ?? null,
+        dto.locale,
+        dto.zoneConfirmed,
+        dto.requestedAreaNote ?? null,
+      ]
     );
     return toMemberResponse(rows[0]);
   }

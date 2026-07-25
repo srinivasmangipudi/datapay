@@ -1,16 +1,9 @@
 import { getPortalPool } from "../db";
 import { CategoryWizard } from "./CategoryWizard";
 import { ZoneWizard } from "./ZoneWizard";
+import { ZonesTable, type ZoneRow } from "./ZonesTable";
 
 export const dynamic = "force-dynamic";
-
-interface Zone {
-  id: string;
-  parent_id: string | null;
-  name: string;
-  name_kn: string | null;
-  level: string;
-}
 
 interface Category {
   id: number;
@@ -20,17 +13,11 @@ interface Category {
   sensitivity: string;
 }
 
-const LEVEL_INDENT: Record<string, string> = {
-  constituency: "",
-  hobli: "— ",
-  panchayat: "—— ",
-  village: "——— ",
-};
-
-async function getZones(): Promise<Zone[]> {
+async function getZones(): Promise<ZoneRow[]> {
   const pool = getPortalPool();
-  const { rows } = await pool.query<Zone>(
-    `SELECT id, parent_id, name, name_kn, level FROM zones ORDER BY level, name`
+  const { rows } = await pool.query<ZoneRow>(
+    `SELECT id, parent_id, name, name_kn, level, centroid_lat, centroid_lng, language_code
+     FROM zones ORDER BY level, name`
   );
   return rows;
 }
@@ -46,7 +33,7 @@ async function getCategories(): Promise<Category[]> {
 export default async function ZonesPage({
   searchParams,
 }: {
-  searchParams: { error?: string; created?: string };
+  searchParams: { error?: string; created?: string; updated?: string };
 }): Promise<JSX.Element> {
   const [zones, categories] = await Promise.all([getZones(), getCategories()]);
 
@@ -57,7 +44,8 @@ export default async function ZonesPage({
       <p className="lede">
         Zones form the region hierarchy questions and funds are scoped to (village ⊂ panchayat ⊂
         hobli ⊂ constituency). Categories are what demand aggregation and Pulse questions are grouped
-        by.
+        by. A zone's centroid (below) is a representative point — used only to match a member's
+        phone GPS to the nearest zone when they answer a question (SPEC.md §35), not a real boundary.
       </p>
 
       {searchParams.error && (
@@ -67,31 +55,11 @@ export default async function ZonesPage({
       )}
       {searchParams.created === "zone" && <div className="successBanner">Zone created.</div>}
       {searchParams.created === "category" && <div className="successBanner">Category created.</div>}
+      {searchParams.updated === "zone" && <div className="successBanner">Zone centroid updated.</div>}
 
       <section className="section">
         <h2>Zones ({zones.length})</h2>
-        <div className="tableWrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Level</th>
-              </tr>
-            </thead>
-            <tbody>
-              {zones.map((z) => (
-                <tr key={z.id}>
-                  <td>
-                    {LEVEL_INDENT[z.level] ?? ""}
-                    {z.name}
-                    {z.name_kn && <span className="muted small"> · {z.name_kn}</span>}
-                  </td>
-                  <td className="level">{z.level}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ZonesTable zones={zones} />
         <ZoneWizard zones={zones} />
       </section>
 
