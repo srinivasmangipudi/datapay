@@ -1,5 +1,5 @@
 import { Body, Controller, HttpException, Post } from "@nestjs/common";
-import { RegisterDtoSchema, VerifyOtpDtoSchema } from "@datapay/shared";
+import { AliasCandidatesDtoSchema, CommitAliasDtoSchema, RegisterDtoSchema, VerifyOtpDtoSchema } from "@datapay/shared";
 import { parseOrThrow } from "../zod.util";
 
 // Mobile talks ONLY to Core API for auth — Vault is never internet-facing.
@@ -23,6 +23,20 @@ export class AuthProxyController {
   async verify(@Body() body: unknown) {
     const dto = parseOrThrow(VerifyOtpDtoSchema, body);
     return this.forward("/verify-otp", dto);
+  }
+
+  // SPEC.md §36 — the "choose your name" step, between OTP verification and
+  // completing onboarding: browse more options, then lock one in.
+  @Post("alias-candidates")
+  async aliasCandidates(@Body() body: unknown) {
+    const dto = parseOrThrow(AliasCandidatesDtoSchema, body);
+    return this.forward("/alias-candidates", dto);
+  }
+
+  @Post("commit-alias")
+  async commitAlias(@Body() body: unknown) {
+    const dto = parseOrThrow(CommitAliasDtoSchema, body);
+    return this.forward("/commit-alias", dto);
   }
 
   private async forward(path: string, body: unknown) {
