@@ -1125,3 +1125,667 @@ viewer is signed in; nothing else in the matcher changed.
 `/og-image.png`, `/mark-primary.svg`) returns 200 with the correct content-type, unauthenticated;
 `AdminNav`'s rendered HTML contains the mark's actual SVG markup; `next build` and mobile's `tsc
 --noEmit` both pass clean with zero new errors.
+
+---
+
+## 29. THE PUBLIC DEMAND REGISTRY + OPPORTUNITIES PAGE — ADDENDUM (2026-07-24)
+
+Everything under `/v1/admin/*` and the portal's `AdminNav`-gated pages is deliberately
+unauthenticated-for-now per §19E — a stopgap, not a design decision, until real per-user auth exists.
+This addendum is different in kind: `/v1/public/registry` and the portal's `/registry` page are
+**meant to have no login, ever** — a public-facing page showing what real, k-anonymized household
+demand looks like, and where it's going unmet, for anyone (press, officials, prospective suppliers)
+to see without an account. Built inside the admin portal app for now, per the user's explicit "we can
+move it later" — kept deliberately decoupled from the rest of the portal so that move is cheap.
+
+**29A. Two sections, one query shape, one honest distinction.** `PublicService.getRegistry()` runs
+two queries against `demand_aggregates` (joined to `categories`/`zones` for display names): the
+**registry** is every published aggregate, newest first; **opportunities** is the same rows filtered
+to `NOT EXISTS` a matching open `offers` row — same `zone_id`, and an `offers.product_code` whose
+`products.category_id` matches the aggregate's category. That `NOT EXISTS` join is the entire
+definition of "unmet demand" the user chose (over the other option offered: demand nearing the k=50
+threshold) — real supply-side absence, not a proxy for it. Both queries select only
+`category_name`/`zone_name`/`zone_level`/`cohort_size`/`computed_at` — deliberately never
+`collective_price_paise` or `market_price_paise`, which are commercially sensitive and have no
+business on a public page.
+
+**29B. `GET /v1/public/registry` carries no guard, by design — verified, not asserted.** `public.
+controller.ts` has no auth decorator at all, and the doc comment on the module says explicitly why
+this is not the same posture as §19E's admin endpoints. Confirmed live: rebuilt, restarted the API,
+curled the endpoint directly and got `{"registry":[],"opportunities":[]}` — and confirmed by direct
+query that this empty result is *correct*, not a bug: zero rows exist in `demand_aggregates` yet, and
+the real per-category/zone response counts (checked directly) all fall well short of the k=50
+publication floor (six responses was the highest, for rice in one village). The page has to render
+that state gracefully, not assume data will always be there by the time someone visits.
+
+**29C. The portal route needed two separate exclusions, not one.** `middleware.ts`'s matcher gained
+`registry` alongside its existing static-asset exclusions (§28F) — without it, the login gate would
+redirect a public page to a login form, defeating the entire point. `AdminNav` also gained a
+`pathname === "/registry"` check next to its existing `/login` check, so the ops-only nav bar (with
+its "Log out" button and nine admin links) doesn't render on a page meant for the general public.
+
+**29D. The page's styling is fully self-contained — no `globals.css` dependency.** Every other portal
+page shares `globals.css` and `AdminNav`'s layout chrome; `/registry` intentionally does not, via an
+inline `<style>` tag scoped to its own class names. This is the concrete form the user's "we can move
+it later" took: the file can be lifted into a standalone Next.js app with just `page.tsx` and
+`core-api.ts` — no CSS variables or shared components to untangle first. `core-api.ts` still goes
+through Core API (`apiFetch("/v1/public/registry")`) rather than a direct DB read, same §10
+discipline as every other page, just against a genuinely public endpoint instead of an admin one.
+
+**Acceptance:** `curl http://localhost:3002/registry` returns 200 with no redirect, unauthenticated
+(confirmed directly, alongside `/` correctly still 307-ing to `/login`); the rendered page shows
+tasteful empty-state copy for both sections rather than a blank or broken layout, matching the real
+current state of zero published aggregates; `next build` passes clean with the new route listed as
+server-rendered (`ƒ /registry`).
+
+---
+
+## 30. MEMBER-PROPOSED FUND PROJECTS — ADDENDUM (2026-07-24)
+
+The mobile Community tab's "fake data" turned out to be real, but wrong: 43 identical "Streetlight
+repair" rows had accumulated in `fund_projects`, one per run of `fund.integration.spec.ts` — the test
+created a project via the admin endpoint to exercise the one-vote-per-member rule but never deleted
+it afterward (the same class of bug as the earlier "suppression test question" incident). No seed
+script or fixture inserts fund projects anywhere in this repo; this was pure test debris, confirmed
+by reading every seed migration and grepping for the literal title. Deleted all 43 rows directly
+(`fund_votes` cascades off `fund_projects`, so nothing else needed cleanup), and fixed the test to
+delete its project row in the same place it already deletes its test members.
+
+**30A. Members can now propose a project into their own zone's fund — a real gap, not a UI-only
+one.** Until now `fund_projects` only had one write path: `POST /v1/admin/fund-projects`, ops-only,
+zone chosen by whoever's calling it. `POST /v1/fund/projects` (new, member-facing, same
+`AliasAuthGuard` as every other member write) adds the missing path: `FundService.proposeProject()`
+resolves the zone from the caller's own membership (`getMemberZone`) and never accepts a client-
+supplied `zoneId` — a member can only ever propose into the zone they actually belong to, the same
+trust boundary as every other member-facing endpoint in this codebase. New project rows land with
+the schema's existing default status (`proposed`) — no new status-transition logic was needed, since
+none existed before this either (moving `proposed → voting → approved → funded → done` is still a
+manual/ops action, unchanged).
+
+**30B. "Upvote/downvote once" was already enforced server-side — the gap was the client, not the
+rule.** `fund_votes`' `UNIQUE(project_id, alias_id)` constraint (§12 Phase 5, unchanged) already made
+a second vote from the same alias impossible at the database level, regardless of what the mobile app
+remembered locally. What was missing was the server ever telling the client it had already voted:
+`GET /v1/fund/projects` now returns `yesVotes`/`noVotes`/`myVote` per project (a `LEFT JOIN` against
+`fund_votes` plus a per-caller correlated subquery for `myVote`), replacing the mobile screen's old
+`votedIds` local-only state — which meant a killed-and-reopened app forgot every vote it had cast
+until the member tried again and hit a 400. The vote buttons (styled as ▲/▼ counts, brand jade/danger
+colors) now disable and highlight based on the server's `myVote`, and there's still no vote-changing
+path — casting once is final, matching the DB constraint exactly.
+
+**30C. The Community tab gained a propose form, not a separate screen.** A "+ Propose a project"
+toggle above the active-votes list reveals a small inline form (title, estimated cost in rupees,
+converted to paise before the request) — kept in the same screen deliberately, since proposing and
+voting are the same activity from a member's point of view. Submission errors (e.g. a network
+failure) surface inline rather than failing silently, unlike the vote action's deliberately-silent
+catch (a failed vote just leaves the buttons active again on reload — there's no ambiguous state to
+explain, but a failed proposal would otherwise look like nothing happened).
+
+**Acceptance:** `fund.integration.spec.ts` passes and leaves zero rows in `fund_projects` afterward
+(confirmed via direct query pre- and post-run, both `0`); `POST /v1/fund/projects` is mapped and
+reachable only with a valid member bearer token; a member who has already voted on a project cannot
+vote again even after force-quitting and relaunching the app, because `myVote` now comes from the
+server on every load, not from memory.
+
+---
+
+## 31. EDITABLE FUND PROJECTS IN THE ADMIN PORTAL — ADDENDUM (2026-07-24)
+
+Before this, `fund_projects` had exactly one ops write path (`POST /v1/admin/fund-projects`, create
+only) — a typo in a title, a wrong estimate, or moving a project through its status lifecycle
+(`proposed → voting → approved → funded → done`) had no UI at all; the only fix was a direct SQL
+`UPDATE`. This closes that gap with a real edit path, not a bigger create form.
+
+**31A. `PATCH /v1/admin/fund-projects/:id` — partial update, same posture as the rest of §25's admin
+API (no auth guard yet, per §19E).** `UpdateFundProjectDtoSchema` (`packages/shared/src/dto.ts`)
+makes every field optional (`title`, `titleKn`, `estimatePaise`, `status`) but `.refine()`s that at
+least one is present — an empty `{}` body is a 400 ("Provide at least one field to update"), not a
+silent no-op. `FundService.updateProject()` builds its `SET` clause from whichever fields were sent
+and returns the row via `RETURNING id`; a nonexistent project id is a real 404
+(`NotFoundException`), not a quiet 200 that changed nothing. `status` is constrained to the same five
+values the table's own CHECK constraint allows — the DTO and the schema agree on the same list by
+construction, not by copy-paste luck.
+
+**31B. The portal's project table is now a client component with an inline edit row, not a separate
+edit page.** `FundProjectsTable.tsx` (new) replaces the static table that used to live directly in
+`page.tsx`; clicking "Edit" swaps that one row for input fields (title, Kannada title, a status
+`<select>` restricted to the five real statuses, and estimate in ₹) pre-filled with the row's current
+values, "Save" and "Cancel" buttons alongside. This is the same client-component-plus-server-action
+shape as `FundWizard.tsx`'s create form (`useTransition`, inline `clientError`, no full-page reload) —
+extended to editing rather than inventing a second pattern.
+
+**31C. This is also the only place in the entire app a project's status can move.** Nothing before
+this addendum ever wrote anything other than `'proposed'` into `fund_projects.status` — not a bug
+being fixed, just a genuinely unbuilt path until now. Advancing a project to `voting`/`approved`/
+`funded`/`done` is still entirely a manual ops call (no automatic vote-threshold or deadline logic
+was added), made through this same edit form by picking a different status and saving.
+
+**Acceptance:** `PATCH /v1/admin/fund-projects/:id` confirmed live — a title/estimate/status edit
+persists and reads back correctly, an empty body 400s with the refine's message, and an unknown id
+404s; the portal's `/fund` page (authenticated) renders the edit button against the two real
+member-proposed projects live in the DB ("art for schools", "Farm school"); `pnpm build`/`tsc
+--noEmit` clean across `packages/shared`, `apps/api`, and `apps/portal`; `fund.integration.spec.ts`
+still passes and still leaves zero rows behind.
+
+---
+
+## 32. SNAP IMAGE RECOGNITION — GEMINI VISION TAGS, LABELS, PRODUCT & CATEGORY GUESSES (2026-07-24)
+
+`snaps.state` has always had a `recognized` value in its CHECK constraint (SPEC.md §8.4's own
+described chain: `uploaded → recognized → member_confirmed → ops_verified → rejected`) — but nothing
+ever wrote it. A snap sat at `uploaded` until an ops reviewer manually verified or rejected it, with
+zero automated help figuring out what was actually in the photo. This closes that specific gap: real
+image analysis, not a stub — same "GCP/Gemini across the stack, not Bhashini" posture as ASR (§9) and
+translation (§27D).
+
+**32A. `GeminiVisionProvider` (`apps/api/src/snaps/vision.provider.ts`) — same lazy-init,
+fails-loudly-if-misconfigured shape as every other Gemini provider in this codebase, with one
+deliberate difference: it degrades instead of failing the request.** `GeminiAsrProvider`/
+`GeminiTranslationProvider` throw if `GEMINI_API_KEY` is missing, because their callers (a member
+speaking, an admin translating) are asking for that specific thing to happen right now. Recognition
+is different — it's enrichment on top of a reward that's already been earned, so `SnapsService`'s
+private `vision` getter falls back to a `DevNoopVisionProvider` (empty tags, by design — never
+invents plausible-looking ones) rather than throwing, if the key isn't configured.
+
+**32B. Recognition runs after the reward is committed, not before — a member's tokens never depend
+on whether Gemini could tag the photo.** `submit()` now fires `this.recognize(snapId, imageBase64)`
+as a background call (`.catch()`'d, not `await`'d) only after the transaction crediting tokens has
+already resolved; a failed or slow Gemini call is logged and otherwise invisible to the member. This
+also sidesteps a real constraint: `storage.provider.ts`'s `DevNoopStorageProvider` discards the
+actual image bytes immediately (no real blob storage is wired up yet, documented since §8's original
+build) — recognition works around that by analyzing `dto.imageBase64` while it's still in scope,
+before it would otherwise be thrown away, rather than depending on storage that doesn't durably exist.
+
+**32C. The model returns tags, a label, a product guess, AND a category guess — the category guess
+is checked against the real category list, never trusted blindly.** The prompt sends Gemini the
+exact list of real category slugs and requires it to either copy one verbatim or return `null` —
+`GeminiVisionProvider.analyze()` re-validates the returned slug against that same list itself
+(`categories.some(...)`) before it's treated as real, so a hallucinated slug can never become a
+dangling reference. `productGuess` is intentionally free text, not FK-validated against `products` —
+the pilot's product catalog is one row deep today, so matching against it reliably isn't
+possible yet; it's stored as an honest guess, not a validated product link.
+
+**32D. The AI's category guess is stored separately from the member-declared one — never merged
+into it.** New columns `recognized_tags`, `recognized_label`, `recognized_confidence`,
+`recognized_product_guess`, `recognized_category_id` (migration
+`1738540800000_snap_recognition.js`) sit alongside the existing `category_id`, which stays exactly
+what the member chose (or left blank) at capture time. This matches the same "AI output is always a
+suggestion, never silently becomes the system of record" posture as §27D's translate-then-edit flow
+— ops sees both and decides, recognition never overwrites ground truth.
+
+**32E. Surfaced in the ops verification queue, not on the member's device.** The portal's `/snaps`
+page gained an "AI tags" column — product guess, tags, matched category (if any), and confidence —
+next to the existing verify/reject actions, explicitly captioned as "ops-assist only, never a
+substitute for actually looking at the evidence." Nothing was added to the mobile Snap screen; a
+member never sees or interacts with their own photo's AI tags.
+
+**Acceptance:** confirmed live against a real (non-garbage) JPEG through the running API and a real
+`GEMINI_API_KEY` — Gemini correctly tagged an unrelated logo image as `{graphic, logo, icon, vector,
+symbol}` at 0.3 confidence with no product guess and no category match (an honest low-confidence
+non-match, not a forced one); `snaps.integration.spec.ts` gained a test using a
+`FakeVisionProvider` override (same seam as `TranslationService.translationOverride`) that polls for
+the background recognition to land and asserts the real category-slug validation resolves to a real
+`category_id`; the portal's `/snaps` page renders the new column against live data; `pnpm build`
+clean on `apps/api`, `tsc --noEmit` clean on `apps/portal`.
+
+---
+
+## 33. FIX: "REQUEST ENTITY TOO LARGE" ON SNAP UPLOADS (2026-07-24)
+
+`main.ts` never configured a body-size limit, so Nest fell back to Express's default (100kb) for
+every endpoint. That's fine for JSON DTOs, but a real camera photo — base64-encoded, often several
+MB — blew straight past it, and the mobile app surfaced Express's raw `PayloadTooLargeError` as
+"Couldn't upload image. Request entity too large." §32's snap recognition work made real (not
+garbage) image bytes flow through this same path for the first time this session, which is what
+surfaced it.
+
+**Fix:** `bootstrap()` now disables Nest's built-in body parser (`{ bodyParser: false }`) and
+re-registers `express`'s own `json`/`urlencoded` parsers with an explicit `15mb` limit — enough
+headroom for a full-resolution phone photo's base64 encoding (~33% larger than the raw file).
+
+**A real dependency gap surfaced doing this, not just a config tweak.** `import { json, urlencoded }
+from "express"` doesn't resolve at all under this repo's pnpm workspace — `express` was only ever a
+*transitive* dependency of `@nestjs/platform-express`, never a direct one, and pnpm's strict
+node_modules layout doesn't let a package reach into dependencies it didn't declare itself
+("phantom dependency" access, which npm/yarn's flatter layouts allow by accident and pnpm
+deliberately blocks). Added `express` as a direct dependency of `apps/api` — but pinned to `^4.22.1`
+to match the version `@nestjs/platform-express@10` actually runs internally, not the `^5.x` that
+`pnpm add express` resolves to by default today. Nest 10 is built and tested against Express 4;
+running two different major versions side-by-side in the same process (Nest's internal one on v4,
+this file's directly-imported one on v5) risked subtle incompatibilities for no real benefit, so both
+now resolve to the same v4.22.1 install.
+
+**Acceptance:** confirmed live — a ~2.6MB request body (26× the old 100kb ceiling) that previously
+would have 413'd now returns `201 credited`; `apps/api/node_modules/express` resolves to the same
+`4.22.1` install `@nestjs/platform-express` uses internally (checked directly, not assumed);
+`snaps.integration.spec.ts`, `voice.integration.spec.ts`, and `fund.integration.spec.ts` all still
+pass, confirming normal-sized JSON request handling is unaffected by disabling Nest's default parser.
+
+---
+
+## 34. PHOTO/VOICE MOVE FROM A GENERIC SNAP TAB TO A PER-QUESTION ANSWER MODE (2026-07-24)
+
+The mobile app had two, disconnected ways to submit a photo: a standalone "Snap" tab (point the
+camera at anything you use, get a small reward, no question involved) and a photo-attach button
+already living inside Pulse's answer flow (§22, evidence supplementary to a specific question's
+answer). The user asked for three things: the Snap tab's raw camera capture uploaded with no chance
+to review what was actually captured; photo (and voice) should only ever be offered as part of
+answering a specific question, not as a free-floating button; and the question's author — not a
+blanket app-wide setting — should decide whether a given question accepts photo/voice evidence at
+all, on by default.
+
+**34A. The Snap tab is gone — not hidden, removed.** `apps/mobile/src/main/SnapScreen.tsx` (raw
+`expo-camera` `CameraView`, immediate `takePictureAsync` → upload, no preview) is deleted, along with
+its `"snap"` entry in `MainApp.tsx`'s tab bar, `strings.tabs.snap`, and the whole `strings.snap`
+block. Mobile's `submitSnap()` API client function is deleted too — nothing in the app calls
+`POST /v1/snaps` anymore. **Left alone, deliberately:** the backend `snaps` module/table, its
+recognition pipeline (§32), and the admin portal's `/snaps` verification queue — those are real,
+independent infrastructure the user didn't ask to remove, and this is a big enough call (rolling back
+part of §8/§32) that it's flagged here rather than silently taken. If the whole `snaps` feature
+should also be retired, that's a separate, explicit decision.
+
+**34B. "The photo should freeze" turned out to already be solved by the OTHER photo path.**
+`PulseScreen.tsx`'s existing `attachPhoto()` uses `expo-image-picker`'s `launchCameraAsync`, whose
+native camera UI already shows a freeze-frame + "use photo / retake" confirmation before ever
+returning control to the app — unlike the deleted `SnapScreen`'s raw `CameraView`, which had no such
+step. Consolidating onto this path fixes the freeze complaint as a side effect of removing the worse
+path, not a separate fix. The one gap carried over deliberately: the Snap tab's `hasFace()` privacy
+check (SPEC.md §8.4, rejects a photo that looks like it contains a person) is now also run inside
+`attachPhoto()` — dropping it during the move would have quietly regressed a real privacy protection.
+
+**34C. `questions.allow_photo`/`allow_voice` — both default `true`, an admin opts out, not in.**
+New columns (migration `1738627200000_question_photo_voice_gating.js`), returned by
+`GET /v1/pulse/today` and enforced (not just hidden client-side) by `POST /v1/pulse/answers`: a photo
+on a `allow_photo = false` question, or `inputMode: "voice"` on an `allow_voice = false` one, is a
+`400`, not a silent drop — the mobile client shouldn't offer the control at all if it's off, so
+hitting this in practice means a stale client, and a clear rejection is the right response to that,
+not partial acceptance. The portal's `QuestionWizard` gained a fifth step ("Evidence") with two
+checkboxes, both checked by default; the recent-questions table shows what each question actually
+allows.
+
+**34D. `inputMode` is one categorical value but a response can now carry a photo AND a voice-sourced
+note at once — precedence had to be decided, not left implicit.** `PulseScreen.submit()`: a photo
+takes priority (`"snap"`), then a voice-sourced note (`"voice"` — tracked via a new `usedVoice` flag,
+set only when transcription actually produced the note text, not when the member just typed
+something), then the question-type default. This also, as a side effect, activates two reward
+branches (`earn_voice`, `earn_snap`) in `pulse.service.ts` that existed since §22 but were dead code —
+the mobile client never sent anything but `"tap"`/`"text"` before this.
+
+**34E. A photo attached to a Pulse response is analyzed the same way a Snap always has been —
+reused, not reimplemented.** `PulseService` gained the exact same lazy `vision` getter, background
+(`.catch()`'d, never `await`'d) `recognize()` call, and category-slug validation as `SnapsService`
+(§32) — importing `GeminiVisionProvider`/`DevNoopVisionProvider` from `apps/api/src/snaps/
+vision.provider.ts` rather than duplicating the logic. Results land in new `responses` columns
+(`recognized_tags`, `recognized_label`, `recognized_confidence`, `recognized_product_guess`,
+`recognized_category_id`, `recognized_at` — same shape as `snaps`'), same "never gates the reward,
+ops-assist only" posture. Voice's equivalent — "analysed, saved as part of the response" — was
+already true before this addendum: `transcribeVoice()` already runs client-side and its output
+already lands in `textValue`; nothing new was needed there beyond the gating and `inputMode` fixes
+above.
+
+**Acceptance:** confirmed live — a question created with `allowVoice: false` 400s a voice-mode
+answer and 400s nothing for a photo; a photo submitted to an `allowPhoto: true` question credits
+immediately (`201 credited`) and a real Gemini call (not a fake) tags the response's photo in the
+background, polled and confirmed in the database; `pulse.integration.spec.ts` gained three new tests
+(photo-gating rejection, voice-gating rejection, background recognition via a `FakeVisionProvider`
+override) and `create-question.integration.spec.ts` gained one (default-true / explicit-false);
+`tsc --noEmit` clean on `apps/mobile` and `apps/portal`, `pnpm build` clean on `apps/api`; grepped
+the mobile source tree to confirm zero remaining references to `SnapScreen`, `strings.tabs.snap`, or
+`strings.snap`.
+
+---
+
+## 35. GEOLOCATION → NEAREST-ZONE RESOLUTION, PER RESPONSE (2026-07-24)
+
+The user's ask: capture geolocation on every question response, so demand can eventually be
+calculated by real place, not just by whatever zone a member picked once at onboarding — "a proper
+GIS system." Before writing any code, three real tradeoffs needed the user's own call (asked via
+`AskUserQuestion`, not assumed): how precise a location to keep and where it lives, whether to
+capture it once (onboarding) or every time, and whether real boundary-polygon data already exists.
+Answers: **zone-only, no raw GPS stored**; **every time a question is answered**; **still need
+boundary data — try bharatatlas.com**. That third answer changed the plan mid-build (§35C).
+
+**35A. What "zone-only, no raw GPS stored" means concretely: coordinates are used, never kept.**
+`PulseAnswerDtoSchema` gained optional `lat`/`lng` (SPEC.md §35), but `PulseService.submitAnswers()`
+resolves them to a zone id via `ZoneResolverService.resolveNearestZone()` *before* the transaction —
+a read-only lookup, not a write — and only that resolved id is ever referenced again; `answer.lat`/
+`answer.lng` are never passed to a query, a log line, or anywhere past that one call. `responses`
+gained a `zone_id` column (migration `1738713600000_geo_zone_resolution.js`) for the result —
+deliberately separate from `members.zone_id` (the zone chosen once at onboarding, unchanged) — not a
+`lat`/`lng` column. `geo-resolution.integration.spec.ts` asserts this schema-level, not just by
+convention: it queries `information_schema.columns` and fails if any raw-coordinate column ever
+appears on `responses`.
+
+**35B. Captured every time, but never blocking — `expo-location`'s cached reading, not a live GPS
+fix.** This app is offline-first by construction (an answer enqueues locally the instant it's given,
+SPEC.md §3); awaiting a fresh GPS fix (which can take seconds cold) on every single answer would have
+visibly stalled that. `PulseScreen.getBestEffortLocation()` uses `getLastKnownPositionAsync()` — an
+already-cached reading, effectively instant — and returns `null` on any denial, timeout, or missing
+cache rather than throwing; a question always submits regardless of whether a location was obtained.
+Permission is requested (once — the OS itself suppresses repeat prompts after a denial) via the
+standard `expo-location` flow, coarse accuracy only (`ACCESS_COARSE_LOCATION` on Android), matching
+the "we only need which village, not which house" scope.
+
+**35C. Real boundary-polygon data still doesn't exist — bharatatlas.com was checked twice and never
+returned usable content.** Fetched directly (both `bharatatlas.com` and `www.bharatatlas.com`) while
+building this — empty both times (likely a JS-rendered SPA the fetch tool can't execute, or the
+domain isn't what it was remembered as). Rather than block the whole feature on unresolved data
+sourcing, `ZoneResolverService` ships nearest-centroid matching instead: `zones` gained
+`centroid_lat`/`centroid_lng` (admin-settable, both nullable — a zone with no centroid is just never
+matched, not an error), and resolution is a Haversine-distance nearest search capped at 50km (a
+pilot-scale sanity bound, not a universal constant — tunable if the pilot area grows). This is
+strictly less precise than real polygons would be, and is documented as exactly that, not dressed up
+as more than it is. [[memory: geo_zone_resolution]] records the exact current state of which zones
+actually have centroids set (5 of 6 — real Melukote-pilot zones, approximate town-center coordinates
+from general knowledge, not surveyed) and flags a likely-stray "Mapusa" zone (a real town in Goa,
+unrelated to this Mandya pilot) that has none.
+
+**35D. Demand aggregation deliberately still uses `members.zone_id`, not the new per-response
+one — not an oversight, a scope boundary.** A household's *registered* zone is what determines where
+a collective-buy truck actually delivers; the zone resolved from wherever a member happened to be
+standing when answering a Pulse question is a different, additional signal (useful later for
+detecting zone drift, or as a fraud/quality input alongside `FraudService`'s existing checks) — not
+automatically the right thing to recalculate demand-by-place against. `aggregation.service.ts` is
+untouched by this addendum. If per-response geo should eventually feed aggregation, that's a distinct
+decision to make explicitly, not an implicit side effect of capturing the data.
+
+**35E. Portal support: create-time centroid fields, plus inline edit for existing zones.**
+`ZoneWizard.tsx`'s create form gained optional centroid lat/lng inputs; `/zones` also gained
+`ZonesTable.tsx` (the same inline-edit-row pattern as `FundProjectsTable.tsx`, §31) so a zone created
+before this addendum — i.e. every zone that exists today — can have its centroid set or corrected
+after the fact via `PATCH /v1/admin/zones/:id`.
+
+**Acceptance:** confirmed live — `resolveNearestZone()` correctly matches a reading near a
+zone's real centroid and correctly returns `null` for one >1500km away (New Delhi, well past the
+50km cap); a real Pulse answer submitted with `lat`/`lng` near Kikkeri's centroid resolved and stored
+`responses.zone_id = 'Kikkeri'` end-to-end through the live API; `geo-resolution.integration.spec.ts`
+(4 tests, including the schema-level "no raw coordinate column" assertion) plus the existing
+`pulse`/`zones`/`snaps`/`question-feeder`/`fund` suites (34 tests total) all pass together; `tsc
+--noEmit` clean on `apps/mobile`/`apps/portal`, `pnpm build` clean on `apps/api`. One test-authoring
+bug surfaced and was fixed during this work, not left in: the geo-resolution test's own test-zone
+centroid was initially set to Melukote's exact real-world coordinates, which broke the moment
+Melukote's actual centroid was also set to that location — a genuine tie, not a resolver bug — fixed
+by moving the test's centroid somewhere no real pilot zone will ever coincide with.
+
+---
+
+## 36. SIGNUP REDESIGN: NO AADHAAR, AND A CHOSEN (NOT ASSIGNED) DISPLAY ALIAS (2026-07-24)
+
+The user's original ask included collecting an Aadhaar number at signup. Flagged before writing any
+code, not built and quietly dropped, and not silently skipped either: India's Aadhaar Act restricts
+Aadhaar collection/authentication to UIDAI-licensed "Requesting Entities," and the Supreme Court's
+2018 Puttaswamy ruling struck down *mandatory* Aadhaar for private, non-welfare services outright — a
+pilot with no such license would carry real legal exposure, on top of directly contradicting LAW 1's
+"no name, no phone, no address, ever" architecture. Asked the user directly; confirmed: drop it,
+phone+OTP is enough. The rest of the ask — a nicer visual pass, and letting a member pick their own
+public name from generated options rather than have one silently assigned — proceeded as designed.
+
+**36A. Alias generation and alias commitment used to be the same atomic step — split into two.**
+Before this addendum, `AuthService.resolveOrCreateAlias()` picked ONE random `display_alias` and
+inserted it in the same breath as the OTP verification. Now: a *returning* member's flow is
+byte-for-byte unchanged (existing `alias_map` row → straight to a session token, no picking). A
+*first-time* member instead gets an 8-name batch and commits nothing yet — `verify-otp`'s response is
+now a discriminated union, `{status:"returning", token, aliasId, displayAlias}` or
+`{status:"choose_alias", pendingToken, aliasId, candidates}`.
+
+**36B. A new Vault table, `pending_signups` (migration `1738800000000_pending_signups.js`), bridges
+"OTP verified" to "name chosen" — one row per user, replaced (not duplicated) on re-verification.**
+Two new Vault endpoints close the loop: `POST /alias-candidates` (fetch a fresh batch for the same
+session — "see various combinations," the exact ask) and `POST /commit-alias` (locks in the pick,
+mints the real JWT, deletes the pending row). Both are proxied through Core's existing unauthenticated
+`AuthProxyController` (`POST /v1/auth/otp/alias-candidates`, `POST /v1/auth/otp/commit-alias`) —
+Vault itself stays never-internet-facing, unchanged.
+
+**36C. The chosen name is never trusted at face value — re-validated against the real word lists,
+not just checked for "looks like a name."** `commitAlias()` rejects anything that isn't an exact
+`RIVER BIRD NN` combination genuinely producible by `alias.util.ts`'s own generator
+(`isWellFormedDisplayAlias()`) — a member (or a modified client) can't submit an arbitrary string as
+their "generated" alias. A same-name race between two different members committing in the same
+instant is handled explicitly: the loser gets a `409`, not a silently-overwritten row, and `alias_map`'s
+existing `UNIQUE` constraints (both `user_id` and `display_alias`) are what actually enforce it —
+`commitAlias()` just interprets the two different `23505` cases correctly (own retry → idempotent
+replay; someone else's name → ask for a different one).
+
+**36D. Five onboarding screens redesigned, one new one added — all real, no fabricated illustration
+assets.** `PhoneEntryScreen`, `OtpVerifyScreen` (now individual digit boxes, not a single 6-char
+field), the new `ChooseAliasScreen`, `ZonePickerScreen`, and `AliasRevealScreen` (reframed from
+"reveal" to "here's your profile," since the name is chosen now, not surprised-with) all share a new
+`ProgressDots` component and consistent brand styling (jade/brass/porcelain, `DataPayLogo`/
+`DataPayMark`, rounded cards) — built from the theme's real tokens and soft decorative circles (plain
+colored `View`s), not invented image assets that don't exist in `apps/assets`.
+
+**Acceptance:** confirmed live through the actually-running Vault + Core services (not just tests) —
+a real signup cycle: request OTP → verify (returns 8 real candidates, commits nothing) →
+`alias-candidates` (fresh batch) → `commit-alias` (real JWT, JWT payload decoded and confirmed to
+contain only `aliasId`/`displayAlias`, no phone) → re-verifying the same phone now returns
+`status:"returning"` with the identical alias → `PUT /v1/me` creates the real Core member end to end.
+32 Vault tests (14 rewritten/new in `auth.integration.spec.ts` for the new contract, 9 new unit tests
+in `alias.util.spec.ts`) and the existing 34 API tests (`pulse`/`zones`/`snaps`/`question-feeder`/
+`fund`, unaffected by this change) all pass; `tsc --noEmit` clean on `apps/mobile`, `pnpm build`
+clean on `apps/vault` and `apps/api`.
+
+---
+
+## 37. ZONE CENTROIDS: PICK ON A MAP, NOT TYPE COORDINATES (2026-07-24)
+
+§35's admin-facing centroid fields were plain latitude/longitude number inputs — functional, but not
+how anyone actually thinks about "where is this place." Replaced with `ZoneCentroidMapModal.tsx`, an
+interactive Leaflet map (OpenStreetMap tiles, no API key — same "avoid unnecessary bureaucracy"
+reasoning as ruling out Bhashini for voice, SPEC.md §9): tap anywhere to drop a marker, drag to
+adjust, save. Used in two places — `/zones`' per-row "Set centroid"/"Edit" button (`ZonesTable.tsx`,
+now a modal trigger instead of an inline editable row) and `ZoneWizard.tsx`'s create form (replacing
+its two manual number inputs) — one component, not two implementations of the same picker.
+
+**37A. Opens centered on the admin's own location when a zone has no existing centroid yet** — the
+explicit ask, not a guess at what "beautiful and simple" meant. Falls back to a wide view of the
+pilot area (Melukote) if geolocation is denied or unavailable; either way this is silent and
+non-blocking — declining to share location is a normal choice, not an error state. A zone that
+already has a centroid opens centered on that point instead (editing, not re-discovering).
+
+**37B. The save button is fire-and-forget, matching how every other action-triggering button in this
+portal already works — not a new pattern.** `updateZoneCentroidAction`/`createZoneAction` always
+redirect (to `?updated=zone` or `?error=...`), never throw back to the caller — so the modal doesn't
+`await` or `try/catch` the save; it hands `{lat, lng}` to the parent and closes. The parent decides
+what "save" means: `ZonesTable` wraps the existing server action in `startTransition` (a real,
+immediate write); `ZoneWizard` just fills in the create-form's local state, since a new zone's
+centroid is submitted together with everything else when the form itself is submitted.
+
+**37C. Leaflet's default marker icons are pointed at unpkg's CDN, not bundled paths.** Leaflet's
+default icon URLs are relative paths that resolve incorrectly under Next.js's bundler — a well-known
+class of issue for this library, not specific to this app — worked around by pointing
+`L.Icon.Default` at the same CDN the `leaflet` package itself publishes its release assets to, rather
+than fighting webpack's asset resolution.
+
+**Acceptance:** `tsc --noEmit` clean; confirmed the `leaflet` package is actually bundled into both
+the server module graph and the client-side chunk (not just installed and unused); `/zones`
+(authenticated) renders the "Set centroid"/"Edit" triggers correctly against live zone data.
+Interactive behavior itself (drag/click/geolocation prompt) needs a real browser to exercise, which
+this environment doesn't have — flagged rather than assumed working from static checks alone.
+
+---
+
+## 38. ONBOARDING FALLBACK: "MY AREA ISN'T LISTED" — GEOCODE, THEN FIND-OR-CREATE THE REAL REGION (2026-07-25)
+
+The pilot's zone tree only ever covered Melukote — testing on a real device immediately surfaced
+that a member from anywhere else has exactly one complete path to pick (Melukote → Melukote Hobli →
+Kikkeri → Kikkeri Village) and nothing else. Two things got fixed: the immediate blocker (a member
+outside the pilot area couldn't finish onboarding at all), and a stray "Mapusa" constituency
+(a real Goa town, unrelated to this Mandya pilot, with nothing built under it) confirmed unreferenced
+and deleted.
+
+**38A. "Detect my location" or "enter my address" — either way, geocoded to a real place, not just
+matched to whatever's nearest.** `ZonePickerScreen` gained an "My area isn't listed →" link opening a
+flow with both options: a live GPS fix (`getCurrentPositionAsync`, a real fetch worth the few seconds
+since this is a one-time onboarding moment — unlike §35's per-answer capture, which deliberately only
+uses a cached reading) or a free-text address, forward-geocoded instead. Whichever path is used, the
+result is shown to the member for explicit confirmation ("Is this right?") before it's ever used —
+especially important for the typed-address path, where a mistyped address could resolve to the wrong
+place entirely.
+
+**38B. Geocoding: OpenStreetMap's Nominatim, not Google — same "avoid the bureaucracy" reasoning as
+ruling out Bhashini for voice (§9) and Google Maps for §37's zone-centroid picker.** Free, no API
+key/billing setup. Real, stated tradeoff: OSM's rural-India coverage is thinner than Google's — live-
+tested directly against the actual pilot area (reverse-geocoding real coordinates near Kikkeri
+correctly resolved to "Guduganahalli," a genuine neighboring village), so it's adequate here, but this
+is a one-file provider swap (`geocoding.provider.ts`, same seam as `GeminiVisionProvider`/
+`GeminiAsrProvider`) if that ever stops being true.
+
+**38C. A real bug, caught by the user during live testing, not by code review: the first version of
+this parented every newly-created village under whatever existing constituency happened to be
+nearest — with no distance cap.** With only Melukote in the system, that meant a village reverse-
+geocoded from a phone actually in Goa got filed under a Karnataka constituency 500km away. Since this
+platform's entire point is aggregating demand *by real geographic area* for logistics, a wrong parent
+silently corrupts exactly the rollups that matter — not a cosmetic bug. Fixed by changing what "find
+the right structure" means entirely: **`ZoneGeocodingService` now finds-or-creates the region
+(constituency-level) zone BY NAME first** — using the geocoder's own district/taluk-equivalent field
+(`regionName()` in `geocoding.provider.ts`; OSM doesn't carry India's actual Assembly Constituency
+layer, so this is an honest proxy using a real administrative name, not a fabricated one) — and only
+THEN finds-or-creates the village SCOPED INSIDE that specific region. Distance is no longer part of
+the decision at all. This also fixed a second, related latent bug: village-name matching used to be
+global (`WHERE level='village' AND name=...` with no region scope), so two real, differently-located
+villages that happen to share a name would have collided into one; now correctly scoped per-region.
+
+**38D. Both members and zones carry an honest "not verified" flag, at the layer where verification
+actually applies.** `members.zone_confirmed` (false only for the old nearest-guess path, which no
+longer exists post-38C — the current flow always gets an explicit member confirmation, so this is
+now effectively always true via the fallback) plus `members.requested_area_note` (free text, for a
+path that still wants one). `zones.needs_hierarchy_review` is the one that matters most today: every
+region or village created via this flow is flagged, since its centroid is just the first reading that
+created it and its placement in a bigger real hierarchy (state, above constituency — a level this
+schema doesn't model yet) is a guess ops should review, not a verified boundary.
+
+**Acceptance:** live-tested end to end on a real device, twice — once surfacing the §38C bug (a real
+Arpora, Goa reading filed under Melukote), once confirming the fix (same coordinates now correctly
+create/match a "North Goa" region, with Arpora correctly nested under it, not Melukote). The member
+and fund-project data created during that first (buggy) test were repaired in place — rows
+reassigned to the corrected hierarchy — rather than deleted, since a real `fund_projects` row already
+referenced the original zone. `onboarding-fallback.integration.spec.ts` (9 tests, using a
+`FakeGeocodingProvider` override — same seam as `SnapsService.recognitionOverride` — to avoid live
+Nominatim calls in CI) covers: region matched by name regardless of proximity, region+village created
+together when neither exists, same-named villages in different regions not colliding, missing
+place/region name both 400, address-based resolution, and `zoneConfirmed`/`requestedAreaNote`
+persistence. `pnpm build` clean on `apps/api`, `tsc --noEmit` clean on `apps/mobile`.
+
+## 39. QUESTIONS IN THREE LANGUAGES: ENGLISH (ALWAYS), HINDI (ALWAYS), THE MEMBER'S LOCAL LANGUAGE (2026-07-25)
+
+The question text schema hardcoded a single `questions.text_kn` column — fine while every pilot
+member was in Karnataka, wrong the moment §38's onboarding fallback let a member from anywhere in
+India actually join: their "local language" isn't necessarily Kannada. Fixed by replacing the fixed
+column with a flexible per-question translations table, and deriving each zone's local language from
+its real-world state, so a question always shows English, always attempts Hindi, and shows a third
+line only when the member's own zone resolves to a further, distinct local language.
+
+**39A. Schema: `question_translations` (question_id, language_code, text — composite PK) replaces the
+single `text_kn` column.** Any number of languages per question, each independently optional. The
+migration (`1739059200000_multilingual_questions.js`) preserved every existing Kannada translation
+losslessly — verified directly via psql after running it: 15 rows correctly migrated with
+`language_code = 'kn'`, `questions.text_kn` dropped, zero data loss.
+
+**39B. `zones.language_code`, auto-derived from the geocoded state — an explicit AskUserQuestion
+decision (auto-derive, recommended, over asking per-zone).** `india-languages.util.ts`'s
+`STATE_LANGUAGE` map (36 states/UTs → ISO-ish language codes) is consulted whenever §38's geocoding
+flow creates or matches a region/village zone; `GeocodedPlace` gained a `state` field for this,
+populated only from what the geocoder actually returned, never guessed. A zone created before this
+addendum existed, or created manually by an admin, has no language yet — ops sets or corrects it via
+the new `PATCH /v1/admin/zones/:id/language` endpoint, surfaced in the portal as a language picker on
+both the zones table (per-row, fires immediately on change) and the new-zone wizard.
+
+**39C. Resolution walks the member's zone ancestor chain, same recursive-CTE shape as §23's
+region-scoping query, taking the first non-null `language_code` found.** Necessary because a
+geocoded zone (§38) gets its language set on both the village and its region, but a manually-created
+zone typically only has it set on the region — a plain lookup on the member's own zone would miss the
+latter case.
+
+**39D. Missing translation falls back to showing English only for that slot — never blocks question
+creation or delivery (the other explicit AskUserQuestion decision this addendum needed).** When the
+member's resolved local language IS Hindi, `textLocal`/`localLanguage` are omitted entirely (not just
+duplicated) rather than showing the same Hindi translation twice under two different labels.
+
+**39E. Portal (`QuestionWizard.tsx`): the old single "Translate to Kannada →" button is now two
+independent ones — Hindi (always available) and a dynamic local-language button that only appears
+once a target zone with a known language is selected**, each still Gemini-backed drafts the admin
+reviews/edits before saving, same non-system-of-record posture as §27. `TranslationService` itself
+needed no new logic, just generalizing from a single hardcoded `{ kn: "Kannada" }` map to the shared
+15-language `LANGUAGE_NAMES` table.
+
+**39F. Deliberately out of scope: the LLM-driven document-grounded question generator
+(`document-grounded-generator.service.ts`, topics' `translateToKannada`) stays Kannada-only.** That
+generator config predates this addendum and wasn't asked about — extending it to auto-generate in
+whatever language a topic's target zone resolves to is a real follow-up, not silently bundled in here.
+
+**Acceptance:** migration run and verified directly via psql (translations migrated, zero loss; real
+pilot zones correctly auto-tagged `kn`); `pnpm build` clean on `packages/shared`, `apps/api`,
+`apps/portal`; `tsc --noEmit` clean on `apps/mobile`. New tests: `language-resolution.integration.spec.ts`
+(4 cases — full translation, partial/English-fallback, Hindi-zone dedup, no-language-set zone) plus a
+new translations-persistence case in `create-question.integration.spec.ts`; full existing suite (112
+tests, 25 suites) still green.
+
+## 40. OUTSTANDING VS. REALISED TOKENS — THE RESERVE (2026-07-25)
+
+Two related gaps closed together: (1) the ledger already distinguished earned vs. redeemed tokens,
+but nothing distinguished "redeemed" from "backed by an actual completed sale" — a real distinction
+per LAW 2 ("tokens convert to value only at a verified, self-declared purchase"), just never made
+visible or ledgered as its own thing; (2) the pitch deck's 50/20/30 split (tokens/fund/operations, §17)
+only ever had the fund's 20% slice built — the 50% tokens-backing slice didn't exist as a ledger at
+all. Both close with the same mechanism: a new **reserve**, credited at the same event that already
+triggers Fund accrual.
+
+**40A. A token is "outstanding" (hollow ◇) from the moment it's earned until it's spent, and
+"realised" (filled ◆) only once the specific offer it was redeemed against reaches DELIVERED — never
+at redemption itself.** A member can redeem tokens joining an offer (`offers.service.ts`'s `join()`)
+before the goods actually arrive; nothing about that moment proves a completed sale. Confirmed
+delivery (`FundService.confirmDelivery()`, already SPEC.md §17A's fund-accrual trigger) is the
+verification event LAW 2 refers to — the same call now realises the tokens redeemed on that
+participation, atomically alongside the fund accrual it already does.
+
+**40B. The reserve amount is 1:1 against the realised tokens, not a percentage of savings like the
+fund's 20%.** `tokens_redeemed × offer_token_terms.token_value_paise` — the rate actually locked in
+for that specific offer, never the fluctuating current `token_rate` (a different offer's redemption
+could have happened at a different published rate entirely). New table `reserve_ledger` (migration
+`1739145600000_reserve_ledger.js`) gets the full §15/§17C treatment: append-only via a
+`reject_reserve_ledger_mutation` trigger rejecting UPDATE/DELETE from any role, idempotent via
+`UNIQUE(ref_type, ref_id)` keyed to the same `offer_participation` row the fund accrual uses. Global,
+not per-zone — tokens themselves aren't zone-partitioned (`members.token_balance` isn't either), so
+neither is what backs them. `ReserveService` (new module) owns `creditReserve()`/`getTotal()`;
+`FundService.confirmDelivery()` calls it inside the same transaction and now returns `reservedPaise`
+alongside `accruedPaise`.
+
+**40C. All three design questions were asked, not assumed, since guessing wrong on real-money
+mechanics is expensive to unwind:** realise-at-delivery vs. realise-at-redemption (chose delivery);
+1:1 token value vs. a savings-percentage split (chose 1:1); a new ledger vs. just better-surfacing the
+existing Fund (chose new — the reserve backs token liability, the Fund funds community projects; same
+trigger event, different purpose, both need to exist).
+
+**40D. A genuinely stale stub got fixed in passing, not expanded in scope: `token_rate`'s
+`realisedSalesVelocity` factor (§6C) had been hardcoded to 0** with a comment saying it honestly
+couldn't be computed until Phase 4 (offers + verified purchases) existed. Phase 4 shipped since that
+comment was written and it was never revisited. Now computed for real — the fraction of intents
+declared in the last 30 days whose `fulfilled_offer_id` points at an offer_participation that reached
+`delivered` — the same "verified purchase" bar §40A uses. `supplierCompetition` stays at 0 deliberately:
+it needs a competing-bids mechanic that genuinely doesn't exist yet (an offer today has exactly one
+`collective_price_paise`, not multiple suppliers bidding), so 0 remains the honest current value there.
+
+**40E. Surfaced in three places.** Member-facing `GET /v1/tokens` gains `realisedTokens` (this
+member's own delivered-redemption total) alongside the existing `balance`; `HomeScreen.tsx`'s balance
+card now shows both, hollow ◇ for outstanding and dimmed filled ◆ for realised, so the distinction the
+member sees matches the one the ledger enforces. Ops-facing: a new `GET
+/v1/admin/token-economy/overview` (new `AdminOverviewModule`, no new business logic — it only reports
+what LedgerService/ReserveService/TokenRateService already recorded) returns total members,
+outstanding tokens, realised tokens, reserved paise, and the current published rate; the portal's home
+page (`page.tsx`, the actual "main company page") gained a "Token economics" section showing all five,
+fetched via Core API like every other member-adjacent portal read (§10's boundary — none of
+members/token_ledger/reserve_ledger are in the portal role's direct-read grant).
+
+**Acceptance:** migration run and verified via psql (table, both triggers, unique constraint all
+present); `pnpm build` clean on `apps/api` and `apps/portal`; `tsc --noEmit` clean on `apps/mobile`.
+New tests: `reserve.integration.spec.ts` (3 cases — reserves only at delivery not redemption, zero
+reserve when no tokens redeemed, append-only enforcement), `admin-overview.integration.spec.ts` (2
+cases — full earn→redeem→deliver delta tracking, token-rate field presence), `tokens.integration.spec.ts`
+(1 case — balance drops at redemption, realisedTokens only appears at delivery). Full suite: 118
+tests, 28 suites, all green. Live-verified `GET /v1/admin/token-economy/overview` against the running
+dev API after restarting it with the new build — real data (1597 members, 61126 outstanding tokens,
+current rate ₹0.50) returned in the exact shape the portal page consumes. The portal page itself was
+not click-tested in a browser — its session cookie is gated by a `PORTAL_SESSION_SECRET` set directly
+in the shell environment, not in any file this session had access to; confirmed instead that the live
+API response matches the TypeScript shape the page code reads, and that `next build` type-checks the
+render logic cleanly.
