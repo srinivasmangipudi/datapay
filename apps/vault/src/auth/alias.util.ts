@@ -43,3 +43,31 @@ export function generateDisplayAliasCandidate(): string {
   const number = randomInt(1, 100);
   return `${river} ${bird} ${number}`;
 }
+
+/**
+ * SPEC.md §36 — a first-time member picks their own display alias from a
+ * batch like this rather than having one silently assigned. Never checked
+ * against the DB here (the caller does that); this only guarantees the
+ * batch has no internal duplicates.
+ */
+export function generateDisplayAliasCandidates(count: number): string[] {
+  const seen = new Set<string>();
+  while (seen.size < count) {
+    seen.add(generateDisplayAliasCandidate());
+  }
+  return [...seen];
+}
+
+/**
+ * Guards `commitAlias` against a client sending back something that isn't
+ * actually one of the offered candidates' shape — e.g. a name a member typed
+ * in themselves, which would defeat the whole point of a closed, curated word
+ * list (SPEC.md §36).
+ */
+export function isWellFormedDisplayAlias(candidate: string): boolean {
+  const match = candidate.match(/^([A-Z-]+) ([A-Z-]+) (\d{1,2})$/);
+  if (!match) return false;
+  const [, river, bird, numberStr] = match;
+  const number = Number(numberStr);
+  return RIVERS.includes(river) && BIRDS.includes(bird) && number >= 1 && number <= 99;
+}

@@ -1,5 +1,5 @@
 import { Body, Controller, Post } from "@nestjs/common";
-import { RegisterDtoSchema, VerifyOtpDtoSchema } from "@datapay/shared";
+import { AliasCandidatesDtoSchema, CommitAliasDtoSchema, RegisterDtoSchema, VerifyOtpDtoSchema } from "@datapay/shared";
 import { parseOrThrow } from "../zod.util";
 import { AuthService } from "./auth.service";
 
@@ -19,5 +19,19 @@ export class AuthController {
   verifyOtp(@Body() body: unknown) {
     const dto = parseOrThrow(VerifyOtpDtoSchema, body);
     return this.auth.verifyOtp(dto.phoneE164, dto.otp);
+  }
+
+  // SPEC.md §36 — a first-time verify-otp offers candidates but commits
+  // nothing; these two close the loop (browse more / lock one in).
+  @Post("alias-candidates")
+  aliasCandidates(@Body() body: unknown) {
+    const dto = parseOrThrow(AliasCandidatesDtoSchema, body);
+    return this.auth.regenerateCandidates(dto.pendingToken);
+  }
+
+  @Post("commit-alias")
+  commitAlias(@Body() body: unknown) {
+    const dto = parseOrThrow(CommitAliasDtoSchema, body);
+    return this.auth.commitAlias(dto.pendingToken, dto.displayAlias);
   }
 }

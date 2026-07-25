@@ -1,8 +1,13 @@
-import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Pool } from "pg";
 import { PG_POOL } from "../db/db.module";
-import { computeAliasId, generateDisplayAliasCandidate } from "./alias.util";
+import {
+  computeAliasId,
+  generateDisplayAliasCandidate,
+  generateDisplayAliasCandidates,
+  isWellFormedDisplayAlias,
+} from "./alias.util";
 import {
   OTP_MAX_ATTEMPTS,
   OTP_TTL_MS,
@@ -11,7 +16,11 @@ import {
   hashOtpCode,
 } from "./otp.util";
 
-const MAX_DISPLAY_ALIAS_ATTEMPTS = 20;
+const ALIAS_CANDIDATE_COUNT = 8;
+// A member browsing name options shouldn't have to redo OTP if they take a
+// few minutes deciding — but an abandoned session shouldn't squat a pending
+// row forever either. 30 minutes is a generous "still mid-signup" window.
+const PENDING_SIGNUP_TTL_MS = 30 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
@@ -56,7 +65,10 @@ export class AuthService {
   async verifyOtp(
     phoneE164: string,
     otp: string
-  ): Promise<{ token: string; aliasId: string; displayAlias: string }> {
+  ): Promise<
+    | { status: "returning"; token: string; aliasId: string; displayAlias: string }
+    | { status: "choose_alias"; pendingToken: string; aliasId: string; candidates: string[] }
+  > {
     const { rows: userRows } = await this.pool.query<{ id: string }>(
       `SELECT id FROM users WHERE phone_e164 = $1`,
       [phoneE164]
@@ -94,56 +106,124 @@ export class AuthService {
       pending.id,
     ]);
 
-    const { aliasId, displayAlias } = await this.resolveOrCreateAlias(user.id);
-
+    const aliasId = computeAliasId(user.id, this.pepper);
     await this.pool.query(
       `INSERT INTO vault_access_log (service, purpose, alias_or_token) VALUES ($1, $2, $3)`,
       ["vault", "verify-otp", aliasId]
     );
 
-    // displayAlias rides in the JWT alongside aliasId — it isn't PII (it's the
-    // handle members/brands already see), so Core can read it here without ever
-    // asking Vault "what's this alias" (that lookup path doesn't exist).
+    const existing = await this.getExistingAlias(user.id);
+    if (existing) {
+      // Returning member — same as before this addendum, no name-picking step.
+      const token = await this.jwt.signAsync({
+        aliasId: existing.aliasId,
+        displayAlias: existing.displayAlias,
+      });
+      return { status: "returning", token, aliasId: existing.aliasId, displayAlias: existing.displayAlias };
+    }
+
+    // First-time member (SPEC.md §36): offer candidates, commit nothing yet.
+    // Re-verifying replaces any earlier pending session for this user — only
+    // one is ever valid at a time.
+    const { rows: pendingRows } = await this.pool.query<{ token: string }>(
+      `INSERT INTO pending_signups (user_id) VALUES ($1)
+       ON CONFLICT (user_id) DO UPDATE SET token = gen_random_uuid(), created_at = now()
+       RETURNING token`,
+      [user.id]
+    );
+    const candidates = await this.generateUniqueCandidates();
+    return { status: "choose_alias", pendingToken: pendingRows[0].token, aliasId, candidates };
+  }
+
+  /** SPEC.md §36 — "see various combinations": a fresh batch, same pending session. */
+  async regenerateCandidates(pendingToken: string): Promise<{ candidates: string[] }> {
+    await this.loadPendingSignup(pendingToken); // validates existence + expiry, discards the row
+    return { candidates: await this.generateUniqueCandidates() };
+  }
+
+  /** SPEC.md §36 — the member's chosen name becomes real: alias_map is written, JWT is minted. */
+  async commitAlias(
+    pendingToken: string,
+    displayAlias: string
+  ): Promise<{ token: string; aliasId: string; displayAlias: string }> {
+    if (!isWellFormedDisplayAlias(displayAlias)) {
+      throw new BadRequestException("Not a recognized display alias");
+    }
+
+    const userId = await this.loadPendingSignup(pendingToken);
+    const aliasId = computeAliasId(userId, this.pepper);
+
+    try {
+      await this.pool.query(
+        `INSERT INTO alias_map (user_id, alias_id, display_alias) VALUES ($1, $2, $3)`,
+        [userId, aliasId, displayAlias]
+      );
+    } catch (err) {
+      if ((err as { code?: string }).code !== "23505") throw err;
+      // Either this exact user already committed (a retried request —
+      // idempotent replay, return what's there) or a different user took
+      // this exact name in the last few seconds (rare — the whole point of
+      // an 8-candidate batch from a 7,920-combination space, but possible).
+      const existing = await this.getExistingAlias(userId);
+      if (existing) {
+        await this.pool.query(`DELETE FROM pending_signups WHERE token = $1`, [pendingToken]);
+        const token = await this.jwt.signAsync({
+          aliasId: existing.aliasId,
+          displayAlias: existing.displayAlias,
+        });
+        return { token, aliasId: existing.aliasId, displayAlias: existing.displayAlias };
+      }
+      throw new ConflictException("That name was just taken — pick another");
+    }
+
+    await this.pool.query(`DELETE FROM pending_signups WHERE token = $1`, [pendingToken]);
     const token = await this.jwt.signAsync({ aliasId, displayAlias });
     return { token, aliasId, displayAlias };
   }
 
-  private async resolveOrCreateAlias(
+  private async loadPendingSignup(pendingToken: string): Promise<string> {
+    const { rows } = await this.pool.query<{ user_id: string; created_at: Date }>(
+      `SELECT user_id, created_at FROM pending_signups WHERE token = $1`,
+      [pendingToken]
+    );
+    const row = rows[0];
+    if (!row) throw new UnauthorizedException("Invalid or already-used signup session");
+    if (Date.now() - new Date(row.created_at).getTime() > PENDING_SIGNUP_TTL_MS) {
+      await this.pool.query(`DELETE FROM pending_signups WHERE token = $1`, [pendingToken]);
+      throw new UnauthorizedException("This signup session expired — verify your phone again");
+    }
+    return row.user_id;
+  }
+
+  private async getExistingAlias(
     userId: string
-  ): Promise<{ aliasId: string; displayAlias: string }> {
+  ): Promise<{ aliasId: string; displayAlias: string } | null> {
     const { rows } = await this.pool.query<{ alias_id: string; display_alias: string }>(
       `SELECT alias_id, display_alias FROM alias_map WHERE user_id = $1`,
       [userId]
     );
-    if (rows[0]) {
-      return { aliasId: rows[0].alias_id, displayAlias: rows[0].display_alias };
-    }
+    return rows[0] ? { aliasId: rows[0].alias_id, displayAlias: rows[0].display_alias } : null;
+  }
 
-    const aliasId = computeAliasId(userId, this.pepper);
+  /** Generates a batch, filters out anything already taken, tops back up if needed. */
+  private async generateUniqueCandidates(): Promise<string[]> {
+    const batch = generateDisplayAliasCandidates(ALIAS_CANDIDATE_COUNT);
+    const { rows: taken } = await this.pool.query<{ display_alias: string }>(
+      `SELECT display_alias FROM alias_map WHERE display_alias = ANY($1)`,
+      [batch]
+    );
+    const takenSet = new Set(taken.map((r) => r.display_alias));
+    const available = new Set(batch.filter((c) => !takenSet.has(c)));
 
-    for (let attempt = 0; attempt < MAX_DISPLAY_ALIAS_ATTEMPTS; attempt++) {
-      const displayAlias = generateDisplayAliasCandidate();
-      try {
-        await this.pool.query(
-          `INSERT INTO alias_map (user_id, alias_id, display_alias) VALUES ($1, $2, $3)`,
-          [userId, aliasId, displayAlias]
-        );
-        return { aliasId, displayAlias };
-      } catch (err) {
-        const isUniqueViolation = (err as { code?: string }).code === "23505";
-        if (!isUniqueViolation) throw err;
-
-        // Two concurrent verify-otp calls for the same user can both reach here — since
-        // aliasId is deterministic, the loser isn't a display-alias collision, it's a race.
-        const { rows: raced } = await this.pool.query<{
-          alias_id: string;
-          display_alias: string;
-        }>(`SELECT alias_id, display_alias FROM alias_map WHERE user_id = $1`, [userId]);
-        if (raced[0]) return { aliasId: raced[0].alias_id, displayAlias: raced[0].display_alias };
-
-        if (attempt === MAX_DISPLAY_ALIAS_ATTEMPTS - 1) throw err;
+    // With 7,920 total combinations and an 8-item batch, losing one to a
+    // collision is already rare — this just tops the batch back up rather
+    // than silently showing the member fewer options than promised.
+    while (available.size < ALIAS_CANDIDATE_COUNT) {
+      const candidate = generateDisplayAliasCandidate();
+      if (!available.has(candidate) && !takenSet.has(candidate)) {
+        available.add(candidate);
       }
     }
-    throw new Error("Could not allocate a unique display alias");
+    return [...available];
   }
 }

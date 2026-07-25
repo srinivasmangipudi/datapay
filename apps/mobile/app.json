@@ -17,14 +17,17 @@
       "minSdkVersion": 26,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
     "ios": {
       "supportsTablet": false,
+      "bundleIdentifier": "org.datapay.mobile",
       "infoPlist": {
         "NSCameraUsageDescription": "DataPay needs the camera to snap what your household uses.",
-        "NSMicrophoneUsageDescription": "DataPay needs the microphone to record voice notes on your answers."
+        "NSMicrophoneUsageDescription": "DataPay needs the microphone to record voice notes on your answers.",
+        "NSLocationWhenInUseUsageDescription": "DataPay uses your approximate location to attribute answers to the right village — never stored as exact coordinates."
       }
     },
     "plugins": [
@@ -44,6 +47,12 @@
         "expo-audio",
         {
           "microphonePermission": "DataPay needs the microphone to record voice notes on your answers."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "DataPay uses your approximate location to attribute answers to the right village — never stored as exact coordinates."
         }
       ]
     ]

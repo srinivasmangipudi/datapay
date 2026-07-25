@@ -1,19 +1,16 @@
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { completeOnboarding } from "../api";
 import type { Zone } from "../api";
+import { DataPayMark } from "../brand/DataPayLogo";
+import { colors, radii, spacing, type } from "../theme";
+import { ProgressDots } from "./ProgressDots";
 
 interface Props {
   token: string;
   displayAlias: string;
   zone: Zone;
+  zoneMeta?: { zoneConfirmed: boolean; requestedAreaNote?: string };
   onDone: () => void;
 }
 
@@ -23,13 +20,15 @@ const GUARANTEES = [
   "Deliveries pass through a relay. Identity never crosses the seal.",
 ];
 
-export function AliasRevealScreen({ token, displayAlias, zone, onDone }: Props) {
+const TOTAL_STEPS = 5;
+
+export function AliasRevealScreen({ token, displayAlias, zone, zoneMeta, onDone }: Props) {
   const [loading, setLoading] = useState(false);
 
   async function handleContinue() {
     setLoading(true);
     try {
-      await completeOnboarding(token, zone.id, "kn");
+      await completeOnboarding(token, zone.id, "kn", zoneMeta);
       onDone();
     } catch (err) {
       Alert.alert("Couldn't finish onboarding", (err as Error).message);
@@ -40,10 +39,21 @@ export function AliasRevealScreen({ token, displayAlias, zone, onDone }: Props) 
 
   return (
     <View style={styles.container}>
+      <ProgressDots step={5} total={TOTAL_STEPS} />
+
+      <Text style={styles.title}>You're all set 🎉</Text>
+      <Text style={styles.subtitle}>Here's your profile — this is what DataPay and every brand will ever see.</Text>
+
       <View style={styles.card}>
-        <Text style={styles.cap}>Your sealed identity</Text>
+        <DataPayMark size={26} dark />
+        <Text style={styles.cap}>Your public name</Text>
         <Text style={styles.alias}>{displayAlias}</Text>
-        <Text style={styles.zone}>{zone.name}</Text>
+        <View style={styles.zoneRow}>
+          <Text style={styles.zone}>{zone.name}</Text>
+          {zoneMeta && !zoneMeta.zoneConfirmed && (
+            <Text style={styles.zoneNote}>Closest match for now — we'll refine this as we add your area.</Text>
+          )}
+        </View>
       </View>
 
       {GUARANTEES.map((g) => (
@@ -53,33 +63,44 @@ export function AliasRevealScreen({ token, displayAlias, zone, onDone }: Props) 
         </View>
       ))}
 
-      <TouchableOpacity style={styles.button} disabled={loading} onPress={handleContinue}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Continue</Text>}
+      <TouchableOpacity style={styles.button} disabled={loading} onPress={handleContinue} activeOpacity={0.85}>
+        {loading ? <ActivityIndicator color={colors.onDark} /> : <Text style={styles.buttonText}>Start earning</Text>}
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: "center", backgroundColor: "#fff" },
-  card: {
-    backgroundColor: "#101418",
-    borderRadius: 20,
-    padding: 28,
-    marginBottom: 32,
+  container: { flex: 1, padding: spacing.xl, paddingTop: 64, justifyContent: "center", backgroundColor: colors.paper },
+  title: { ...type.title, textAlign: "center", color: colors.ink, marginTop: spacing.xl },
+  subtitle: {
+    ...type.body,
+    textAlign: "center",
+    color: colors.subtle,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
+    lineHeight: 20,
   },
-  cap: { color: "#8A939B", fontSize: 11, letterSpacing: 2, textTransform: "uppercase" },
-  alias: { color: "#F6F5F1", fontSize: 22, fontWeight: "700", marginTop: 10, letterSpacing: 1 },
-  zone: { color: "#8A939B", fontSize: 13, marginTop: 8 },
-  guaranteeRow: { flexDirection: "row", gap: 10, marginBottom: 16, alignItems: "flex-start" },
-  check: { color: "#0E7A5C", fontWeight: "700", fontSize: 15 },
-  guaranteeText: { flex: 1, fontSize: 14, color: "#333", lineHeight: 20 },
+  card: {
+    backgroundColor: colors.ink,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
+    marginBottom: spacing.xl,
+  },
+  cap: { color: colors.mist, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginTop: spacing.base },
+  alias: { color: colors.onDark, fontSize: 22, fontWeight: "700", marginTop: 10, letterSpacing: 0.5 },
+  zoneRow: { marginTop: spacing.sm },
+  zone: { color: colors.mist, fontSize: 13 },
+  zoneNote: { color: colors.brassOnDark, fontSize: 11.5, marginTop: 4, lineHeight: 16 },
+  guaranteeRow: { flexDirection: "row", gap: 10, marginBottom: spacing.base, alignItems: "flex-start" },
+  check: { color: colors.teal, fontWeight: "700", fontSize: 15 },
+  guaranteeText: { flex: 1, fontSize: 14, color: colors.subtle, lineHeight: 20 },
   button: {
-    marginTop: 16,
-    backgroundColor: "#0E7A5C",
-    borderRadius: 999,
-    paddingVertical: 14,
+    marginTop: spacing.base,
+    backgroundColor: colors.teal,
+    borderRadius: radii.pill,
+    paddingVertical: 16,
     alignItems: "center",
   },
-  buttonText: { color: "#fff", fontWeight: "600", fontSize: 16 },
+  buttonText: { color: colors.onDark, fontWeight: "700", fontSize: 16 },
 });
