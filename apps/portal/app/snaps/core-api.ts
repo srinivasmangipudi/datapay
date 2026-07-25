@@ -9,6 +9,11 @@ export interface AdminSnap {
   rewardTokens: number;
   capturedAt: string;
   productCode: string | null;
+  recognizedTags: string[];
+  recognizedLabel: string | null;
+  recognizedConfidence: number | null;
+  recognizedProductGuess: string | null;
+  recognizedCategoryName: string | null;
 }
 
 export function listSnaps(state?: string): Promise<AdminSnap[]> {

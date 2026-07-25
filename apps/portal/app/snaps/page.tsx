@@ -22,7 +22,8 @@ export default async function SnapsPage({
         <span className="mono small">ops_verified</span> and gives the member a small trust-score
         bump (SPEC.md §6); rejecting closes it out with no penalty. Real image storage isn't wired up
         yet — <span className="mono small">storageKey</span> below is a dev-stub reference, not a
-        real photo URL.
+        real photo URL. "AI tags" is Gemini's own guess at what the photo shows (SPEC.md §32) — ops-
+        assist only, never a substitute for actually looking at the evidence.
       </p>
 
       {searchParams.error && (
@@ -57,6 +58,7 @@ export default async function SnapsPage({
                   <th>ID</th>
                   <th>Alias</th>
                   <th>Category</th>
+                  <th>AI tags</th>
                   <th>Storage key</th>
                   <th>Captured</th>
                   <th className="num">Reward</th>
@@ -70,6 +72,24 @@ export default async function SnapsPage({
                     <td className="mono small">{s.id}</td>
                     <td className="mono small">{s.aliasId.slice(0, 12)}…</td>
                     <td>{s.categoryId ?? <span className="muted">—</span>}</td>
+                    <td className="small">
+                      {s.recognizedTags.length > 0 ? (
+                        <>
+                          {s.recognizedProductGuess && <div>{s.recognizedProductGuess}</div>}
+                          <div className="muted">{s.recognizedTags.join(", ")}</div>
+                          {s.recognizedCategoryName && (
+                            <div className="muted">→ {s.recognizedCategoryName}</div>
+                          )}
+                          {s.recognizedConfidence !== null && (
+                            <div className="muted">{Math.round(s.recognizedConfidence * 100)}% confident</div>
+                          )}
+                        </>
+                      ) : (
+                        <span className="muted">
+                          {s.state === "uploaded" ? "Pending…" : "—"}
+                        </span>
+                      )}
+                    </td>
                     <td className="mono small">{s.storageKey}</td>
                     <td className="muted small">{new Date(s.capturedAt).toLocaleString()}</td>
                     <td className="num value">{s.rewardTokens} ◈</td>
