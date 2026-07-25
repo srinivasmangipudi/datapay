@@ -8,7 +8,14 @@ export interface Zone {
   nameKn: string | null;
 }
 
-export interface VerifyOtpResult {
+// SPEC.md §36 — a returning member gets a session immediately; a first-time
+// member gets a batch of name candidates to choose from instead (nothing is
+// committed until commitAlias() is called).
+export type VerifyOtpResult =
+  | { status: "returning"; token: string; aliasId: string; displayAlias: string }
+  | { status: "choose_alias"; pendingToken: string; aliasId: string; candidates: string[] };
+
+export interface CommitAliasResult {
   token: string;
   aliasId: string;
   displayAlias: string;
@@ -23,6 +30,14 @@ export interface MemberProfile {
   joinedAt: string;
   status: string;
   trustScore: number;
+  zoneConfirmed: boolean;
+  requestedAreaNote: string | null;
+}
+
+export interface ResolveLocationResult {
+  zone: { id: string; name: string; nameKn: string | null; level: string; parentId: string | null };
+  matchType: "existing" | "created";
+  geocodedLabel: string;
 }
 
 export interface PulseOption {
@@ -37,8 +52,15 @@ export interface PulseQuestion {
   categoryId: number;
   type: "single" | "multi" | "yesno" | "intent_window" | "numeric" | "free_text";
   textEn: string;
-  textKn: string | null;
+  // SPEC.md §39 — Hindi is always attempted; textLocal/localLanguage are only
+  // populated when the member's zone resolves to a non-Hindi local language
+  // (never a duplicate of textHi under a second label).
+  textHi: string | null;
+  textLocal: string | null;
+  localLanguage: string | null;
   rewardTokens: number;
+  allowPhoto: boolean;
+  allowVoice: boolean;
   options: PulseOption[];
 }
 
@@ -50,6 +72,11 @@ export interface PulseAnswerInput {
   textValue?: string;
   photoBase64?: string;
   inputMode: "tap" | "voice" | "snap" | "text";
+  // Best-effort — used server-side to resolve the nearest zone, never stored
+  // as raw coordinates (SPEC.md §35). Omitted entirely if permission was
+  // denied or a reading wasn't available in time; never blocks answering.
+  lat?: number;
+  lng?: number;
   language: string;
   answeredAt: string;
 }
@@ -60,13 +87,20 @@ export interface PulseAnswerResult {
 }
 
 export interface TokensSummary {
+  // Outstanding — earned, unspent, still just a promise (SPEC.md §40).
   balance: number;
+  // Realised — redeemed AND the underlying offer actually delivered, so a
+  // real rupee has been reserved to back it. Never a duplicate of balance:
+  // a token leaves balance the moment it's redeemed, well before delivery.
+  realisedTokens: number;
   history: {
     entry: string;
     tokens: number;
     refType: string;
     refId: string;
     createdAt: string;
+    label: string;
+    labelKn: string;
   }[];
 }
 
@@ -90,6 +124,9 @@ export interface FundProject {
   titleKn: string | null;
   estimatePaise: number;
   status: "proposed" | "voting" | "approved" | "funded" | "done";
+  yesVotes: number;
+  noVotes: number;
+  myVote: "yes" | "no" | null;
 }
 
 async function request<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
@@ -122,18 +159,51 @@ export function verifyOtp(phoneE164: string, otp: string): Promise<VerifyOtpResu
   });
 }
 
+export function getAliasCandidates(pendingToken: string): Promise<{ candidates: string[] }> {
+  return request("/v1/auth/otp/alias-candidates", {
+    method: "POST",
+    body: JSON.stringify({ pendingToken }),
+  });
+}
+
+export function commitAlias(pendingToken: string, displayAlias: string): Promise<CommitAliasResult> {
+  return request("/v1/auth/otp/commit-alias", {
+    method: "POST",
+    body: JSON.stringify({ pendingToken, displayAlias }),
+  });
+}
+
 export function getZones(): Promise<Zone[]> {
   return request("/v1/zones");
+}
+
+// SPEC.md §38 — "my village isn't listed" fallback: "detect my location" or
+// "enter my address," either way geocoded to a real place, matched to an
+// existing zone or created on the spot.
+export function resolveLocation(
+  token: string,
+  location: { lat: number; lng: number } | { address: string }
+): Promise<ResolveLocationResult> {
+  return request("/v1/zones/resolve-location", { method: "POST", body: JSON.stringify(location) }, token);
 }
 
 export function completeOnboarding(
   token: string,
   zoneId: string,
-  locale: string
+  locale: string,
+  opts?: { zoneConfirmed?: boolean; requestedAreaNote?: string }
 ): Promise<MemberProfile> {
   return request(
     "/v1/me",
-    { method: "PUT", body: JSON.stringify({ zoneId, locale }) },
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        zoneId,
+        locale,
+        zoneConfirmed: opts?.zoneConfirmed,
+        requestedAreaNote: opts?.requestedAreaNote,
+      }),
+    },
     token
   );
 }
@@ -155,13 +225,6 @@ export function submitPulseAnswers(
     { method: "POST", body: JSON.stringify({ answers }) },
     token
   );
-}
-
-export function submitSnap(
-  token: string,
-  dto: { clientMsgId: string; imageBase64: string; categoryId?: number; capturedAt: string }
-): Promise<{ status: "credited" | "already_synced"; snapId?: number }> {
-  return request("/v1/snaps", { method: "POST", body: JSON.stringify(dto) }, token);
 }
 
 export function transcribeVoice(
@@ -202,6 +265,18 @@ export function getFundBalance(token: string): Promise<FundBalance> {
 
 export function getFundProjects(token: string): Promise<FundProject[]> {
   return request("/v1/fund/projects", {}, token);
+}
+
+export function proposeFundProject(
+  token: string,
+  title: string,
+  estimatePaise: number
+): Promise<{ id: number }> {
+  return request(
+    "/v1/fund/projects",
+    { method: "POST", body: JSON.stringify({ title, estimatePaise }) },
+    token
+  );
 }
 
 export function voteFundProject(

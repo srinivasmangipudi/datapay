@@ -172,21 +172,23 @@ export class QuestionFeederService {
       for (const variant of variants) {
         const { rows: qRows } = await client.query<{ id: number }>(
           `INSERT INTO questions
-             (category_id, type, text_en, text_kn, reward_tokens, source, generator_topic_id, generation_run_id, review_state, zone_id)
-           VALUES ($1, $2, $3, $4, $5, 'plugin_generated', $6, $7, 'draft', $8)
+             (category_id, type, text_en, reward_tokens, source, generator_topic_id, generation_run_id, review_state, zone_id)
+           VALUES ($1, $2, $3, $4, 'plugin_generated', $5, $6, 'draft', $7)
            RETURNING id`,
-          [
-            categoryId,
-            variant.type,
-            variant.textEn,
-            variant.textKn ?? null,
-            variant.rewardTokens,
-            topicId,
-            runId,
-            zoneId,
-          ]
+          [categoryId, variant.type, variant.textEn, variant.rewardTokens, topicId, runId, zoneId]
         );
         const questionId = qRows[0].id;
+
+        // The generator only ever produces Kannada today (SPEC.md §39 —
+        // multi-language translation is an admin-authored capability so
+        // far; extending the LLM prompt itself to other languages is a
+        // separate, bounded decision, not implied by this addendum).
+        if (variant.textKn) {
+          await client.query(
+            `INSERT INTO question_translations (question_id, language_code, text) VALUES ($1, 'kn', $2)`,
+            [questionId, variant.textKn]
+          );
+        }
 
         if (variant.options?.length) {
           for (const [i, opt] of variant.options.entries()) {
@@ -225,17 +227,18 @@ export class QuestionFeederService {
     return withTransaction(this.pool, async (client: PoolClient) => {
       const { rows } = await client.query<{ id: number }>(
         `INSERT INTO questions
-           (category_id, type, text_en, text_kn, reward_tokens, source, review_state, intent_window, zone_id)
-         VALUES ($1, $2, $3, $4, $5, 'admin_authored', 'approved', $6, $7)
+           (category_id, type, text_en, reward_tokens, source, review_state, intent_window, zone_id, allow_photo, allow_voice)
+         VALUES ($1, $2, $3, $4, 'admin_authored', 'approved', $5, $6, $7, $8)
          RETURNING id`,
         [
           dto.categoryId,
           dto.type,
           dto.textEn,
-          dto.textKn ?? null,
           dto.rewardTokens,
           dto.type === "intent_window" ? dto.intentWindow : null,
           dto.zoneId ?? null,
+          dto.allowPhoto,
+          dto.allowVoice,
         ]
       );
       const questionId = rows[0].id;
@@ -244,6 +247,15 @@ export class QuestionFeederService {
         await client.query(
           `INSERT INTO question_options (question_id, label_en, label_kn, sort) VALUES ($1, $2, $3, $4)`,
           [questionId, opt.labelEn, opt.labelKn ?? null, i]
+        );
+      }
+
+      // SPEC.md §39 — any number of language translations, each optional;
+      // a question with none is still fully valid (English-only until translated).
+      for (const t of dto.translations ?? []) {
+        await client.query(
+          `INSERT INTO question_translations (question_id, language_code, text) VALUES ($1, $2, $3)`,
+          [questionId, t.languageCode, t.text]
         );
       }
 
@@ -264,8 +276,10 @@ export class QuestionFeederService {
     }
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const { rows } = await this.pool.query(
-      `SELECT q.id, q.category_id, q.type, q.text_en, q.text_kn, q.reward_tokens, q.source,
-              q.review_state, q.active_from, q.zone_id, z.name AS zone_name
+      `SELECT q.id, q.category_id, q.type, q.text_en, q.reward_tokens, q.source,
+              q.review_state, q.active_from, q.zone_id, z.name AS zone_name,
+              q.allow_photo, q.allow_voice,
+              (SELECT json_object_agg(language_code, text) FROM question_translations WHERE question_id = q.id) AS translations
        FROM questions q
        LEFT JOIN zones z ON z.id = q.zone_id
        ${where}
@@ -287,8 +301,9 @@ export class QuestionFeederService {
 
   async listQuestionsByReviewState(reviewState: string) {
     const { rows } = await this.pool.query(
-      `SELECT q.id, q.category_id, q.type, q.text_en, q.text_kn, q.reward_tokens, q.source,
-              q.generation_run_id, q.review_state, q.zone_id, z.name AS zone_name
+      `SELECT q.id, q.category_id, q.type, q.text_en, q.reward_tokens, q.source,
+              q.generation_run_id, q.review_state, q.zone_id, z.name AS zone_name,
+              (SELECT json_object_agg(language_code, text) FROM question_translations WHERE question_id = q.id) AS translations
        FROM questions q
        LEFT JOIN zones z ON z.id = q.zone_id
        WHERE q.review_state = $1 ORDER BY q.id`,

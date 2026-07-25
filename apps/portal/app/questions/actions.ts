@@ -29,8 +29,9 @@ export async function createQuestionAction(payload: CreateQuestionFormPayload): 
 
 // Called directly from a client onClick, not a form submission — no
 // redirect() here, just a value the wizard drops into the (still editable)
-// Kannada field (SPEC.md §27).
-export async function translateToKannada(text: string): Promise<string> {
-  const { translated } = await translateText(text, "kn");
+// translation field for that language (SPEC.md §27, generalized in §39
+// beyond the original Kannada-only version).
+export async function translateQuestionText(text: string, targetLang: string): Promise<string> {
+  const { translated } = await translateText(text, targetLang);
   return translated;
 }

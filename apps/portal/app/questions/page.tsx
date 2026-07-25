@@ -17,6 +17,7 @@ interface Zone {
   id: string;
   name: string;
   level: string;
+  languageCode: string | null;
 }
 
 async function getCategories(): Promise<Category[]> {
@@ -27,7 +28,9 @@ async function getCategories(): Promise<Category[]> {
 
 async function getZones(): Promise<Zone[]> {
   const pool = getPortalPool();
-  const { rows } = await pool.query<Zone>(`SELECT id, name, level FROM zones ORDER BY level, name`);
+  const { rows } = await pool.query<Zone>(
+    `SELECT id, name, level, language_code AS "languageCode" FROM zones ORDER BY level, name`
+  );
   return rows;
 }
 
@@ -71,6 +74,7 @@ export default async function QuestionsPage({
                   <th>Question</th>
                   <th>Type</th>
                   <th>Region</th>
+                  <th>Evidence</th>
                   <th>Reward</th>
                 </tr>
               </thead>
@@ -79,10 +83,18 @@ export default async function QuestionsPage({
                   <tr key={q.id}>
                     <td>
                       {q.text_en}
-                      {q.text_kn && <div className="muted small">{q.text_kn}</div>}
+                      {q.translations &&
+                        Object.entries(q.translations).map(([lang, text]) => (
+                          <div key={lang} className="muted small">
+                            {text}
+                          </div>
+                        ))}
                     </td>
                     <td className="mono small">{q.type}</td>
                     <td className="small">{q.zone_name ?? <span className="muted">Global</span>}</td>
+                    <td className="small muted">
+                      {[q.allow_photo && "photo", q.allow_voice && "voice"].filter(Boolean).join(", ") || "—"}
+                    </td>
                     <td className="num value">{q.reward_tokens} ◈</td>
                   </tr>
                 ))}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createQuestionAction, translateToKannada } from "./actions";
+import { LANGUAGE_NAMES } from "../lib/language-names";
+import { createQuestionAction, translateQuestionText } from "./actions";
 import type { AnswerType } from "./core-api";
 
 interface Category {
@@ -13,6 +14,7 @@ interface Zone {
   id: string;
   name: string;
   level: string;
+  languageCode: string | null;
 }
 
 const LEVEL_INDENT: Record<string, string> = {
@@ -60,30 +62,42 @@ export function QuestionWizard({
 }): JSX.Element {
   const [categoryName, setCategoryName] = useState(categories[0]?.name ?? "");
   const [textEn, setTextEn] = useState("");
-  const [textKn, setTextKn] = useState("");
+  const [textHi, setTextHi] = useState("");
+  const [textLocal, setTextLocal] = useState("");
   const [type, setType] = useState<AnswerType>("single");
   const [options, setOptions] = useState<OptionRow[]>(emptyOptions(2));
   const [intentWindow, setIntentWindow] = useState<"1m" | "3m" | "6m" | "12m">("1m");
   const [rewardTokens, setRewardTokens] = useState(4);
   const [zoneId, setZoneId] = useState<string>("");
+  const [allowPhoto, setAllowPhoto] = useState(true);
+  const [allowVoice, setAllowVoice] = useState(true);
   const [clientError, setClientError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [isTranslating, setIsTranslating] = useState(false);
+  const [translatingLang, setTranslatingLang] = useState<string | null>(null);
 
-  async function handleTranslate() {
+  // SPEC.md §39 — the local-language button only appears once a zone is
+  // scoped and its language is known; "hi"/"en" don't get a second button
+  // since Hindi already has its own field and English is the base text.
+  const selectedZone = zones.find((z) => z.id === zoneId);
+  const localLanguageCode =
+    selectedZone?.languageCode && selectedZone.languageCode !== "hi" && selectedZone.languageCode !== "en"
+      ? selectedZone.languageCode
+      : null;
+
+  async function handleTranslate(targetLang: string, setText: (text: string) => void) {
     if (!textEn.trim()) {
       setClientError("Type the English question first.");
       return;
     }
     setClientError(null);
-    setIsTranslating(true);
+    setTranslatingLang(targetLang);
     try {
-      const translated = await translateToKannada(textEn.trim());
-      setTextKn(translated);
+      const translated = await translateQuestionText(textEn.trim(), targetLang);
+      setText(translated);
     } catch (err) {
       setClientError((err as Error).message);
     } finally {
-      setIsTranslating(false);
+      setTranslatingLang(null);
     }
   }
 
@@ -133,11 +147,16 @@ export function QuestionWizard({
       }
     }
 
+    const translations = [
+      ...(textHi.trim() ? [{ languageCode: "hi", text: textHi.trim() }] : []),
+      ...(localLanguageCode && textLocal.trim() ? [{ languageCode: localLanguageCode, text: textLocal.trim() }] : []),
+    ];
+
     startTransition(() => {
       createQuestionAction({
         categoryName: categoryName.trim(),
         textEn: textEn.trim(),
-        textKn: textKn.trim() || undefined,
+        translations: translations.length ? translations : undefined,
         type,
         rewardTokens,
         options: needsOptions
@@ -147,6 +166,8 @@ export function QuestionWizard({
           : undefined,
         intentWindow: type === "intent_window" ? intentWindow : undefined,
         zoneId: zoneId || undefined,
+        allowPhoto,
+        allowVoice,
       });
     });
   }
@@ -178,16 +199,41 @@ export function QuestionWizard({
           onChange={(e) => setTextEn(e.target.value)}
         />
         <input
-          placeholder="Question text (Kannada) — optional"
-          value={textKn}
-          onChange={(e) => setTextKn(e.target.value)}
+          placeholder="Question text (Hindi) — optional"
+          value={textHi}
+          onChange={(e) => setTextHi(e.target.value)}
         />
-        <button type="button" className="linkBtn" onClick={handleTranslate} disabled={isTranslating}>
-          {isTranslating ? "Translating…" : "Translate to Kannada →"}
+        <button
+          type="button"
+          className="linkBtn"
+          onClick={() => handleTranslate("hi", setTextHi)}
+          disabled={translatingLang !== null}
+        >
+          {translatingLang === "hi" ? "Translating…" : "Translate to Hindi →"}
         </button>
+        {localLanguageCode && (
+          <>
+            <input
+              placeholder={`Question text (${LANGUAGE_NAMES[localLanguageCode] ?? localLanguageCode}) — optional`}
+              value={textLocal}
+              onChange={(e) => setTextLocal(e.target.value)}
+            />
+            <button
+              type="button"
+              className="linkBtn"
+              onClick={() => handleTranslate(localLanguageCode, setTextLocal)}
+              disabled={translatingLang !== null}
+            >
+              {translatingLang === localLanguageCode
+                ? "Translating…"
+                : `Translate to ${LANGUAGE_NAMES[localLanguageCode] ?? localLanguageCode} →`}
+            </button>
+          </>
+        )}
         <p className="hint">
           Auto-translated by Gemini — always a starting draft, review and edit before creating the
-          question (SPEC.md §27).
+          question (SPEC.md §27). English is always shown; Hindi and the region's local language
+          (from step 4) fill in when set (SPEC.md §39).
         </p>
       </div>
 
@@ -276,7 +322,23 @@ export function QuestionWizard({
       </div>
 
       <div className="step">
-        <span className="stepLabel">5. Reward</span>
+        <span className="stepLabel">5. Evidence</span>
+        <label className="checkboxRow">
+          <input type="checkbox" checked={allowPhoto} onChange={(e) => setAllowPhoto(e.target.checked)} />
+          Allow a photo as evidence
+        </label>
+        <label className="checkboxRow">
+          <input type="checkbox" checked={allowVoice} onChange={(e) => setAllowVoice(e.target.checked)} />
+          Allow a voice note as evidence
+        </label>
+        <p className="hint">
+          Both on by default — turn either off if this question shouldn't offer that input at all
+          (SPEC.md §34). The member's own tap/typed answer is never affected either way.
+        </p>
+      </div>
+
+      <div className="step">
+        <span className="stepLabel">6. Reward</span>
         <input
           type="number"
           min={1}

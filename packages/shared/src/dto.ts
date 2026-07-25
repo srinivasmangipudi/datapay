@@ -17,6 +17,10 @@ export const PulseAnswerDtoSchema = z.object({
   inputMode: z.enum(INPUT_MODES).default("tap"),
   language: z.string().min(2).max(10),
   answeredAt: z.string().datetime(),
+  // SPEC.md §35 — used transiently, server-side, to resolve the nearest zone
+  // at answer time; never persisted as raw coordinates anywhere (LAW 1).
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
 });
 export type PulseAnswerDto = z.infer<typeof PulseAnswerDtoSchema>;
 
@@ -81,7 +85,12 @@ export const CreateQuestionDtoSchema = z
   .object({
     categoryId: z.number().int().positive(),
     textEn: z.string().min(1).max(300),
-    textKn: z.string().max(300).optional(),
+    // SPEC.md §39 — replaces the old fixed textKn field. Any number of
+    // language translations, each independently optional; a question with
+    // none is still fully valid (shows English only until translated).
+    translations: z
+      .array(z.object({ languageCode: z.string().min(2).max(5), text: z.string().min(1).max(300) }))
+      .optional(),
     type: z.enum(["single", "multi", "yesno", "intent_window", "numeric", "free_text"]),
     rewardTokens: z.number().int().positive().default(4),
     options: z.array(QuestionOptionInputSchema).optional(),
@@ -90,6 +99,11 @@ export const CreateQuestionDtoSchema = z
     // a zone and every zone beneath it in the hierarchy — never sideways to
     // a sibling zone (SPEC.md §23).
     zoneId: z.string().uuid().optional(),
+    // Whether photo/voice can be attached as evidence on THIS question
+    // (SPEC.md §34) — both on by default; the question's author opts out,
+    // not in.
+    allowPhoto: z.boolean().default(true),
+    allowVoice: z.boolean().default(true),
   })
   .superRefine((val, ctx) => {
     if (["single", "multi", "yesno"].includes(val.type) && (val.options?.length ?? 0) < 2) {
@@ -132,8 +146,30 @@ export const CreateZoneDtoSchema = z.object({
   nameKn: z.string().max(120).optional(),
   level: z.enum(ZONE_LEVELS),
   parentId: z.string().uuid().optional(),
+  // A representative point for this zone (e.g. its town center) — used only
+  // to resolve a member's GPS reading to the nearest zone (SPEC.md §35), not
+  // a real boundary. Optional: a zone with no centroid is simply never
+  // matched, not an error.
+  centroidLat: z.number().min(-90).max(90).optional(),
+  centroidLng: z.number().min(-180).max(180).optional(),
+  // SPEC.md §39 — a manually-created zone has no geocoded state data to
+  // derive this from automatically, so the admin sets it directly.
+  languageCode: z.string().min(2).max(5).optional(),
 });
 export type CreateZoneDto = z.infer<typeof CreateZoneDtoSchema>;
+
+/** PATCH /v1/admin/zones/:id — set or correct a zone's centroid after creation. */
+export const UpdateZoneCentroidDtoSchema = z.object({
+  centroidLat: z.number().min(-90).max(90),
+  centroidLng: z.number().min(-180).max(180),
+});
+export type UpdateZoneCentroidDto = z.infer<typeof UpdateZoneCentroidDtoSchema>;
+
+/** PATCH /v1/admin/zones/:id/language — set or correct a zone's local language. */
+export const UpdateZoneLanguageDtoSchema = z.object({
+  languageCode: z.string().min(2).max(5),
+});
+export type UpdateZoneLanguageDto = z.infer<typeof UpdateZoneLanguageDtoSchema>;
 
 /**
  * POST /v1/admin/translate (SPEC.md §27) — a starting draft, never the
@@ -141,7 +177,10 @@ export type CreateZoneDto = z.infer<typeof CreateZoneDtoSchema>;
  */
 export const TranslateDtoSchema = z.object({
   text: z.string().min(1).max(500),
-  targetLang: z.enum(["kn"]).default("kn"),
+  // SPEC.md §39 — any of the platform's supported languages, not just
+  // Kannada; the actual supported set is validated server-side
+  // (TranslationService), not enumerated here.
+  targetLang: z.string().min(2).max(5).default("hi"),
 });
 export type TranslateDto = z.infer<typeof TranslateDtoSchema>;
 
@@ -167,13 +206,44 @@ export const VerifyOtpDtoSchema = z.object({
 });
 export type VerifyOtpDto = z.infer<typeof VerifyOtpDtoSchema>;
 
+/**
+ * Vault POST /alias-candidates — SPEC.md §36 "see various combinations":
+ * a fresh batch of display-alias options for the same pending signup session.
+ */
+export const AliasCandidatesDtoSchema = z.object({
+  pendingToken: z.string().uuid(),
+});
+export type AliasCandidatesDto = z.infer<typeof AliasCandidatesDtoSchema>;
+
+/** Vault POST /commit-alias — locks in the member's chosen display alias (SPEC.md §36). */
+export const CommitAliasDtoSchema = z.object({
+  pendingToken: z.string().uuid(),
+  displayAlias: z.string().min(1).max(60),
+});
+export type CommitAliasDto = z.infer<typeof CommitAliasDtoSchema>;
+
 /** Core PUT /v1/me — completes onboarding once an alias exists. Never carries a phone. */
 export const CompleteOnboardingDtoSchema = z.object({
   zoneId: z.string().uuid(),
   householdSizeBand: z.string().optional(),
   locale: z.string().min(2).max(10).default("kn"),
+  // SPEC.md §38 — false when zoneId is a nearest-match fallback (the
+  // member's real area isn't in the zones tree yet), not a real pick.
+  zoneConfirmed: z.boolean().default(true),
+  requestedAreaNote: z.string().max(300).optional(),
 });
 export type CompleteOnboardingDto = z.infer<typeof CompleteOnboardingDtoSchema>;
+
+/**
+ * Core POST /v1/zones/resolve-location — SPEC.md §38 onboarding fallback:
+ * "detect my location" (lat/lng) or "enter my address" (address), either
+ * way resolved to a real place, matched to an existing zone or created new.
+ */
+export const ResolveLocationDtoSchema = z.union([
+  z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) }),
+  z.object({ address: z.string().min(3).max(300) }),
+]);
+export type ResolveLocationDto = z.infer<typeof ResolveLocationDtoSchema>;
 
 /**
  * Core POST /v1/me/delivery-address, proxied to Vault's internal
@@ -237,6 +307,33 @@ export const CreateFundProjectDtoSchema = z.object({
   estimatePaise: z.number().int().positive(),
 });
 export type CreateFundProjectDto = z.infer<typeof CreateFundProjectDtoSchema>;
+
+/**
+ * POST /v1/fund/projects — a member proposes a project, member-facing (SPEC.md
+ * §30). No zoneId field: unlike the admin variant, the zone is always the
+ * caller's own (resolved server-side from their alias), never client-supplied.
+ */
+export const ProposeFundProjectDtoSchema = z.object({
+  title: z.string().min(1).max(200),
+  titleKn: z.string().max(200).optional(),
+  estimatePaise: z.number().int().positive(),
+});
+export type ProposeFundProjectDto = z.infer<typeof ProposeFundProjectDtoSchema>;
+
+/**
+ * PATCH /v1/admin/fund-projects/:id — ops edits a project's details or
+ * advances it through its status lifecycle (proposed → voting → approved →
+ * funded → done). Every field optional; at least one must be present.
+ */
+export const UpdateFundProjectDtoSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    titleKn: z.string().max(200).optional(),
+    estimatePaise: z.number().int().positive().optional(),
+    status: z.enum(["proposed", "voting", "approved", "funded", "done"]).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Provide at least one field to update" });
+export type UpdateFundProjectDto = z.infer<typeof UpdateFundProjectDtoSchema>;
 
 /** Core POST /v1/produce/payout-instrument, proxied to Vault's internal /payout-instrument. */
 export const SetPayoutInstrumentDtoSchema = z.object({

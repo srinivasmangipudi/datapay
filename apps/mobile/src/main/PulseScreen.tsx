@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Crypto from "expo-crypto";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { RecordingPresets, requestRecordingPermissionsAsync, useAudioRecorder, useAudioRecorderState } from "expo-audio";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -21,6 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getPulseToday, PulseQuestion, transcribeVoice } from "../api";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { hasFace } from "../faceDetector";
 import { strings } from "../i18n/strings";
 import { enqueueAnswer, flushOutbox } from "../outbox";
 import type { Session } from "../session";
@@ -37,6 +39,7 @@ export function PulseScreen({ session }: Props) {
   const [numericInput, setNumericInput] = useState("");
   const [note, setNote] = useState("");
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [usedVoice, setUsedVoice] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const insets = useSafeAreaInsets();
 
@@ -59,12 +62,18 @@ export function PulseScreen({ session }: Props) {
     setNumericInput("");
     setNote("");
     setPhotoBase64(null);
+    setUsedVoice(false);
   }
 
   async function submit() {
     const question = questions![index];
     const isNumeric = question.type === "numeric";
     const isFreeText = question.type === "free_text";
+    // A single categorical inputMode, so precedence matters when more than
+    // one supplement is present: a photo is the richest evidence, then a
+    // voice-sourced note, then whatever the question type itself implies.
+    const inputMode = photoBase64 ? "snap" : usedVoice ? "voice" : isFreeText ? "text" : "tap";
+    const coords = await getBestEffortLocation();
     enqueueAnswer({
       clientMsgId: Crypto.randomUUID(),
       questionId: question.id,
@@ -72,14 +81,40 @@ export function PulseScreen({ session }: Props) {
       numericValue: isNumeric ? Number(numericInput) : undefined,
       textValue: note.trim() || undefined,
       photoBase64: photoBase64 || undefined,
-      inputMode: isFreeText ? "text" : "tap",
+      inputMode,
       language: session.locale ?? "en",
       answeredAt: new Date().toISOString(),
+      lat: coords?.lat,
+      lng: coords?.lng,
     });
     resetSupplements();
     setIndex((i) => i + 1);
     // Best-effort background sync — the outbox is the source of truth if this fails.
     flushOutbox(session.token).catch(() => {});
+  }
+
+  /**
+   * SPEC.md §35 — a cached ("last known") reading, not a fresh GPS fix: this
+   * app is offline-first-by-design (answers enqueue locally the instant
+   * they're given), and requesting a live fix can take seconds on a cold
+   * GPS — that would visibly stall every single answer. A missing/denied
+   * reading is a normal outcome, not an error; the question still submits.
+   */
+  async function getBestEffortLocation(): Promise<{ lat: number; lng: number } | null> {
+    try {
+      const current = await Location.getForegroundPermissionsAsync();
+      let granted = current.status === "granted";
+      if (!granted && current.canAskAgain) {
+        granted = (await Location.requestForegroundPermissionsAsync()).status === "granted";
+      }
+      if (!granted) return null;
+
+      const position = await Location.getLastKnownPositionAsync();
+      if (!position) return null;
+      return { lat: position.coords.latitude, lng: position.coords.longitude };
+    } catch {
+      return null;
+    }
   }
 
   function toggleOption(optionId: number, multi: boolean) {
@@ -102,6 +137,7 @@ export function PulseScreen({ session }: Props) {
         const heard = result.translatedText ?? result.transcript;
         if (heard) {
           setNote((prev) => (prev ? `${prev}\n${heard}` : heard));
+          setUsedVoice(true);
         }
       } catch (err) {
         Alert.alert(strings.pulse.transcribeFailedTitle.en, (err as Error).message);
@@ -120,10 +156,17 @@ export function PulseScreen({ session }: Props) {
   async function attachPhoto() {
     const { granted } = await ImagePicker.requestCameraPermissionsAsync();
     if (!granted) return;
+    // launchCameraAsync's native camera UI already shows a freeze-frame +
+    // "use photo / retake" confirmation before returning — no separate
+    // preview step needed here, unlike the old raw-CameraView Snap screen.
     const result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.6 });
-    if (!result.canceled && result.assets[0]?.base64) {
-      setPhotoBase64(result.assets[0].base64);
+    if (result.canceled || !result.assets[0]?.base64) return;
+
+    if (await hasFace(result.assets[0].base64)) {
+      Alert.alert(strings.pulse.photoRejectedTitle.en, strings.pulse.photoRejectedBody.en);
+      return;
     }
+    setPhotoBase64(result.assets[0].base64);
   }
 
   if (!questions) {
@@ -186,7 +229,8 @@ export function PulseScreen({ session }: Props) {
 
       <Card style={styles.card}>
         <Text style={styles.question}>{question.textEn}</Text>
-        {question.textKn && <Text style={styles.questionKn}>{question.textKn}</Text>}
+        {question.textHi && <Text style={styles.questionKn}>{question.textHi}</Text>}
+        {question.textLocal && <Text style={styles.questionKn}>{question.textLocal}</Text>}
 
         {isNumeric ? (
           <TextInput
@@ -231,43 +275,46 @@ export function PulseScreen({ session }: Props) {
           />
 
           <View style={styles.supplementRow}>
-            <TouchableOpacity
-              style={[styles.supplementBtn, recorderState.isRecording && styles.supplementBtnActive]}
-              onPress={toggleRecording}
-              disabled={transcribing}
-              activeOpacity={0.8}
-            >
-              {transcribing ? (
-                <ActivityIndicator color={colors.teal} size="small" />
-              ) : (
-                <Ionicons
-                  name={recorderState.isRecording ? "stop-circle" : "mic-outline"}
-                  size={18}
-                  color={recorderState.isRecording ? colors.danger : colors.teal}
-                />
-              )}
-              <Text style={styles.supplementText}>
-                {transcribing
-                  ? strings.pulse.transcribing.en
-                  : recorderState.isRecording
-                    ? strings.pulse.recording.en
-                    : strings.pulse.recordVoiceNote.en}
-              </Text>
-            </TouchableOpacity>
-
-            {photoBase64 ? (
-              <View style={styles.photoPreviewWrap}>
-                <Image source={{ uri: `data:image/jpeg;base64,${photoBase64}` }} style={styles.photoPreview} />
-                <TouchableOpacity onPress={() => setPhotoBase64(null)}>
-                  <Text style={styles.removePhoto}>{strings.pulse.removePhoto.en}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.supplementBtn} onPress={attachPhoto} activeOpacity={0.8}>
-                <Ionicons name="camera-outline" size={18} color={colors.teal} />
-                <Text style={styles.supplementText}>{strings.pulse.attachPhoto.en}</Text>
+            {question.allowVoice && (
+              <TouchableOpacity
+                style={[styles.supplementBtn, recorderState.isRecording && styles.supplementBtnActive]}
+                onPress={toggleRecording}
+                disabled={transcribing}
+                activeOpacity={0.8}
+              >
+                {transcribing ? (
+                  <ActivityIndicator color={colors.teal} size="small" />
+                ) : (
+                  <Ionicons
+                    name={recorderState.isRecording ? "stop-circle" : "mic-outline"}
+                    size={18}
+                    color={recorderState.isRecording ? colors.danger : colors.teal}
+                  />
+                )}
+                <Text style={styles.supplementText}>
+                  {transcribing
+                    ? strings.pulse.transcribing.en
+                    : recorderState.isRecording
+                      ? strings.pulse.recording.en
+                      : strings.pulse.recordVoiceNote.en}
+                </Text>
               </TouchableOpacity>
             )}
+
+            {question.allowPhoto &&
+              (photoBase64 ? (
+                <View style={styles.photoPreviewWrap}>
+                  <Image source={{ uri: `data:image/jpeg;base64,${photoBase64}` }} style={styles.photoPreview} />
+                  <TouchableOpacity onPress={() => setPhotoBase64(null)}>
+                    <Text style={styles.removePhoto}>{strings.pulse.removePhoto.en}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.supplementBtn} onPress={attachPhoto} activeOpacity={0.8}>
+                  <Ionicons name="camera-outline" size={18} color={colors.teal} />
+                  <Text style={styles.supplementText}>{strings.pulse.attachPhoto.en}</Text>
+                </TouchableOpacity>
+              ))}
           </View>
         </View>
       </Card>

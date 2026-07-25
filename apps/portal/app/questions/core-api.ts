@@ -5,7 +5,7 @@ export type AnswerType = "single" | "multi" | "yesno" | "intent_window" | "numer
 export interface CreateQuestionPayload {
   categoryId: number;
   textEn: string;
-  textKn?: string;
+  translations?: { languageCode: string; text: string }[];
   type: AnswerType;
   rewardTokens: number;
   options?: { labelEn: string; labelKn?: string }[];
@@ -14,6 +14,10 @@ export interface CreateQuestionPayload {
   // beneath it (SPEC.md §23) — e.g. a constituency-scoped question reaches
   // every village under it, never a sibling zone.
   zoneId?: string;
+  // Whether photo/voice can be attached as evidence on this question
+  // (SPEC.md §34) — both on by default.
+  allowPhoto: boolean;
+  allowVoice: boolean;
 }
 
 export interface RecentQuestion {
@@ -21,13 +25,15 @@ export interface RecentQuestion {
   category_id: number;
   type: AnswerType;
   text_en: string;
-  text_kn: string | null;
+  translations: Record<string, string> | null;
   reward_tokens: number;
   source: string;
   review_state: string;
   active_from: string;
   zone_id: string | null;
   zone_name: string | null;
+  allow_photo: boolean;
+  allow_voice: boolean;
 }
 
 export function createQuestion(payload: CreateQuestionPayload) {
@@ -54,6 +60,6 @@ export function resolveCategory(name: string): Promise<{ id: number; created: bo
  * A starting draft, never the system of record (SPEC.md §27) — the admin
  * reviews/edits the result before anything is saved.
  */
-export function translateText(text: string, targetLang: "kn"): Promise<{ translated: string }> {
+export function translateText(text: string, targetLang: string): Promise<{ translated: string }> {
   return apiFetch("/v1/admin/translate", { method: "POST", body: JSON.stringify({ text, targetLang }) });
 }

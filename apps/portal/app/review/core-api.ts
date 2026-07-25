@@ -5,7 +5,7 @@ export interface DraftQuestion {
   category_id: number;
   type: string;
   text_en: string;
-  text_kn: string | null;
+  translations: Record<string, string> | null;
   reward_tokens: number;
   source: string;
   generation_run_id: number | null;

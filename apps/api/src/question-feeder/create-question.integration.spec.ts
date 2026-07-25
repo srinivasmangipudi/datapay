@@ -46,14 +46,13 @@ describe("Admin-authored questions skip the draft queue (SPEC.md §14/§21)", ()
   // (the exact bug this suite's own last test would otherwise repeat).
   async function deleteQuestion(id: number) {
     await pool.query(`DELETE FROM question_options WHERE question_id = $1`, [id]);
-    await pool.query(`DELETE FROM questions WHERE id = $1`, [id]);
+    await pool.query(`DELETE FROM questions WHERE id = $1`, [id]); // cascades question_translations
   }
 
   it("creates a 'single' question with options, approved immediately — no draft step", async () => {
     const res = await post({
       categoryId: soapCategoryId,
       textEn: "Which soap brand does your household use?",
-      textKn: "ನಿಮ್ಮ ಮನೆಯಲ್ಲಿ ಯಾವ ಸಾಬೂನು ಬ್ರಾಂಡ್ ಬಳಸುತ್ತೀರಿ?",
       type: "single",
       rewardTokens: 4,
       options: [
@@ -76,6 +75,31 @@ describe("Admin-authored questions skip the draft queue (SPEC.md §14/§21)", ()
       [res.body.id]
     );
     expect(optRows.map((r) => r.label_en)).toEqual(["Lifebuoy", "Lux", "Other"]);
+
+    await deleteQuestion(res.body.id);
+  });
+
+  it("persists any number of translations (SPEC.md §39) — not just Kannada", async () => {
+    const res = await post({
+      categoryId: soapCategoryId,
+      textEn: "Which soap brand does your household use?",
+      translations: [
+        { languageCode: "hi", text: "आपका घर कौन सा साबुन ब्रांड उपयोग करता है?" },
+        { languageCode: "kn", text: "ನಿಮ್ಮ ಮನೆಯಲ್ಲಿ ಯಾವ ಸಾಬೂನು ಬ್ರಾಂಡ್ ಬಳಸುತ್ತೀರಿ?" },
+      ],
+      type: "single",
+      options: [{ labelEn: "Lifebuoy" }, { labelEn: "Lux" }],
+    });
+    expect(res.status).toBe(201);
+
+    const { rows } = await pool.query(
+      `SELECT language_code, text FROM question_translations WHERE question_id = $1 ORDER BY language_code`,
+      [res.body.id]
+    );
+    expect(rows).toEqual([
+      { language_code: "hi", text: "आपका घर कौन सा साबुन ब्रांड उपयोग करता है?" },
+      { language_code: "kn", text: "ನಿಮ್ಮ ಮನೆಯಲ್ಲಿ ಯಾವ ಸಾಬೂನು ಬ್ರಾಂಡ್ ಬಳಸುತ್ತೀರಿ?" },
+    ]);
 
     await deleteQuestion(res.body.id);
   });
@@ -139,6 +163,24 @@ describe("Admin-authored questions skip the draft queue (SPEC.md §14/§21)", ()
       [res.body.id]
     );
     expect(optRows.map((r) => r.label_en)).toEqual(["Yes", "Maybe", "No"]);
+
+    await deleteQuestion(res.body.id);
+  });
+
+  it("defaults allow_photo/allow_voice to true, and honors an explicit false (SPEC.md §34)", async () => {
+    const res = await post({
+      categoryId: soapCategoryId,
+      textEn: "Photo-gating defaults test question",
+      type: "numeric",
+      allowPhoto: false,
+    });
+    expect(res.status).toBe(201);
+
+    const { rows } = await pool.query(`SELECT allow_photo, allow_voice FROM questions WHERE id = $1`, [
+      res.body.id,
+    ]);
+    expect(rows[0].allow_photo).toBe(false);
+    expect(rows[0].allow_voice).toBe(true); // not specified — defaults true
 
     await deleteQuestion(res.body.id);
   });

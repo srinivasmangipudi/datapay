@@ -47,7 +47,12 @@ export default async function ReviewQueuePage({
                   <tr key={q.id}>
                     <td>
                       {q.text_en}
-                      {q.text_kn && <div className="muted small">{q.text_kn}</div>}
+                      {q.translations &&
+                        Object.entries(q.translations).map(([lang, text]) => (
+                          <div key={lang} className="muted small">
+                            {text}
+                          </div>
+                        ))}
                     </td>
                     <td className="mono small">{q.type}</td>
                     <td className="small">{q.zone_name ?? <span className="muted">Global</span>}</td>
