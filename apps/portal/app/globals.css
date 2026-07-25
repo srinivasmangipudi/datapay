@@ -244,6 +244,17 @@ th.num {
   font-size: 14px;
   font-family: inherit;
 }
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #101418;
+}
+.checkboxRow input {
+  width: auto;
+  padding: 0;
+}
 
 .typeGrid {
   display: grid;
@@ -410,13 +421,107 @@ th.num {
   display: flex;
   gap: 8px;
 }
+.editBtn {
+  background: none;
+  border: 1px solid #d8d7cf;
+  color: #52514e;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.saveBtn {
+  background: var(--jade);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.cancelBtn {
+  background: none;
+  border: none;
+  color: #898781;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.editRow input,
+.editRow select {
+  padding: 6px 9px;
+  border-radius: 6px;
+  border: 1px solid #d8d7cf;
+  background: #fcfcfb;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 20, 24, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+.modalCard {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  max-width: 560px;
+  box-shadow: 0 20px 60px rgba(16, 20, 24, 0.3);
+}
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.modalHeader h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #101418;
+}
+.modalClose {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #898781;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.mapContainer {
+  width: 100%;
+  height: 320px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #d8d7cf;
+}
+.modalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 
 @media (prefers-color-scheme: dark) {
   .lede {
     color: #c3c2b7;
   }
   h1,
-  .adminNavBrand {
+  .adminNavBrand,
+  .checkboxRow {
     color: #fff;
   }
   .eyebrow,
@@ -442,10 +547,16 @@ th.num {
   .step textarea,
   .typeCard,
   .tile,
-  .zonePicker select {
+  .zonePicker select,
+  .editRow input,
+  .editRow select {
     background: #1a1a19;
     border-color: #2c2c2a;
     color: #fff;
+  }
+  .editBtn {
+    border-color: #2c2c2a;
+    color: #c3c2b7;
   }
   .typeCardOn {
     border-color: var(--jade-bright);
@@ -476,5 +587,14 @@ th.num {
     background: #2e1f1e;
     border-color: #d98a83;
     color: #d98a83;
+  }
+  .modalCard {
+    background: #14161b;
+  }
+  .modalHeader h3 {
+    color: #fff;
+  }
+  .mapContainer {
+    border-color: #2c2c2a;
   }
 }

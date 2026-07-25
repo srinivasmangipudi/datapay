@@ -8,7 +8,9 @@ const SESSION_COOKIE = "portal_session";
 // runs, fund projects, etc). /login itself, Next's own static assets, and
 // public brand assets (icons, OG image — SPEC.md §28) are the only paths
 // this doesn't guard; a favicon or a shared-link preview needs to load
-// whether or not the viewer is signed in.
+// whether or not the viewer is signed in. /registry (SPEC.md §29) is
+// deliberately public too — it's the demand registry + opportunities page,
+// meant for anyone to see, not an ops tool.
 export function middleware(request: NextRequest): NextResponse {
   const sessionSecret = process.env.PORTAL_SESSION_SECRET;
   if (!sessionSecret) {
@@ -31,6 +33,6 @@ export function middleware(request: NextRequest): NextResponse {
 
 export const config = {
   matcher: [
-    "/((?!login|_next/static|_next/image|favicon\\.ico|icon\\.png|apple-icon\\.png|og-image\\.png|mark-primary\\.svg|logo-tagline-asset\\.svg|site\\.webmanifest).*)",
+    "/((?!login|registry|_next/static|_next/image|favicon\\.ico|icon\\.png|apple-icon\\.png|og-image\\.png|mark-primary\\.svg|logo-tagline-asset\\.svg|site\\.webmanifest).*)",
   ],
 };

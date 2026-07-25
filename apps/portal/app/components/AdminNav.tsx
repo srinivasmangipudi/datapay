@@ -20,7 +20,7 @@ const LINKS = [
 
 export function AdminNav(): JSX.Element | null {
   const pathname = usePathname();
-  if (pathname === "/login") return null;
+  if (pathname === "/login" || pathname === "/registry") return null;
 
   return (
     <nav className="adminNav">
