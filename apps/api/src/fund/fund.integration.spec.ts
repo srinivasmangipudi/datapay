@@ -142,6 +142,10 @@ describe("Fund + Governance (SPEC.md §12 Phase 5)", () => {
     );
     expect(voteCount[0].n).toBe(2); // memberA's one vote + memberB's one vote, never 3
 
+    // fund_votes cascades off fund_projects, so deleting the project cleans
+    // up both — this test used to leave a "Streetlight repair" row behind on
+    // every run (43 of them accumulated in the dev DB before this fix).
+    await pool.query(`DELETE FROM fund_projects WHERE id = $1`, [projectId]);
     await cleanupMember(memberA);
     await cleanupMember(memberB);
   });

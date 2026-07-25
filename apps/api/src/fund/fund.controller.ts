@@ -1,5 +1,10 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Req, UseGuards } from "@nestjs/common";
-import { CreateFundProjectDtoSchema, FundVoteDtoSchema } from "@datapay/shared";
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import {
+  CreateFundProjectDtoSchema,
+  FundVoteDtoSchema,
+  ProposeFundProjectDtoSchema,
+  UpdateFundProjectDtoSchema,
+} from "@datapay/shared";
 import { AliasAuthGuard, AliasRequest } from "../auth/alias-auth.guard";
 import { parseOrThrow } from "../zod.util";
 import { FundService } from "./fund.service";
@@ -18,7 +23,13 @@ export class FundController {
   @Get("projects")
   async listProjects(@Req() req: AliasRequest) {
     const zoneId = await this.fund.getMemberZone(req.aliasId);
-    return this.fund.listProjects(zoneId);
+    return this.fund.listProjects(zoneId, req.aliasId);
+  }
+
+  @Post("projects")
+  proposeProject(@Req() req: AliasRequest, @Body() body: unknown) {
+    const dto = parseOrThrow(ProposeFundProjectDtoSchema, body);
+    return this.fund.proposeProject(req.aliasId, dto.title, dto.titleKn, dto.estimatePaise);
   }
 
   @Post("projects/:id/vote")
@@ -46,5 +57,11 @@ export class FundAdminController {
   create(@Body() body: unknown) {
     const dto = parseOrThrow(CreateFundProjectDtoSchema, body);
     return this.fund.createProject(dto.zoneId, dto.title, dto.titleKn, dto.estimatePaise);
+  }
+
+  @Patch(":id")
+  update(@Param("id", ParseIntPipe) id: number, @Body() body: unknown) {
+    const dto = parseOrThrow(UpdateFundProjectDtoSchema, body);
+    return this.fund.updateProject(id, dto);
   }
 }

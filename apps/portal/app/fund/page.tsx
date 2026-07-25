@@ -1,5 +1,6 @@
 import { getPortalPool } from "../db";
 import { listFundProjects } from "./core-api";
+import { FundProjectsTable } from "./FundProjectsTable";
 import { FundWizard } from "./FundWizard";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ async function getZones(): Promise<Zone[]> {
 export default async function FundPage({
   searchParams,
 }: {
-  searchParams: { error?: string; created?: string };
+  searchParams: { error?: string; created?: string; updated?: string };
 }): Promise<JSX.Element> {
   const [zones, projects] = await Promise.all([getZones(), listFundProjects()]);
 
@@ -35,47 +36,18 @@ export default async function FundPage({
 
       {searchParams.error && (
         <div className="errorBanner">
-          <strong>Couldn't create project:</strong> {searchParams.error}
+          <strong>Action failed:</strong> {searchParams.error}
         </div>
       )}
       {searchParams.created && <div className="successBanner">Project proposed.</div>}
+      {searchParams.updated && <div className="successBanner">Project updated.</div>}
 
       <FundWizard zones={zones} />
 
       <section className="section">
         <h2>Projects ({projects.length})</h2>
         {projects.length === 0 && <p className="empty">No projects proposed yet.</p>}
-        {projects.length > 0 && (
-          <div className="tableWrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Title</th>
-                  <th>Zone</th>
-                  <th>Status</th>
-                  <th className="num">Estimate</th>
-                  <th className="num">Yes</th>
-                  <th className="num">No</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      {p.title}
-                      {p.title_kn && <div className="muted small">{p.title_kn}</div>}
-                    </td>
-                    <td className="small">{p.zone_name}</td>
-                    <td className="small">{p.status}</td>
-                    <td className="num value">₹{(p.estimate_paise / 100).toLocaleString()}</td>
-                    <td className="num">{p.yes_votes}</td>
-                    <td className="num">{p.no_votes}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {projects.length > 0 && <FundProjectsTable projects={projects} />}
       </section>
     </main>
   );
