@@ -48,7 +48,14 @@ export default defineRailway(() => {
       API_PORT: "3000",
       RAILPACK_NODE_VERSION: "22",
       REDIS_URL: cache.env.REDIS_URL,
-      VAULT_INTERNAL_URL: `http://${vault.env.RAILWAY_PRIVATE_DOMAIN}:3001`,
+      // A plain string containing Railway's OWN ${{service.VAR}} syntax —
+      // NOT a JS template literal. `vault.env.RAILWAY_PRIVATE_DOMAIN` is a
+      // {type:"reference"} object; embedding it in a JS template literal
+      // stringifies to "[object Object]" (the bug that actually broke
+      // portal's login — CORE_API_INTERNAL_URL had the same mistake).
+      // Railway resolves ${{...}} server-side at deploy time, confirmed by
+      // testing it directly against this project before writing this.
+      VAULT_INTERNAL_URL: "http://${{vault.RAILWAY_PRIVATE_DOMAIN}}:3001",
       // Set out-of-band, never written to source — see vault's comment above.
       CORE_DATABASE_URL: preserve(),
       JWT_SECRET: preserve(),
@@ -64,7 +71,9 @@ export default defineRailway(() => {
     build: "pnpm install --frozen-lockfile && pnpm --filter @datapay/portal... build",
     start: "pnpm --filter @datapay/portal start",
     env: {
-      CORE_API_INTERNAL_URL: `http://${api.env.RAILWAY_PRIVATE_DOMAIN}:3000`,
+      // See vault's comment above — plain string with Railway's own
+      // ${{...}} syntax, not a JS template literal embedding a reference object.
+      CORE_API_INTERNAL_URL: "http://${{api.RAILWAY_PRIVATE_DOMAIN}}:3000",
       NODE_ENV: "production",
       RAILPACK_NODE_VERSION: "22",
       // Set out-of-band, never written to source — see vault's comment above.
