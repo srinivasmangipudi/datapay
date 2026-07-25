@@ -8,12 +8,13 @@ export const strings = {
   tabs: {
     home: { en: "Home", kn: "ಮುಖಪುಟ" },
     pulse: { en: "Pulse", kn: "ಪಲ್ಸ್" },
-    snap: { en: "Snap", kn: "ಸ್ನ್ಯಾಪ್" },
     community: { en: "Community", kn: "ಸಮುದಾಯ" },
     vault: { en: "Vault", kn: "ವಾಲ್ಟ್" },
   },
   home: {
     yourTokens: { en: "Your tokens", kn: "ನಿಮ್ಮ ಟೋಕನ್‌ಗಳು" },
+    outstanding: { en: "Outstanding", kn: "ಬಾಕಿ ಇರುವ" },
+    realised: { en: "Realised", kn: "ವಾಸ್ತವಿಕಗೊಂಡ" },
     todaysPulse: { en: "Today's Pulse", kn: "ಇಂದಿನ ಪಲ್ಸ್" },
     recentActivity: { en: "Recent activity", kn: "ಇತ್ತೀಚಿನ ಚಟುವಟಿಕೆ" },
     emptyActivity: {
@@ -41,24 +42,10 @@ export const strings = {
     attachPhoto: { en: "Attach a photo", kn: "ಫೋಟೋ ಲಗತ್ತಿಸಿ" },
     photoAttached: { en: "Photo attached", kn: "ಫೋಟೋ ಲಗತ್ತಿಸಲಾಗಿದೆ" },
     removePhoto: { en: "Remove", kn: "ತೆಗೆದುಹಾಕಿ" },
-  },
-  snap: {
-    hint: {
-      en: "Point at what you use — toothpaste, rice bag, soap.",
-      kn: "ನೀವು ಬಳಸುವುದನ್ನು ತೋರಿಸಿ — ಟೂತ್‌ಪೇಸ್ಟ್, ಅಕ್ಕಿ ಚೀಲ, ಸೋಪು.",
-    },
-    permissionNeeded: {
-      en: "Camera access is needed to snap what you use.",
-      kn: "ನೀವು ಬಳಸುವುದನ್ನು ಸ್ನ್ಯಾಪ್ ಮಾಡಲು ಕ್ಯಾಮೆರಾ ಅನುಮತಿ ಬೇಕು.",
-    },
-    allowCamera: { en: "Allow camera", kn: "ಕ್ಯಾಮೆರಾಗೆ ಅನುಮತಿಸಿ" },
-    savedCredited: { en: "Snap saved — tokens on the way.", kn: "ಸ್ನ್ಯಾಪ್ ಉಳಿಸಲಾಗಿದೆ — ಟೋಕನ್‌ಗಳು ಬರುತ್ತಿವೆ." },
-    savedDuplicate: { en: "Already saved.", kn: "ಈಗಾಗಲೇ ಉಳಿಸಲಾಗಿದೆ." },
-    rejectedTitle: { en: "Photo rejected", kn: "ಫೋಟೋ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ" },
-    rejectedBody: {
+    photoRejectedTitle: { en: "Photo rejected", kn: "ಫೋಟೋ ತಿರಸ್ಕರಿಸಲಾಗಿದೆ" },
+    photoRejectedBody: {
       en: "This looks like it contains a person. Try again without one.",
       kn: "ಇದರಲ್ಲಿ ವ್ಯಕ್ತಿ ಇರುವಂತೆ ಕಾಣುತ್ತದೆ. ವ್ಯಕ್ತಿ ಇಲ್ಲದೆ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
     },
-    uploadFailedTitle: { en: "Couldn't upload snap", kn: "ಸ್ನ್ಯಾಪ್ ಅಪ್‌ಲೋಡ್ ಆಗಲಿಲ್ಲ" },
   },
 } as const;

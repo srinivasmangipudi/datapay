@@ -8,24 +8,25 @@ import { colors, spacing } from "../theme";
 import { CommunityScreen } from "./CommunityScreen";
 import { HomeScreen } from "./HomeScreen";
 import { PulseScreen } from "./PulseScreen";
-import { SnapScreen } from "./SnapScreen";
 import { VaultScreen } from "./VaultScreen";
 
 interface Props {
   session: Session;
+  onLogout: () => void;
 }
 
+// The generic photo-snap tab is retired (SPEC.md §34) — photo/voice are now
+// answer modes gated per-question inside Pulse, not a free-floating feature.
 const TABS = [
   { key: "home", ...strings.tabs.home, icon: "home" },
   { key: "pulse", ...strings.tabs.pulse, icon: "pulse" },
-  { key: "snap", ...strings.tabs.snap, icon: "camera" },
   { key: "community", ...strings.tabs.community, icon: "people" },
   { key: "vault", ...strings.tabs.vault, icon: "shield-checkmark" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
 
-export function MainApp({ session }: Props) {
+export function MainApp({ session, onLogout }: Props) {
   const [tab, setTab] = useState<TabKey>("home");
   const insets = useSafeAreaInsets();
 
@@ -34,9 +35,8 @@ export function MainApp({ session }: Props) {
       <View style={styles.screen}>
         {tab === "home" && <HomeScreen session={session} onNavigate={setTab} />}
         {tab === "pulse" && <PulseScreen session={session} />}
-        {tab === "snap" && <SnapScreen session={session} />}
         {tab === "community" && <CommunityScreen session={session} />}
-        {tab === "vault" && <VaultScreen session={session} />}
+        {tab === "vault" && <VaultScreen session={session} onLogout={onLogout} />}
       </View>
       <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         {TABS.map((t) => {
