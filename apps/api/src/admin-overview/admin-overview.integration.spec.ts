@@ -14,13 +14,16 @@ import {
 } from "../test-fixtures";
 import { startVaultForTest, stopVaultForTest } from "../test-vault-process";
 
-const TOKEN_VALUE_PAISE = 24; // seeded rice offer's offer_token_terms
+// Seeded rice offer (infra/migrations/core/1737849602000_seed_offer.js):
+// collective_price_paise = 119000. 2% of that, as whole rupees: round(119000*0.02/100) = 24.
+const EXPECTED_PURCHASE_TOKENS = Math.round((119000 * 0.02) / 100);
+const EXPECTED_CORPUS_CONTRIBUTION_PAISE = Math.round(119000 * 0.02);
 
 // Real pilot data (and other suites' members) may already exist, so every
 // assertion here is a DELTA across a live earn→redeem→deliver cycle, never
 // an absolute count — same lesson as isEligibleForPulseToday/the fund test's
 // before/after balance check.
-describe("Admin overview — the 'main company page' numbers (SPEC.md §40)", () => {
+describe("Admin overview — the 'main company page' numbers (TOKEN_ECONOMY_REDESIGN.md)", () => {
   let app: INestApplication;
   let pool: Pool;
   let vaultPool: Pool;
@@ -81,23 +84,19 @@ describe("Admin overview — the 'main company page' numbers (SPEC.md §40)", ()
     expect(res.status).toBe(200);
     return res.body as {
       totalMembers: number;
-      issuedTokens: number;
-      realisedTokens: number;
-      reservedPaise: number;
-      currentTokenRatePaise: number | null;
-      tokenRateComputedAt: string | null;
+      totalTokens: number;
+      corpusFundPaise: number;
     };
   }
 
-  it("tracks a member's tokens as issued until redemption, then realised only once delivery is confirmed", async () => {
+  it("every token counts the same — no issued/realised split — and buying adds to both the member's tokens and the corpus", async () => {
     const before = await overview();
 
     const member = await memberWithAddressAndTokens(100);
     const afterEarn = await overview();
     expect(afterEarn.totalMembers - before.totalMembers).toBe(1);
-    expect(afterEarn.issuedTokens - before.issuedTokens).toBe(100);
-    expect(afterEarn.realisedTokens - before.realisedTokens).toBe(0);
-    expect(afterEarn.reservedPaise - before.reservedPaise).toBe(0);
+    expect(afterEarn.totalTokens - before.totalTokens).toBe(100);
+    expect(afterEarn.corpusFundPaise - before.corpusFundPaise).toBe(0);
 
     const auth = { Authorization: `Bearer ${member.token}` };
     await pool.query(
@@ -111,26 +110,22 @@ describe("Admin overview — the 'main company page' numbers (SPEC.md §40)", ()
       .send({ qty: 1, tokensToRedeem: 40 });
 
     const afterRedeem = await overview();
-    // Spent, so no longer counted as issued-and-held — but not yet realised
-    // either, since delivery hasn't been confirmed (SPEC.md §40's whole point).
-    expect(afterRedeem.issuedTokens - before.issuedTokens).toBe(60);
-    expect(afterRedeem.realisedTokens - before.realisedTokens).toBe(0);
-    expect(afterRedeem.reservedPaise - before.reservedPaise).toBe(0);
+    // Redeeming spends 40 of the member's own tokens — total supply drops by
+    // that much, nothing waiting in an intermediate "issued" state anymore.
+    expect(afterRedeem.totalTokens - before.totalTokens).toBe(60);
+    expect(afterRedeem.corpusFundPaise - before.corpusFundPaise).toBe(0);
 
     await request(app.getHttpServer()).post(`/v1/offers/${riceOfferId}/confirm-delivery`).set(auth);
 
     const afterDelivery = await overview();
-    expect(afterDelivery.issuedTokens - before.issuedTokens).toBe(60);
-    expect(afterDelivery.realisedTokens - before.realisedTokens).toBe(40);
-    expect(afterDelivery.reservedPaise - before.reservedPaise).toBe(40 * TOKEN_VALUE_PAISE);
+    // The purchase earns the member NEW tokens (2% of spend) — an ordinary
+    // credit, same ledger as answering a question — and the supplier's 2%
+    // lands in the corpus fund, both at the same confirm-delivery event.
+    expect(afterDelivery.totalTokens - before.totalTokens).toBe(60 + EXPECTED_PURCHASE_TOKENS);
+    expect(afterDelivery.corpusFundPaise - before.corpusFundPaise).toBe(
+      EXPECTED_CORPUS_CONTRIBUTION_PAISE
+    );
 
     await cleanupMember(member);
-  });
-
-  it("surfaces the current published token rate, or null if none has run yet", async () => {
-    const body = await overview();
-    expect(body.currentTokenRatePaise === null || typeof body.currentTokenRatePaise === "number").toBe(
-      true
-    );
   });
 });

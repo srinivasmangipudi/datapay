@@ -17,6 +17,8 @@ interface LedgerRow {
   product_name_kn: string | null;
 }
 
+const EARN_PURCHASE_ENTRY = "earn_purchase";
+
 // Human-readable label per ledger row — what the raw entry/ref_type columns
 // mean is only ever obvious from the code that wrote them (§15's payments-
 // infrastructure posture keeps that data minimal), so the mobile app used to
@@ -34,6 +36,16 @@ function labelFor(r: LedgerRow): { en: string; kn: string } {
     };
   }
   if (r.product_name) {
+    // TOKEN_ECONOMY_REDESIGN.md — earn_purchase and redeem_offer both join
+    // to the same offer_participation → product, just under different
+    // ref_type discriminators (offer_delivery vs offer_participation);
+    // distinguish the label by which entry actually earned/spent the tokens.
+    if (r.entry === EARN_PURCHASE_ENTRY) {
+      return {
+        en: `Purchase reward: ${r.product_name}`,
+        kn: r.product_name_kn ? `${r.product_name_kn} ಖರೀದಿ ಬಹುಮಾನ` : `Purchase reward: ${r.product_name}`,
+      };
+    }
     return {
       en: `Redeemed on ${r.product_name}`,
       kn: r.product_name_kn ? `${r.product_name_kn} ಮೇಲೆ ಬಳಸಲಾಗಿದೆ` : `Redeemed on ${r.product_name}`,
@@ -52,15 +64,6 @@ export class TokensController {
   async get(@Req() req: AliasRequest) {
     const { rows: memberRows } = await this.pool.query<{ token_balance: number }>(
       `SELECT token_balance FROM members WHERE alias_id = $1`,
-      [req.aliasId]
-    );
-    // SPEC.md §40 — issued (token_balance, the empty-diamond amount still
-    // owed) vs. realised: tokens this member redeemed on an offer that
-    // actually reached 'delivered' — the same bar the reserve itself uses,
-    // not just "redeemed."
-    const { rows: realisedRows } = await this.pool.query<{ realised: string }>(
-      `SELECT COALESCE(SUM(tokens_redeemed), 0) AS realised
-       FROM offer_participation WHERE alias_id = $1 AND state = 'delivered'`,
       [req.aliasId]
     );
     const { rows: ledgerRows } = await this.pool.query<LedgerRow>(
@@ -82,7 +85,10 @@ export class TokensController {
          ON sn.id = CASE WHEN tl.ref_type = 'snap' AND tl.ref_id ~ '^[0-9]+$' THEN tl.ref_id::int END
        LEFT JOIN categories sc ON sc.id = sn.category_id
        LEFT JOIN offer_participation op
-         ON op.id = CASE WHEN tl.ref_type = 'offer_participation' AND tl.ref_id ~ '^[0-9]+$' THEN tl.ref_id::int END
+         ON op.id = CASE
+              WHEN tl.ref_type IN ('offer_participation', 'offer_delivery') AND tl.ref_id ~ '^[0-9]+$'
+              THEN tl.ref_id::int
+            END
        LEFT JOIN offers o ON o.id = op.offer_id
        LEFT JOIN products p ON p.product_code = o.product_code
        WHERE tl.alias_id = $1
@@ -91,8 +97,9 @@ export class TokensController {
     );
 
     return {
+      // TOKEN_ECONOMY_REDESIGN.md — every token is equal now, no
+      // issued/realised split; this single number is your whole stake.
       balance: memberRows[0]?.token_balance ?? 0,
-      realisedTokens: Number(realisedRows[0].realised),
       history: ledgerRows.map((r) => {
         const label = labelFor(r);
         return {

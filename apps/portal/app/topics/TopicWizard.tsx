@@ -53,7 +53,7 @@ export function TopicWizard({ categories, zones }: { categories: Category[]; zon
     { labelEn: "", labelKn: "" },
     { labelEn: "", labelKn: "" },
   ]);
-  const [rewardTokens, setRewardTokens] = useState(4);
+  const [rewardTokens, setRewardTokens] = useState(1);
 
   // 'document_grounded' kind config
   const [questionCount, setQuestionCount] = useState(3);

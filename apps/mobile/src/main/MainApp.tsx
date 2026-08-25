@@ -7,6 +7,7 @@ import type { Session } from "../session";
 import { colors, spacing } from "../theme";
 import { CommunityScreen } from "./CommunityScreen";
 import { HomeScreen } from "./HomeScreen";
+import { ProductsScreen } from "./ProductsScreen";
 import { PulseScreen } from "./PulseScreen";
 import { VaultScreen } from "./VaultScreen";
 
@@ -20,6 +21,7 @@ interface Props {
 const TABS = [
   { key: "home", ...strings.tabs.home, icon: "home" },
   { key: "pulse", ...strings.tabs.pulse, icon: "pulse" },
+  { key: "products", ...strings.tabs.products, icon: "storefront" },
   { key: "community", ...strings.tabs.community, icon: "people" },
   { key: "vault", ...strings.tabs.vault, icon: "shield-checkmark" },
 ] as const;
@@ -35,6 +37,7 @@ export function MainApp({ session, onLogout }: Props) {
       <View style={styles.screen}>
         {tab === "home" && <HomeScreen session={session} onNavigate={setTab} />}
         {tab === "pulse" && <PulseScreen session={session} />}
+        {tab === "products" && <ProductsScreen />}
         {tab === "community" && <CommunityScreen session={session} />}
         {tab === "vault" && <VaultScreen session={session} onLogout={onLogout} />}
       </View>

@@ -1,48 +1,36 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool } from "pg";
 import { PG_POOL } from "../db/db.module";
-import { ReserveService } from "../reserve/reserve.service";
-import { TokenRateService } from "../token-rate/token-rate.service";
+import { CorpusFundService } from "../corpus-fund/corpus-fund.service";
 
-// SPEC.md §40 — the "main company page" numbers: how many members, how many
-// tokens have been issued (an unbacked liability, members.token_balance)
-// vs. realised (redeemed AND delivered — actually backed, SPEC.md §40), how
-// much real currency is reserved against that realised amount, and the
-// current published rate. Every number here is a straight aggregate read —
-// no new business logic lives in this service, it only reports what
-// LedgerService/ReserveService/TokenRateService already recorded.
+// TOKEN_ECONOMY_REDESIGN.md — the "main company page" numbers, simplified.
+// Every token is equal now (no issued/realised split, replacing SPEC.md
+// §40 in full): how many members, how many tokens exist in total, and how
+// much has accumulated in the corpus fund so far. No "current token price"
+// is published here anymore — that would require actual distributed
+// investment returns, which don't exist yet (the corpus isn't invested,
+// there's no decided distribution cadence — see TOKEN_ECONOMY_REDESIGN.md's
+// open questions). Showing a number here would be inventing one.
 @Injectable()
 export class AdminOverviewService {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
-    private readonly reserve: ReserveService,
-    private readonly tokenRate: TokenRateService
+    private readonly corpusFund: CorpusFundService
   ) {}
 
   async getOverview() {
-    const [memberRows, tokenRows, reserveTotal, currentRate] = await Promise.all([
+    const [memberRows, tokenRows, corpusTotal] = await Promise.all([
       this.pool.query<{ total: string }>(`SELECT COUNT(*) AS total FROM members`),
-      // "Realised" here means the SPEC.md §40 bar, not just redeemed: a
-      // member can redeem tokens joining an offer before it's delivered
-      // (offers.service.ts's join()) — those are still just issued, not yet
-      // realised (spent, but not yet backed by a real reserved rupee) until
-      // confirm-delivery actually credits the reserve for them.
-      this.pool.query<{ issued: string; realised: string }>(
-        `SELECT
-           (SELECT COALESCE(SUM(token_balance), 0) FROM members) AS issued,
-           (SELECT COALESCE(SUM(tokens_redeemed), 0) FROM offer_participation WHERE state = 'delivered') AS realised`
+      this.pool.query<{ total: string }>(
+        `SELECT COALESCE(SUM(token_balance), 0) AS total FROM members`
       ),
-      this.reserve.getTotal(),
-      this.tokenRate.current(),
+      this.corpusFund.getTotal(),
     ]);
 
     return {
       totalMembers: Number(memberRows.rows[0].total),
-      issuedTokens: Number(tokenRows.rows[0].issued),
-      realisedTokens: Number(tokenRows.rows[0].realised),
-      reservedPaise: reserveTotal.reservedPaise,
-      currentTokenRatePaise: currentRate ? Number(currentRate.rate_paise) : null,
-      tokenRateComputedAt: currentRate ? currentRate.computed_at : null,
+      totalTokens: Number(tokenRows.rows[0].total),
+      corpusFundPaise: corpusTotal.corpusPaise,
     };
   }
 }

@@ -1789,3 +1789,57 @@ not click-tested in a browser — its session cookie is gated by a `PORTAL_SESSI
 in the shell environment, not in any file this session had access to; confirmed instead that the live
 API response matches the TypeScript shape the page code reads, and that `next build` type-checks the
 render logic cleanly.
+
+## 41. SIMPLE TOKEN ECONOMY: EVERY TOKEN IS EQUAL, A REAL CORPUS FUND (2026-07-28)
+
+Replaces §40 in full. §40's "issued vs. realised" distinction, and the reserve backing it, came from
+trying to make a token's state precisely traceable to a specific delivered offer — which kept
+producing dodgy logic (two disconnected "token value" numbers, a "reserve" that was bookkeeping with
+no real money behind it, self-reported delivery as the only verification for anything). The full
+reasoning and the design conversation that led here is in `TOKEN_ECONOMY_REDESIGN.md` at the repo
+root — this section documents what's actually built and tested from it.
+
+**41A. Every token is equal — no state.** `members.token_balance` is the whole story again, same as
+before §40 ever existed. There's no issued/realised/actualised distinction anymore, and no attempt to
+trace which token "led to" which purchase — that causal-attribution idea was explicitly tried and
+rejected as unprovable and gameable (last-click-attribution's problems, applied to survey answers).
+
+**41B. A purchase earns tokens too — a second, ordinary way to earn the same kind of token, not a
+state change on old ones.** On `FundService.confirmDelivery()` (the existing §17 completion event),
+the buyer now also earns tokens worth 2% of what they spent (`qty × collective_price_paise`,
+converted to a whole-rupee token count) via a new `earn_purchase` ledger entry — same
+`LedgerService.creditTokens()` path as answering a question, just a different entry type. Answering a
+question defaults to 1 token now (was 4), still configurable per question exactly as before.
+
+**41C. The supplier's 2% funds a real corpus, never a supplier token stake.** The same
+confirm-delivery event credits 2% of the sale to a new `corpus_fund_ledger` — append-only, idempotent
+via `UNIQUE(ref_type, ref_id)`, the same §15B rigor as every other real-money ledger in this codebase
+(`CorpusFundService`, replacing `ReserveService` entirely — the `reserve` module is deleted, not
+deprecated in place). Suppliers were deliberately considered and rejected as token recipients: the
+dividend pool this corpus is meant to eventually pay out is for members, and a supplier's transaction
+volume could dwarf any individual member's, diluting members out of their own fund.
+
+**41D. What's honestly NOT built yet, on purpose:** the corpus accumulates in a ledger but isn't
+actually invested anywhere (no real bank/FD integration exists); there is no dividend-distribution
+job, because there's no decided distribution cadence and no real investment return to distribute yet;
+`token_rate` (§6C's formula) is superseded but its module/scheduled job weren't deleted, just no
+longer surfaced on the redesigned portal pages, since removing the whole subsystem was a separate
+concern from this change; §17's existing community Fund (20%-of-savings, member-voted local projects)
+is untouched and coexists with the new corpus fund — whether they should eventually merge is an open
+question, not decided here. `TOKEN_ECONOMY_REDESIGN.md` lists every open question explicitly so none
+of them get silently assumed later.
+
+**41E. Mobile gained a Products tab** — a deliberately honest "coming soon, local first" placeholder,
+not a feature pretending to be finished: there's no real direct-purchase flow yet (collective-buy
+Offers remain the only working path), so nothing here claims otherwise.
+
+**Acceptance:** migration (`1739232000000_simple_token_economy.js`) drops `reserve_ledger` cleanly
+(reversible down-migration recreates it), adds `corpus_fund_ledger` with the same append-only
+discipline, and extends `token_ledger`'s entry CHECK constraint with `earn_purchase` — run and
+verified locally. `pnpm build` clean on `apps/api` and `apps/portal`; `tsc --noEmit` clean on
+`apps/mobile`. Full API suite: 116 tests, 28 suites, all green — including a rewritten
+`tokens.integration.spec.ts` (buying earns real new tokens, verified against the seeded rice offer's
+actual collective price), a rewritten `admin-overview.integration.spec.ts` (delta-tracked: earning,
+redeeming, and buying all move the right numbers, corpus fund only grows at confirmed delivery), and
+a new `corpus-fund.integration.spec.ts` (contribution only at delivery not redemption, idempotent
+replay, append-only enforcement).

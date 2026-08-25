@@ -14,7 +14,11 @@ import {
 } from "../test-fixtures";
 import { startVaultForTest, stopVaultForTest } from "../test-vault-process";
 
-describe("GET /v1/tokens — balance is the issued amount, realisedTokens only counts delivered redemptions (SPEC.md §40)", () => {
+// Seeded rice offer (infra/migrations/core/1737849602000_seed_offer.js):
+// collective_price_paise = 119000. 2% of that, as whole rupees: round(119000*0.02/100) = 24.
+const EXPECTED_PURCHASE_TOKENS = Math.round((119000 * 0.02) / 100);
+
+describe("GET /v1/tokens — every token is equal, no issued/realised split (TOKEN_ECONOMY_REDESIGN.md)", () => {
   let app: INestApplication;
   let pool: Pool;
   let vaultPool: Pool;
@@ -51,7 +55,7 @@ describe("GET /v1/tokens — balance is the issued amount, realisedTokens only c
     await deleteTestMemberFromVault(vaultPool, member.aliasId);
   }
 
-  it("balance drops at redemption; realisedTokens stays 0 until delivery is confirmed", async () => {
+  it("balance drops at redemption, then grows again at delivery — buying earns tokens same as answering", async () => {
     const member = await createTestMember(pool, jwt);
     await registerTestMemberInVault(vaultPool, member);
     const auth = { Authorization: `Bearer ${member.token}` };
@@ -73,7 +77,7 @@ describe("GET /v1/tokens — balance is the issued amount, realisedTokens only c
 
     const before = await request(app.getHttpServer()).get("/v1/tokens").set(auth);
     expect(before.body.balance).toBe(100);
-    expect(before.body.realisedTokens).toBe(0);
+    expect(before.body.realisedTokens).toBeUndefined(); // no such field anymore
 
     await request(app.getHttpServer())
       .post(`/v1/offers/${riceOfferId}/join`)
@@ -82,13 +86,23 @@ describe("GET /v1/tokens — balance is the issued amount, realisedTokens only c
 
     const afterRedeem = await request(app.getHttpServer()).get("/v1/tokens").set(auth);
     expect(afterRedeem.body.balance).toBe(60);
-    expect(afterRedeem.body.realisedTokens).toBe(0); // spent, but not yet delivered
 
-    await request(app.getHttpServer()).post(`/v1/offers/${riceOfferId}/confirm-delivery`).set(auth);
+    const confirmRes = await request(app.getHttpServer())
+      .post(`/v1/offers/${riceOfferId}/confirm-delivery`)
+      .set(auth);
+    expect(confirmRes.body.purchaseTokens).toBe(EXPECTED_PURCHASE_TOKENS);
 
     const afterDelivery = await request(app.getHttpServer()).get("/v1/tokens").set(auth);
-    expect(afterDelivery.body.balance).toBe(60); // unchanged — confirm-delivery doesn't touch balance
-    expect(afterDelivery.body.realisedTokens).toBe(40);
+    // The purchase itself earned new tokens — not "unlocking" the 40 already
+    // spent, an ordinary new earn, same balance either way it happened.
+    expect(afterDelivery.body.balance).toBe(60 + EXPECTED_PURCHASE_TOKENS);
+
+    const purchaseEntry = afterDelivery.body.history.find(
+      (h: { entry: string }) => h.entry === "earn_purchase"
+    );
+    expect(purchaseEntry).toBeTruthy();
+    expect(purchaseEntry.tokens).toBe(EXPECTED_PURCHASE_TOKENS);
+    expect(purchaseEntry.label).toContain("Purchase reward");
 
     await cleanupMember(member);
   });

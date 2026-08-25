@@ -87,12 +87,10 @@ export interface PulseAnswerResult {
 }
 
 export interface TokensSummary {
-  // Issued — earned, unspent, still just a promise (SPEC.md §40).
+  // TOKEN_ECONOMY_REDESIGN.md — every token is equal, no issued/realised
+  // split. Answering a question and buying something through the platform
+  // both earn the same kind of token; this is your whole stake.
   balance: number;
-  // Realised — redeemed AND the underlying offer actually delivered, so a
-  // real rupee has been reserved to back it. Never a duplicate of balance:
-  // a token leaves balance the moment it's redeemed, well before delivery.
-  realisedTokens: number;
   history: {
     entry: string;
     tokens: number;

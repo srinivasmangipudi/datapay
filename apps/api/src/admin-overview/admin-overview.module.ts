@@ -1,11 +1,10 @@
 import { Module } from "@nestjs/common";
-import { ReserveModule } from "../reserve/reserve.module";
-import { TokenRateModule } from "../token-rate/token-rate.module";
+import { CorpusFundModule } from "../corpus-fund/corpus-fund.module";
 import { AdminOverviewController } from "./admin-overview.controller";
 import { AdminOverviewService } from "./admin-overview.service";
 
 @Module({
-  imports: [ReserveModule, TokenRateModule],
+  imports: [CorpusFundModule],
   controllers: [AdminOverviewController],
   providers: [AdminOverviewService],
 })

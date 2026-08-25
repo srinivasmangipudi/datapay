@@ -8,13 +8,20 @@ export const strings = {
   tabs: {
     home: { en: "Home", kn: "ಮುಖಪುಟ" },
     pulse: { en: "Pulse", kn: "ಪಲ್ಸ್" },
+    products: { en: "Products", kn: "ಉತ್ಪನ್ನಗಳು" },
     community: { en: "Community", kn: "ಸಮುದಾಯ" },
     vault: { en: "Vault", kn: "ವಾಲ್ಟ್" },
   },
+  products: {
+    heading: { en: "Products", kn: "ಉತ್ಪನ್ನಗಳು" },
+    comingSoon: { en: "Coming soon", kn: "ಶೀಘ್ರದಲ್ಲೇ ಬರಲಿದೆ" },
+    label: {
+      en: "Best quality products will be enabled here — local first.",
+      kn: "ಅತ್ಯುತ್ತಮ ಗುಣಮಟ್ಟದ ಉತ್ಪನ್ನಗಳು ಇಲ್ಲಿ ಲಭ್ಯವಾಗಲಿವೆ — ಸ್ಥಳೀಯವಾಗಿ ಮೊದಲು.",
+    },
+  },
   home: {
     yourTokens: { en: "Your tokens", kn: "ನಿಮ್ಮ ಟೋಕನ್‌ಗಳು" },
-    issued: { en: "Issued", kn: "ನೀಡಲಾದ" },
-    realised: { en: "Realised", kn: "ವಾಸ್ತವಿಕಗೊಂಡ" },
     todaysPulse: { en: "Today's Pulse", kn: "ಇಂದಿನ ಪಲ್ಸ್" },
     recentActivity: { en: "Recent activity", kn: "ಇತ್ತೀಚಿನ ಚಟುವಟಿಕೆ" },
     emptyActivity: {

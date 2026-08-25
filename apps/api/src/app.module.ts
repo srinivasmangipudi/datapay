@@ -7,6 +7,7 @@ import { AuditModule } from "./audit/audit.module";
 import { AuthModule } from "./auth/auth.module";
 import { CategoriesModule } from "./categories/categories.module";
 import { ConsentsModule } from "./consents/consents.module";
+import { CorpusFundModule } from "./corpus-fund/corpus-fund.module";
 import { DbModule } from "./db/db.module";
 import { FraudModule } from "./fraud/fraud.module";
 import { IntelligenceModule } from "./intelligence/intelligence.module";
@@ -21,7 +22,6 @@ import { PublicModule } from "./public/public.module";
 import { PulseModule } from "./pulse/pulse.module";
 import { QuestionFeederModule } from "./question-feeder/question-feeder.module";
 import { RelayModule } from "./relay/relay.module";
-import { ReserveModule } from "./reserve/reserve.module";
 import { SnapsModule } from "./snaps/snaps.module";
 import { TokenRateModule } from "./token-rate/token-rate.module";
 import { TokensModule } from "./tokens/tokens.module";
@@ -56,7 +56,7 @@ import { ZonesModule } from "./zones/zones.module";
     IntelligenceModule,
     TranslationModule,
     PublicModule,
-    ReserveModule,
+    CorpusFundModule,
     AdminOverviewModule,
   ],
   controllers: [AppController],

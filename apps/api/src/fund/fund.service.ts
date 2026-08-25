@@ -2,37 +2,48 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from "@nes
 import { Pool } from "pg";
 import { PG_POOL } from "../db/db.module";
 import { withTransaction } from "../db/tx.util";
-import { ReserveService } from "../reserve/reserve.service";
+import { CorpusFundService } from "../corpus-fund/corpus-fund.service";
+import { LedgerService } from "../ledger/ledger.service";
 
 // The community's cut of the collective-buy savings on a delivered offer.
-// The 50/20/30 split (tokens/fund/operations) is a business & legal decision
-// documented in the pitch deck, not something this code invents as fact —
-// tunable here, deliberately not silently hardcoded three places. The other
-// named slice (tokens, 50%) isn't a percentage of savings at all — it's a
-// 1:1 reserve against the tokens actually redeemed (SPEC.md §40, ReserveService).
+// This is the pre-existing §17 mechanism (20% of savings, spent on
+// member-voted local projects) — deliberately left as-is. Whether it merges
+// with the new corpus fund below is an open question
+// (TOKEN_ECONOMY_REDESIGN.md), not decided here; the two coexist for now.
 const FUND_ACCRUAL_RATE = 0.2;
+
+// TOKEN_ECONOMY_REDESIGN.md — the new revenue mechanism. On every confirmed
+// purchase: the supplier's cut funds the corpus (never spent, only its
+// future investment returns are meant to be distributed as dividends — not
+// built yet); the buyer's cut comes back to them as ordinary tokens, the
+// same kind earned by answering questions. Both computed off the same
+// number — what the buyer actually paid (qty × collective_price_paise) —
+// which is the honest, real "amount spent" already tracked in this system,
+// independent of how payment is actually collected.
+const CORPUS_FUND_RATE = 0.02;
+const PURCHASE_TOKEN_REWARD_RATE = 0.02;
 
 @Injectable()
 export class FundService {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
-    private readonly reserve: ReserveService
+    private readonly corpusFund: CorpusFundService,
+    private readonly ledger: LedgerService
   ) {}
 
   /**
    * SPEC.md §12 Phase 5: "fund accrues from completed offers." Confirming
    * delivery is the completion event. Idempotent both on the state
-   * transition (already-delivered is a clean no-op) and on the ledger write
-   * (UNIQUE(ref_type, ref_id) — same discipline as §15's token_ledger,
-   * applied here to real rupees instead of closed-loop tokens).
+   * transition (already-delivered is a clean no-op) and on every ledger
+   * write (UNIQUE(ref_type, ref_id) — same discipline as §15's
+   * token_ledger, applied here to real rupees too).
    *
-   * SPEC.md §40 — the SAME event also realises whatever tokens this member
-   * redeemed joining this offer: until delivery is confirmed, a redeemed
-   * token is spent but not yet backed by an actual completed sale. Reserved
-   * amount is 1:1 against those tokens at the rate locked in for this offer
-   * (offer_token_terms.token_value_paise) — never the fluctuating current
-   * token_rate, which is a different offer's redemption could've happened at
-   * a different published rate entirely.
+   * TOKEN_ECONOMY_REDESIGN.md — the SAME event now also: credits the buyer
+   * new tokens worth 2% of what they spent (a second, ordinary way to earn
+   * tokens — not "unlocking" or "actualising" the ones redeemed to join;
+   * that causal-attribution idea was tried and rejected as unprovable), and
+   * credits 2% of the sale into the corpus fund. Replaces SPEC.md §40's
+   * reserve entirely.
    */
   async confirmDelivery(aliasId: string, offerId: number) {
     return withTransaction(this.pool, async (client) => {
@@ -58,12 +69,8 @@ export class FundService {
         zone_id: string;
         collective_price_paise: number;
         market_price_paise: number;
-        token_value_paise: number | null;
       }>(
-        `SELECT o.zone_id, o.collective_price_paise, o.market_price_paise, ott.token_value_paise
-         FROM offers o
-         LEFT JOIN offer_token_terms ott ON ott.offer_id = o.id
-         WHERE o.id = $1`,
+        `SELECT zone_id, collective_price_paise, market_price_paise FROM offers WHERE id = $1`,
         [offerId]
       );
       const offer = offerRows[0];
@@ -90,18 +97,37 @@ export class FundService {
         }
       }
 
-      let reservedPaise = 0;
-      if (partRows[0].tokens_redeemed > 0 && offer.token_value_paise != null) {
-        reservedPaise = partRows[0].tokens_redeemed * offer.token_value_paise;
-        await this.reserve.creditReserve({
+      const amountSpentPaise = offer.collective_price_paise * partRows[0].qty;
+      const corpusContributionPaise = Math.round(amountSpentPaise * CORPUS_FUND_RATE);
+      if (corpusContributionPaise > 0) {
+        await this.corpusFund.creditContribution({
           client,
-          amountPaise: reservedPaise,
+          amountPaise: corpusContributionPaise,
           refType: "offer_participation",
           refId: partRows[0].id,
         });
       }
 
-      return { status: "confirmed" as const, accruedPaise: accrualPaise, reservedPaise };
+      // 2% of spend, expressed as a whole-rupee token count (paise / 100) —
+      // an ordinary earn, same ledger as answering a question.
+      const purchaseTokens = Math.round((amountSpentPaise * PURCHASE_TOKEN_REWARD_RATE) / 100);
+      if (purchaseTokens > 0) {
+        await this.ledger.creditTokens({
+          client,
+          aliasId,
+          entry: "earn_purchase",
+          tokens: purchaseTokens,
+          refType: "offer_delivery",
+          refId: partRows[0].id,
+        });
+      }
+
+      return {
+        status: "confirmed" as const,
+        accruedPaise: accrualPaise,
+        corpusContributionPaise,
+        purchaseTokens,
+      };
     });
   }
 

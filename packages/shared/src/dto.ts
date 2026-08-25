@@ -92,7 +92,10 @@ export const CreateQuestionDtoSchema = z
       .array(z.object({ languageCode: z.string().min(2).max(5), text: z.string().min(1).max(300) }))
       .optional(),
     type: z.enum(["single", "multi", "yesno", "intent_window", "numeric", "free_text"]),
-    rewardTokens: z.number().int().positive().default(4),
+    // TOKEN_ECONOMY_REDESIGN.md — default is 1, not a tuned-per-question-type
+    // amount; still overridable per question (e.g. a photo question worth
+    // more effort can still be set higher).
+    rewardTokens: z.number().int().positive().default(1),
     options: z.array(QuestionOptionInputSchema).optional(),
     intentWindow: z.enum(["1m", "3m", "6m", "12m"]).optional(),
     // Omit for a global question (every member sees it). Set to scope it to

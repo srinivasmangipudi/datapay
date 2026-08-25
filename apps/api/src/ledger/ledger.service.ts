@@ -7,6 +7,11 @@ export type TokenLedgerEntry =
   | "earn_voice"
   | "earn_intent"
   | "earn_bonus"
+  // TOKEN_ECONOMY_REDESIGN.md — a second way to earn the SAME kind of
+  // token: buying something through the platform, not just answering
+  // questions. Never "unlocks" or converts prior tokens, just credits new
+  // ones, same as every other earn_* entry.
+  | "earn_purchase"
   | "redeem_offer"
   | "expire"
   | "adjustment";

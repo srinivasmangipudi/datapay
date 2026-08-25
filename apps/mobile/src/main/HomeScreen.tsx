@@ -71,18 +71,8 @@ export function HomeScreen({ session, onNavigate }: Props) {
 
       <Card variant="dark" style={styles.balanceCard}>
         <Bilingual {...strings.home.yourTokens} tone="onDarkSubtle" size={11.5} weight="700" style={type.label as any} />
-        <View style={styles.balanceRow}>
-          <View style={styles.balanceStat}>
-            {/* Hollow diamond — earned, unspent, still just a promise (SPEC.md §40) */}
-            <Text style={styles.balance}>◇ {tokens.balance}</Text>
-            <Bilingual {...strings.home.issued} tone="onDarkSubtle" size={10.5} weight="600" />
-          </View>
-          <View style={styles.balanceStat}>
-            {/* Filled diamond — redeemed AND the purchase actually delivered, so a real rupee backs it */}
-            <Text style={styles.balanceRealised}>◆ {tokens.realisedTokens}</Text>
-            <Bilingual {...strings.home.realised} tone="onDarkSubtle" size={10.5} weight="600" />
-          </View>
-        </View>
+        {/* TOKEN_ECONOMY_REDESIGN.md — every token is equal, one number */}
+        <Text style={styles.balance}>◈ {tokens.balance}</Text>
       </Card>
 
       <TouchableOpacity activeOpacity={0.85} onPress={() => onNavigate("pulse")}>
@@ -134,10 +124,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.base },
   greeting: { fontSize: 13, color: colors.faint, fontWeight: "500" },
   balanceCard: { marginBottom: spacing.md },
-  balanceRow: { flexDirection: "row", gap: spacing.xl, marginTop: spacing.sm },
-  balanceStat: { gap: 2 },
-  balance: { color: colors.brassOnDark, fontSize: 34, fontWeight: "700" },
-  balanceRealised: { color: colors.brassOnDark, fontSize: 34, fontWeight: "700", opacity: 0.55 },
+  balance: { color: colors.brassOnDark, fontSize: 34, fontWeight: "700", marginTop: spacing.sm },
   pulseCard: {
     marginBottom: spacing.md,
     flexDirection: "row",

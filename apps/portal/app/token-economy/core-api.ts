@@ -10,17 +10,14 @@ export function runAggregation() {
 
 export interface TokenEconomyOverview {
   totalMembers: number;
-  issuedTokens: number;
-  realisedTokens: number;
-  reservedPaise: number;
-  currentTokenRatePaise: number | null;
-  tokenRateComputedAt: string | null;
+  totalTokens: number;
+  corpusFundPaise: number;
 }
 
-// SPEC.md §40 — members/token_ledger/reserve_ledger aren't in the portal
-// role's direct-read grant (§10: demand_aggregates/token_rate/zones/
-// categories only), so this goes through Core API like every other
-// member-adjacent read (questions, zones, fund-projects).
+// TOKEN_ECONOMY_REDESIGN.md — members/token_ledger/corpus_fund_ledger aren't
+// in the portal role's direct-read grant (§10: demand_aggregates/
+// token_rate/zones/categories only), so this goes through Core API like
+// every other member-adjacent read (questions, zones, fund-projects).
 export function getTokenEconomyOverview(): Promise<TokenEconomyOverview> {
   return apiFetch("/v1/admin/token-economy/overview");
 }

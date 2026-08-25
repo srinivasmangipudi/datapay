@@ -67,7 +67,7 @@ export function QuestionWizard({
   const [type, setType] = useState<AnswerType>("single");
   const [options, setOptions] = useState<OptionRow[]>(emptyOptions(2));
   const [intentWindow, setIntentWindow] = useState<"1m" | "3m" | "6m" | "12m">("1m");
-  const [rewardTokens, setRewardTokens] = useState(4);
+  const [rewardTokens, setRewardTokens] = useState(1);
   const [zoneId, setZoneId] = useState<string>("");
   const [allowPhoto, setAllowPhoto] = useState(true);
   const [allowVoice, setAllowVoice] = useState(true);

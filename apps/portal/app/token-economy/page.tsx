@@ -1,6 +1,6 @@
-import { getDemandAggregates, getTokenRateHistory } from "../data";
-import { TokenRateChart } from "../TokenRateChart";
-import { runAggregationAction, runTokenRateAction } from "./actions";
+import { getDemandAggregates } from "../data";
+import { getTokenEconomyOverview } from "./core-api";
+import { runAggregationAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -9,20 +9,18 @@ export default async function TokenEconomyPage({
 }: {
   searchParams: { error?: string; ran?: string };
 }): Promise<JSX.Element> {
-  const [tokenRateHistory, aggregates] = await Promise.all([
-    getTokenRateHistory(),
-    getDemandAggregates(),
-  ]);
-  const current = tokenRateHistory[tokenRateHistory.length - 1] ?? null;
+  const [aggregates, overview] = await Promise.all([getDemandAggregates(), getTokenEconomyOverview()]);
 
   return (
     <main className="page">
       <p className="eyebrow">DataPay Portal · Ops</p>
       <h1>Token economy</h1>
       <p className="lede">
-        The token rate is fixed on a scheduled cadence (§6C, every 3 days by default) and demand
-        aggregates refresh hourly — both scheduled jobs already run unattended. These buttons trigger
-        an out-of-cycle run right now, same computation either way.
+        Every token is equal now — answering a question and buying something through the platform
+        both earn the same kind of token (TOKEN_ECONOMY_REDESIGN.md). The supplier's 2% fee on every
+        confirmed delivery accumulates in the corpus fund below; it's never spent down — only its
+        future investment returns are meant to be distributed as dividends, which isn't built yet.
+        Demand aggregates refresh hourly on a scheduled job; this button triggers an out-of-cycle run.
       </p>
 
       {searchParams.error && (
@@ -30,13 +28,20 @@ export default async function TokenEconomyPage({
           <strong>Run failed:</strong> {searchParams.error}
         </div>
       )}
-      {searchParams.ran === "token-rate" && <div className="successBanner">Token rate recomputed.</div>}
       {searchParams.ran === "aggregation" && <div className="successBanner">Aggregation run completed.</div>}
 
       <div className="tiles">
         <div className="tile">
-          <span className="tileLabel">Current token rate</span>
-          <span className="tileValue value">{current ? `₹${(current.ratePaise / 100).toFixed(2)}` : "—"}</span>
+          <span className="tileLabel">Members</span>
+          <span className="tileValue">{overview.totalMembers}</span>
+        </div>
+        <div className="tile">
+          <span className="tileLabel">Total tokens</span>
+          <span className="tileValue">{overview.totalTokens}</span>
+        </div>
+        <div className="tile">
+          <span className="tileLabel">Corpus fund (accumulated)</span>
+          <span className="tileValue value">₹{(overview.corpusFundPaise / 100).toFixed(2)}</span>
         </div>
         <div className="tile">
           <span className="tileLabel">Published aggregates</span>
@@ -45,22 +50,12 @@ export default async function TokenEconomyPage({
       </div>
 
       <div className="actions">
-        <form action={runTokenRateAction}>
-          <button type="submit" className="submitBtn">
-            Run token rate now
-          </button>
-        </form>
         <form action={runAggregationAction}>
           <button type="submit" className="submitBtn">
             Run aggregation now
           </button>
         </form>
       </div>
-
-      <section className="section">
-        <h2>Token rate — history</h2>
-        <TokenRateChart points={tokenRateHistory} />
-      </section>
 
       <section className="section">
         <h2>Demand aggregates</h2>
