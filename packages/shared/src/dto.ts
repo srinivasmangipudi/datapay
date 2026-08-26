@@ -143,6 +143,24 @@ export const CreateCategoryDtoSchema = z.object({
 });
 export type CreateCategoryDto = z.infer<typeof CreateCategoryDtoSchema>;
 
+// Ops-provisioned company accounts — a company logs in separately from the
+// ops team's shared portal password and can submit questions of its own,
+// always into the same draft/review queue every generated question goes
+// through (never auto-approved).
+export const CreateOrganizationDtoSchema = z.object({
+  name: z.string().min(1).max(120),
+  slug: z.string().min(1).max(60).optional(),
+  email: z.string().email(),
+  password: z.string().min(8).max(200),
+});
+export type CreateOrganizationDto = z.infer<typeof CreateOrganizationDtoSchema>;
+
+export const OrgLoginDtoSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+export type OrgLoginDto = z.infer<typeof OrgLoginDtoSchema>;
+
 /** POST /v1/admin/zones (SPEC.md §25). */
 export const CreateZoneDtoSchema = z.object({
   name: z.string().min(1).max(120),

@@ -16,11 +16,14 @@ const LINKS = [
   { href: "/produce", label: "Produce & payouts" },
   { href: "/audit", label: "Audit & fraud" },
   { href: "/zones", label: "Zones & categories" },
+  { href: "/organizations", label: "Organizations" },
 ];
 
 export function AdminNav(): JSX.Element | null {
   const pathname = usePathname();
-  if (pathname === "/login" || pathname === "/registry") return null;
+  // "/org/..." is the separate company-login area (own nav below) — careful
+  // not to match "/organizations", the ops-only page for creating those accounts.
+  if (pathname === "/login" || pathname === "/registry" || pathname.startsWith("/org/")) return null;
 
   return (
     <nav className="adminNav">

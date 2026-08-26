@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const SESSION_COOKIE = "portal_session";
+const ORG_SESSION_COOKIE = "org_session";
 
 // A single shared ops password gates the whole portal (SPEC.md §25) — not
 // per-user auth, just enough that finding the URL isn't enough to reach a
@@ -12,6 +13,22 @@ const SESSION_COOKIE = "portal_session";
 // deliberately public too — it's the demand registry + opportunities page,
 // meant for anyone to see, not an ops tool.
 export function middleware(request: NextRequest): NextResponse {
+  const pathname = request.nextUrl.pathname;
+
+  // A separate, independent gate for company accounts (SPEC.md addendum:
+  // organizations onboarding questions) — its own cookie, its own login
+  // page, never the ops shared password. "/organizations" (no trailing
+  // slash) is the ops-only page for creating those accounts and must NOT
+  // match here.
+  if (pathname === "/org" || pathname.startsWith("/org/")) {
+    if (pathname === "/org/login") return NextResponse.next();
+    const orgCookie = request.cookies.get(ORG_SESSION_COOKIE)?.value;
+    if (orgCookie) return NextResponse.next();
+    const orgLoginUrl = new URL("/org/login", request.url);
+    orgLoginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(orgLoginUrl);
+  }
+
   const sessionSecret = process.env.PORTAL_SESSION_SECRET;
   if (!sessionSecret) {
     // Fails open only in the sense of not crashing the whole app — but every

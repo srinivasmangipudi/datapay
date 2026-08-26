@@ -303,9 +303,11 @@ export class QuestionFeederService {
     const { rows } = await this.pool.query(
       `SELECT q.id, q.category_id, q.type, q.text_en, q.reward_tokens, q.source,
               q.generation_run_id, q.review_state, q.zone_id, z.name AS zone_name,
+              o.name AS organization_name,
               (SELECT json_object_agg(language_code, text) FROM question_translations WHERE question_id = q.id) AS translations
        FROM questions q
        LEFT JOIN zones z ON z.id = q.zone_id
+       LEFT JOIN organizations o ON o.id = q.organization_id
        WHERE q.review_state = $1 ORDER BY q.id`,
       [reviewState]
     );

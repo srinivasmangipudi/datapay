@@ -56,7 +56,9 @@ export default async function ReviewQueuePage({
                     </td>
                     <td className="mono small">{q.type}</td>
                     <td className="small">{q.zone_name ?? <span className="muted">Global</span>}</td>
-                    <td className="muted small">{q.source}</td>
+                    <td className="muted small">
+                      {q.organization_name ? `Organization: ${q.organization_name}` : q.source}
+                    </td>
                     <td className="actions">
                       <form action={reviewQuestionAction}>
                         <input type="hidden" name="questionId" value={q.id} />

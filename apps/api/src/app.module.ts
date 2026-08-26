@@ -16,6 +16,7 @@ import { LedgerModule } from "./ledger/ledger.module";
 import { LinkagesModule } from "./linkages/linkages.module";
 import { MeModule } from "./me/me.module";
 import { OffersModule } from "./offers/offers.module";
+import { OrganizationsModule } from "./organizations/organizations.module";
 import { ProduceModule } from "./produce/produce.module";
 import { ProducerPayoutsModule } from "./producer-payouts/producer-payouts.module";
 import { PublicModule } from "./public/public.module";
@@ -51,6 +52,7 @@ import { ZonesModule } from "./zones/zones.module";
     LinkagesModule,
     ProduceModule,
     ProducerPayoutsModule,
+    OrganizationsModule,
     FraudModule,
     AuditModule,
     IntelligenceModule,

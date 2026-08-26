@@ -12,6 +12,7 @@ export interface DraftQuestion {
   review_state: string;
   zone_id: string | null;
   zone_name: string | null;
+  organization_name: string | null;
 }
 
 export function listDraftQuestions(): Promise<DraftQuestion[]> {
