@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
-import type { Zone } from "../api";
+import { getMe, type Zone } from "../api";
 import { MainApp } from "../main/MainApp";
 import { clearSession, loadSession, saveSession, Session } from "../session";
 import { AliasRevealScreen } from "./AliasRevealScreen";
@@ -42,8 +42,24 @@ export function OnboardingFlow() {
   const [step, setStep] = useState<Step>({ name: "loading" });
 
   useEffect(() => {
-    loadSession().then((session) => {
-      setStep(session ? { name: "done", session } : { name: "phone" });
+    loadSession().then(async (session) => {
+      if (!session) {
+        setStep({ name: "phone" });
+        return;
+      }
+      // A session in SecureStore survives app deletion/reinstall (iOS
+      // Keychain isn't cleared by uninstalling) and can outlive the backend
+      // it was issued against entirely — a fresh install pointed at a new
+      // environment would otherwise land straight on a screen that hangs
+      // forever on every call. One cheap call up front confirms the token
+      // still means something before trusting it.
+      try {
+        await getMe(session.token);
+        setStep({ name: "done", session });
+      } catch {
+        await clearSession();
+        setStep({ name: "phone" });
+      }
     });
   }, []);
 

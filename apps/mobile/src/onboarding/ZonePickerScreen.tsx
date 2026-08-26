@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { resolveLocation, getZones, type ResolveLocationResult, type Zone } from "../api";
 import { colors, radii, spacing, type } from "../theme";
 import { ProgressDots } from "./ProgressDots";
@@ -45,6 +46,7 @@ export function ZonePickerScreen({ token, onSelected, onCancel }: Props) {
   const [zones, setZones] = useState<Zone[] | null>(null);
   const [path, setPath] = useState<Zone[]>([]); // breadcrumb of selections, root to leaf
   const [showFallback, setShowFallback] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     getZones()
@@ -74,6 +76,14 @@ export function ZonePickerScreen({ token, onSelected, onCancel }: Props) {
       return;
     }
     setPath([...path, zone]);
+  }
+
+  // A real, deliberately-picked zone that just doesn't have finer-grained
+  // children seeded yet — SPEC.md §38 says onboarding must never dead-end,
+  // so drilling down is always optional past whatever level actually exists.
+  const currentParent = path.length > 0 ? path[path.length - 1] : null;
+  function useCurrentParent() {
+    if (currentParent) onSelected(currentParent, { zoneConfirmed: true });
   }
 
   return (
@@ -123,10 +133,22 @@ export function ZonePickerScreen({ token, onSelected, onCancel }: Props) {
             <Ionicons name="chevron-forward" size={18} color={colors.faint} />
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={styles.subtitle}>No zones at this level yet.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.subtitle}>
+            {currentParent
+              ? `Nothing more specific listed under ${currentParent.name} yet — use "Use ${currentParent.name} as my area" below, or look yourself up.`
+              : "No zones at this level yet."}
+          </Text>
+        }
       />
 
-      <View style={styles.footerRow}>
+      {currentParent && (
+        <TouchableOpacity style={styles.useAreaButton} onPress={useCurrentParent} activeOpacity={0.85}>
+          <Text style={styles.useAreaButtonText}>Use {currentParent.name} as my area →</Text>
+        </TouchableOpacity>
+      )}
+
+      <View style={[styles.footerRow, { paddingBottom: insets.bottom }]}>
         {path.length > 0 && (
           <TouchableOpacity style={styles.backButton} onPress={() => setPath(path.slice(0, -1))}>
             <Ionicons name="arrow-back" size={16} color={colors.teal} />
@@ -162,6 +184,7 @@ function AreaNotListedFlow({
   const [address, setAddress] = useState("");
   const [result, setResult] = useState<ResolveLocationResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   async function detectLocation() {
     setMode("loading");
@@ -221,7 +244,10 @@ function AreaNotListedFlow({
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.container, { paddingBottom: spacing.xl + insets.bottom }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
           <Ionicons name="arrow-back" size={16} color={colors.teal} />
           <Text style={styles.backText}>Back to the list</Text>
@@ -334,6 +360,15 @@ const styles = StyleSheet.create({
   },
   rowText: { fontSize: 15, fontWeight: "600", color: colors.ink },
   rowSub: { fontSize: 12.5, color: colors.subtle, marginTop: 1 },
+  useAreaButton: {
+    alignItems: "center",
+    paddingVertical: spacing.base,
+    marginBottom: spacing.xs,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.teal,
+  },
+  useAreaButtonText: { color: colors.teal, fontWeight: "700", fontSize: 14 },
   footerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   backButton: { flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: spacing.base },
   backText: { color: colors.teal, fontWeight: "700", fontSize: 14 },

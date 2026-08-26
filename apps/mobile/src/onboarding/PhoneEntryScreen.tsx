@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { requestOtp } from "../api";
 import { DataPayLogo } from "../brand/DataPayLogo";
 import { colors, radii, spacing, type } from "../theme";
@@ -26,6 +27,7 @@ export function PhoneEntryScreen({ onSent }: Props) {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const phoneE164 = phone.startsWith("+") ? phone : `+91${phone.replace(/\D/g, "")}`;
   const canSubmit = /^\+[1-9]\d{6,14}$/.test(phoneE164) && name.trim().length > 0;
@@ -46,7 +48,10 @@ export function PhoneEntryScreen({ onSent }: Props) {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.blobA} />
       <View style={styles.blobB} />
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + spacing.xxl }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <ProgressDots step={1} total={TOTAL_STEPS} />
 
         <View style={styles.logoWrap}>

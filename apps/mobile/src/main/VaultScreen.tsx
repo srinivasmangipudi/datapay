@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { completeOnboarding, ConsentCategory, getConsents, getMe, getZones, MemberProfile, setConsent, Zone } from "../api";
 import { ZonePickerScreen } from "../onboarding/ZonePickerScreen";
 import { saveSession } from "../session";
@@ -29,6 +30,7 @@ export function VaultScreen({ session, onLogout }: Props) {
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [zones, setZones] = useState<Zone[] | null>(null);
   const [changingArea, setChangingArea] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const load = useCallback(async () => {
     const [consentList, memberProfile, zoneList] = await Promise.all([
@@ -86,7 +88,10 @@ export function VaultScreen({ session, onLogout }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+    >
       <Text style={styles.alias}>{session.displayAlias}</Text>
       <Text style={styles.sealNote}>
         Brands only ever see this alias. Identity never shared — every toggle below is instant and

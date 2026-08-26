@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { commitAlias, CommitAliasResult, getAliasCandidates } from "../api";
 import { colors, radii, spacing, type } from "../theme";
 import { ProgressDots } from "./ProgressDots";
@@ -18,6 +19,7 @@ export function ChooseAliasScreen({ pendingToken, candidates: initial, onChosen 
   const [selected, setSelected] = useState<string | null>(null);
   const [shuffling, setShuffling] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const insets = useSafeAreaInsets();
 
   async function shuffle() {
     setShuffling(true);
@@ -89,7 +91,7 @@ export function ChooseAliasScreen({ pendingToken, candidates: initial, onChosen 
         </TouchableOpacity>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: spacing.xl + insets.bottom }]}>
         <TouchableOpacity
           style={[styles.button, !selected && styles.buttonDisabled]}
           disabled={!selected || confirming}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { completeOnboarding } from "../api";
 import type { Zone } from "../api";
 import { DataPayMark } from "../brand/DataPayLogo";
@@ -24,6 +25,7 @@ const TOTAL_STEPS = 5;
 
 export function AliasRevealScreen({ token, displayAlias, zone, zoneMeta, onDone }: Props) {
   const [loading, setLoading] = useState(false);
+  const insets = useSafeAreaInsets();
 
   async function handleContinue() {
     setLoading(true);
@@ -38,7 +40,7 @@ export function AliasRevealScreen({ token, displayAlias, zone, zoneMeta, onDone 
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: spacing.xl + insets.bottom }]}>
       <ProgressDots step={5} total={TOTAL_STEPS} />
 
       <Text style={styles.title}>You're all set 🎉</Text>

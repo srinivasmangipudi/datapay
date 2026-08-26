@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { verifyOtp, type VerifyOtpResult } from "../api";
 import { DataPayMark } from "../brand/DataPayLogo";
 import { colors, radii, spacing, type } from "../theme";
@@ -28,6 +29,7 @@ export function OtpVerifyScreen({ phoneE164, onVerified }: Props) {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<TextInput>(null);
+  const insets = useSafeAreaInsets();
 
   async function handleSubmit() {
     setLoading(true);
@@ -43,7 +45,10 @@ export function OtpVerifyScreen({ phoneE164, onVerified }: Props) {
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + spacing.xxl }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <ProgressDots step={2} total={TOTAL_STEPS} />
 
         <View style={styles.logoWrap}>

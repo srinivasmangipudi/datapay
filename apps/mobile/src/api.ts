@@ -127,20 +127,43 @@ export interface FundProject {
   myVote: "yes" | "no" | null;
 }
 
+// Weak/flaky WiFi (common in the field) makes DNS resolution or the TCP
+// handshake itself fail intermittently — fetch() throws "Network request
+// failed" before ever reaching the server. A couple of short retries ride
+// out that kind of blip without the member having to notice and retry by
+// hand. Only network-level failures are retried, never HTTP error responses.
+const RETRY_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 800;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function request<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init?.headers,
-    },
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.message ?? `Request to ${path} failed (${res.status})`);
+  let lastNetworkError: Error | null = null;
+  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE_URL}${path}`, {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...init?.headers,
+        },
+      });
+    } catch (err) {
+      lastNetworkError = err as Error;
+      if (attempt < RETRY_ATTEMPTS) await sleep(RETRY_DELAY_MS * attempt);
+      continue;
+    }
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.message ?? `Request to ${path} failed (${res.status})`);
+    }
+    return data as T;
   }
-  return data as T;
+  throw lastNetworkError ?? new Error(`Request to ${path} failed`);
 }
 
 export function requestOtp(phoneE164: string, name: string): Promise<{ status: "otp_sent" }> {
