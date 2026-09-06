@@ -34,6 +34,10 @@ export default defineRailway(() => {
       JWT_SECRET: preserve(),
       ALIAS_PEPPER: preserve(),
       VAULT_SECRET_KEY: preserve(),
+      // Real SMS delivery (sms.util.ts) — falls back to a console log OTP
+      // when either is unset, so this stays optional in dev/preview.
+      MSG91_AUTH_KEY: preserve(),
+      MSG91_OTP_TEMPLATE_ID: preserve(),
     },
   });
 

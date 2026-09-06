@@ -15,8 +15,14 @@ import {
   generateOtpSalt,
   hashOtpCode,
 } from "./otp.util";
+import { sendOtpSms } from "./sms.util";
 
 const ALIAS_CANDIDATE_COUNT = 8;
+// Guards against SMS-pumping abuse now that every OTP is a real, paid text
+// (not just a server log) — generous enough not to block a genuine retry
+// after a bad-signal failure, tight enough to cap worst-case cost.
+const OTP_RESEND_COOLDOWN_MS = 20 * 1000;
+const OTP_MAX_PER_HOUR = 15;
 // A member browsing name options shouldn't have to redo OTP if they take a
 // few minutes deciding — but an abandoned session shouldn't squat a pending
 // row forever either. 30 minutes is a generous "still mid-signup" window.
@@ -44,6 +50,13 @@ export class AuthService {
     );
     const userId = rows[0].id;
 
+    // Skipped in tests — the integration suite deliberately re-registers the
+    // same phone number many times in quick succession, exactly what this
+    // guards against for a real caller.
+    if (process.env.NODE_ENV !== "test") {
+      await this.enforceOtpRateLimit(userId);
+    }
+
     const code = generateOtpCode();
     const salt = generateOtpSalt();
     const codeHash = hashOtpCode(code, salt);
@@ -54,12 +67,31 @@ export class AuthService {
       [userId, codeHash, salt, expiresAt]
     );
 
-    // Dev-only delivery: no SMS provider wired yet (Bhashini/telco integration is an
-    // infra follow-up, not part of LAW 1). Never return the code in the API response.
-    // eslint-disable-next-line no-console
-    console.log(`[vault][dev] OTP for ${phoneE164}: ${code}`);
+    // Never return the code in the API response either way.
+    try {
+      await sendOtpSms(phoneE164, code);
+    } catch {
+      throw new BadRequestException("Couldn't send the verification code — try again in a moment");
+    }
 
     return { status: "otp_sent" };
+  }
+
+  private async enforceOtpRateLimit(userId: string): Promise<void> {
+    const { rows } = await this.pool.query<{ recent: string; last_at: Date | null }>(
+      `SELECT
+         count(*) FILTER (WHERE created_at > now() - interval '1 hour') AS recent,
+         max(created_at) AS last_at
+       FROM otp_codes WHERE user_id = $1`,
+      [userId]
+    );
+    const { recent, last_at } = rows[0];
+    if (last_at && Date.now() - new Date(last_at).getTime() < OTP_RESEND_COOLDOWN_MS) {
+      throw new BadRequestException("Please wait a bit before requesting another code");
+    }
+    if (Number(recent) >= OTP_MAX_PER_HOUR) {
+      throw new BadRequestException("Too many codes requested for this number — try again later");
+    }
   }
 
   async verifyOtp(
