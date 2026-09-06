@@ -180,6 +180,15 @@ export function verifyOtp(phoneE164: string, otp: string): Promise<VerifyOtpResu
   });
 }
 
+// The phone was already proven by Firebase Phone Auth on-device (onboarding
+// flow) — idToken is what Vault verifies server-side instead of an OTP code.
+export function verifyFirebaseToken(idToken: string, name: string): Promise<VerifyOtpResult> {
+  return request("/v1/auth/otp/firebase-verify", {
+    method: "POST",
+    body: JSON.stringify({ idToken, name }),
+  });
+}
+
 export function getAliasCandidates(pendingToken: string): Promise<{ candidates: string[] }> {
   return request("/v1/auth/otp/alias-candidates", {
     method: "POST",

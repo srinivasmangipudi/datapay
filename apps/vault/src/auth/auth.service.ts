@@ -16,6 +16,7 @@ import {
   hashOtpCode,
 } from "./otp.util";
 import { sendOtpSms } from "./sms.util";
+import { verifyFirebasePhoneToken } from "./firebase-admin.util";
 
 const ALIAS_CANDIDATE_COUNT = 8;
 // Guards against SMS-pumping abuse now that every OTP is a real, paid text
@@ -125,8 +126,20 @@ export class AuthService {
       throw new UnauthorizedException("Too many attempts — request a new OTP");
     }
 
+    // DEMO ONLY — accepts any 6-digit input as correct, skipping the actual
+    // hash check below. A real OTP still gets generated and (attempted to
+    // be) sent, so this doesn't change register()'s behavior at all — it
+    // only weakens verifyOtp() into never actually proving phone ownership.
+    // Must be off (unset) outside of a live demo: with this on, anyone who
+    // knows or guesses a registered phone number can sign in as that member.
+    const demoBypass = process.env.DEMO_SKIP_OTP_VERIFICATION === "true";
+    if (demoBypass) {
+      // eslint-disable-next-line no-console
+      console.warn(`[vault][DEMO_SKIP_OTP_VERIFICATION] accepted any code for ${phoneE164}`);
+    }
+
     const candidateHash = hashOtpCode(otp, pending.code_salt);
-    if (candidateHash !== pending.code_hash) {
+    if (!demoBypass && candidateHash !== pending.code_hash) {
       await this.pool.query(
         `UPDATE otp_codes SET attempt_count = attempt_count + 1 WHERE id = $1`,
         [pending.id]
@@ -138,13 +151,53 @@ export class AuthService {
       pending.id,
     ]);
 
-    const aliasId = computeAliasId(user.id, this.pepper);
-    await this.pool.query(
-      `INSERT INTO vault_access_log (service, purpose, alias_or_token) VALUES ($1, $2, $3)`,
-      ["vault", "verify-otp", aliasId]
+    return this.completeVerifiedPhoneLogin(user.id, "verify-otp");
+  }
+
+  /**
+   * The phone was already proven by Firebase Phone Auth on-device — the
+   * mobile app never calls register()/verifyOtp() in this path at all, so
+   * the users upsert (normally done by register()) happens here instead.
+   */
+  async verifyFirebaseToken(
+    idToken: string,
+    name: string
+  ): Promise<
+    | { status: "returning"; token: string; aliasId: string; displayAlias: string }
+    | { status: "choose_alias"; pendingToken: string; aliasId: string; candidates: string[] }
+  > {
+    const { phoneE164 } = await verifyFirebasePhoneToken(idToken);
+
+    const { rows } = await this.pool.query<{ id: string }>(
+      `INSERT INTO users (phone_e164, name) VALUES ($1, $2)
+       ON CONFLICT (phone_e164) DO UPDATE SET name = EXCLUDED.name
+       RETURNING id`,
+      [phoneE164, name]
     );
 
-    const existing = await this.getExistingAlias(user.id);
+    return this.completeVerifiedPhoneLogin(rows[0].id, "verify-firebase");
+  }
+
+  /**
+   * Shared by both proof-of-phone paths (our own OTP hash check, and
+   * Firebase's) — everything from here on has never cared which one got it
+   * here: mint a JWT for a returning member, or offer alias candidates for
+   * a first-time one.
+   */
+  private async completeVerifiedPhoneLogin(
+    userId: string,
+    purpose: string
+  ): Promise<
+    | { status: "returning"; token: string; aliasId: string; displayAlias: string }
+    | { status: "choose_alias"; pendingToken: string; aliasId: string; candidates: string[] }
+  > {
+    const aliasId = computeAliasId(userId, this.pepper);
+    await this.pool.query(
+      `INSERT INTO vault_access_log (service, purpose, alias_or_token) VALUES ($1, $2, $3)`,
+      ["vault", purpose, aliasId]
+    );
+
+    const existing = await this.getExistingAlias(userId);
     if (existing) {
       // Returning member — same as before this addendum, no name-picking step.
       const token = await this.jwt.signAsync({
@@ -161,7 +214,7 @@ export class AuthService {
       `INSERT INTO pending_signups (user_id) VALUES ($1)
        ON CONFLICT (user_id) DO UPDATE SET token = gen_random_uuid(), created_at = now()
        RETURNING token`,
-      [user.id]
+      [userId]
     );
     const candidates = await this.generateUniqueCandidates();
     return { status: "choose_alias", pendingToken: pendingRows[0].token, aliasId, candidates };

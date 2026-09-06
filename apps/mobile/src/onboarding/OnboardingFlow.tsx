@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { getMe, type Zone } from "../api";
+import type { FirebaseConfirmation } from "../firebaseAuth";
 import { MainApp } from "../main/MainApp";
 import { clearSession, loadSession, saveSession, Session } from "../session";
 import { AliasRevealScreen } from "./AliasRevealScreen";
@@ -28,7 +29,7 @@ interface ZoneMeta {
 type Step =
   | { name: "loading" }
   | { name: "phone" }
-  | { name: "otp"; phoneE164: string }
+  | { name: "otp"; phoneE164: string; memberName: string; confirmation: FirebaseConfirmation }
   | { name: "chooseAlias"; pendingToken: string; candidates: string[] }
   | { name: "zone"; auth: CommittedAuth }
   | { name: "reveal"; auth: CommittedAuth; zone: Zone; zoneMeta?: ZoneMeta }
@@ -71,11 +72,19 @@ export function OnboardingFlow() {
         </View>
       );
     case "phone":
-      return <PhoneEntryScreen onSent={(phoneE164) => setStep({ name: "otp", phoneE164 })} />;
+      return (
+        <PhoneEntryScreen
+          onSent={(phoneE164, memberName, confirmation) =>
+            setStep({ name: "otp", phoneE164, memberName, confirmation })
+          }
+        />
+      );
     case "otp":
       return (
         <OtpVerifyScreen
           phoneE164={step.phoneE164}
+          name={step.memberName}
+          confirmation={step.confirmation}
           onVerified={(result) => {
             if (result.status === "returning") {
               setStep({

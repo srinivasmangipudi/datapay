@@ -1,5 +1,11 @@
 import { Body, Controller, HttpException, Post } from "@nestjs/common";
-import { AliasCandidatesDtoSchema, CommitAliasDtoSchema, RegisterDtoSchema, VerifyOtpDtoSchema } from "@datapay/shared";
+import {
+  AliasCandidatesDtoSchema,
+  CommitAliasDtoSchema,
+  FirebaseVerifyDtoSchema,
+  RegisterDtoSchema,
+  VerifyOtpDtoSchema,
+} from "@datapay/shared";
 import { parseOrThrow } from "../zod.util";
 
 // Mobile talks ONLY to Core API for auth — Vault is never internet-facing.
@@ -23,6 +29,12 @@ export class AuthProxyController {
   async verify(@Body() body: unknown) {
     const dto = parseOrThrow(VerifyOtpDtoSchema, body);
     return this.forward("/verify-otp", dto);
+  }
+
+  @Post("firebase-verify")
+  async firebaseVerify(@Body() body: unknown) {
+    const dto = parseOrThrow(FirebaseVerifyDtoSchema, body);
+    return this.forward("/firebase-verify", dto);
   }
 
   // SPEC.md §36 — the "choose your name" step, between OTP verification and

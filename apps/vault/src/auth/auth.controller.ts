@@ -1,5 +1,11 @@
 import { Body, Controller, Post } from "@nestjs/common";
-import { AliasCandidatesDtoSchema, CommitAliasDtoSchema, RegisterDtoSchema, VerifyOtpDtoSchema } from "@datapay/shared";
+import {
+  AliasCandidatesDtoSchema,
+  CommitAliasDtoSchema,
+  FirebaseVerifyDtoSchema,
+  RegisterDtoSchema,
+  VerifyOtpDtoSchema,
+} from "@datapay/shared";
 import { parseOrThrow } from "../zod.util";
 import { AuthService } from "./auth.service";
 
@@ -19,6 +25,14 @@ export class AuthController {
   verifyOtp(@Body() body: unknown) {
     const dto = parseOrThrow(VerifyOtpDtoSchema, body);
     return this.auth.verifyOtp(dto.phoneE164, dto.otp);
+  }
+
+  // The phone was already proven by Firebase Phone Auth on-device — see
+  // AuthService.verifyFirebaseToken.
+  @Post("firebase-verify")
+  firebaseVerify(@Body() body: unknown) {
+    const dto = parseOrThrow(FirebaseVerifyDtoSchema, body);
+    return this.auth.verifyFirebaseToken(dto.idToken, dto.name);
   }
 
   // SPEC.md §36 — a first-time verify-otp offers candidates but commits

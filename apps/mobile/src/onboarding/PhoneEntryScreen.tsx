@@ -12,13 +12,13 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { requestOtp } from "../api";
 import { DataPayLogo } from "../brand/DataPayLogo";
+import { getAuth, signInWithPhoneNumber, type FirebaseConfirmation } from "../firebaseAuth";
 import { colors, radii, spacing, type } from "../theme";
 import { ProgressDots } from "./ProgressDots";
 
 interface Props {
-  onSent: (phoneE164: string, name: string) => void;
+  onSent: (phoneE164: string, name: string, confirmation: FirebaseConfirmation) => void;
 }
 
 const TOTAL_STEPS = 5;
@@ -35,8 +35,10 @@ export function PhoneEntryScreen({ onSent }: Props) {
   async function handleSubmit() {
     setLoading(true);
     try {
-      await requestOtp(phoneE164, name.trim());
-      onSent(phoneE164, name.trim());
+      // Firebase texts the code itself — no call to our own backend until
+      // the code is actually confirmed (OtpVerifyScreen).
+      const confirmation = await signInWithPhoneNumber(getAuth(), phoneE164);
+      onSent(phoneE164, name.trim(), confirmation);
     } catch (err) {
       Alert.alert("Couldn't send OTP", (err as Error).message);
     } finally {

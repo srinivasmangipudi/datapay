@@ -15,6 +15,7 @@
     "android": {
       "package": "org.datapay.mobile",
       "minSdkVersion": 26,
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
@@ -31,6 +32,7 @@
       }
     },
     "plugins": [
+      "@react-native-firebase/app",
       [
         "expo-camera",
         {

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "81908487704",
+    "project_id": "datapay-2b5bb",
+    "storage_bucket": "datapay-2b5bb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:81908487704:android:6939881ae9bd7140d6156d",
+        "android_client_info": {
+          "package_name": "org.datapay.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJadg3EJ2WmNofxlDYh3kAJbGQGHZRkc4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

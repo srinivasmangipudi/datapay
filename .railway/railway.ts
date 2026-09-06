@@ -38,6 +38,10 @@ export default defineRailway(() => {
       // when either is unset, so this stays optional in dev/preview.
       MSG91_AUTH_KEY: preserve(),
       MSG91_OTP_TEMPLATE_ID: preserve(),
+      // Firebase Phone Auth — the phone is proven on-device (mobile app);
+      // this is what Vault verifies the resulting ID token against
+      // (firebase-admin.util.ts). Full service-account JSON, one line.
+      FIREBASE_SERVICE_ACCOUNT_JSON: preserve(),
     },
   });
 

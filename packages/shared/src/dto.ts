@@ -228,6 +228,17 @@ export const VerifyOtpDtoSchema = z.object({
 export type VerifyOtpDto = z.infer<typeof VerifyOtpDtoSchema>;
 
 /**
+ * Vault POST /firebase-verify — the phone was already proven by Firebase
+ * Phone Auth on-device; idToken is what Vault verifies server-side (via
+ * firebase-admin) instead of checking an OTP hash itself.
+ */
+export const FirebaseVerifyDtoSchema = z.object({
+  idToken: z.string().min(1),
+  name: z.string().min(1).max(120),
+});
+export type FirebaseVerifyDto = z.infer<typeof FirebaseVerifyDtoSchema>;
+
+/**
  * Vault POST /alias-candidates — SPEC.md §36 "see various combinations":
  * a fresh batch of display-alias options for the same pending signup session.
  */

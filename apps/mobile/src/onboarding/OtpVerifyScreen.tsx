@@ -12,20 +12,23 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { verifyOtp, type VerifyOtpResult } from "../api";
+import { verifyFirebaseToken, type VerifyOtpResult } from "../api";
 import { DataPayMark } from "../brand/DataPayLogo";
+import type { FirebaseConfirmation } from "../firebaseAuth";
 import { colors, radii, spacing, type } from "../theme";
 import { ProgressDots } from "./ProgressDots";
 
 interface Props {
   phoneE164: string;
+  name: string;
+  confirmation: FirebaseConfirmation;
   onVerified: (result: VerifyOtpResult) => void;
 }
 
 const TOTAL_STEPS = 5;
 const OTP_LENGTH = 6;
 
-export function OtpVerifyScreen({ phoneE164, onVerified }: Props) {
+export function OtpVerifyScreen({ phoneE164, name, confirmation, onVerified }: Props) {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<TextInput>(null);
@@ -34,7 +37,12 @@ export function OtpVerifyScreen({ phoneE164, onVerified }: Props) {
   async function handleSubmit() {
     setLoading(true);
     try {
-      const result = await verifyOtp(phoneE164, otp);
+      const credential = await confirmation.confirm(otp);
+      if (!credential?.user) {
+        throw new Error("That code doesn't match — try again.");
+      }
+      const idToken = await credential.user.getIdToken();
+      const result = await verifyFirebaseToken(idToken, name);
       onVerified(result);
     } catch (err) {
       Alert.alert("Couldn't verify OTP", (err as Error).message);
