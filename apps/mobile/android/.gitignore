@@ -14,3 +14,8 @@ local.properties
 
 # Bundle artifacts
 *.jsbundle
+
+# Release signing — real secret, unlike debug.keystore (which stays
+# committed on purpose for direct-install builds). Never commit these.
+keystore.properties
+app/datapay-release.keystore
