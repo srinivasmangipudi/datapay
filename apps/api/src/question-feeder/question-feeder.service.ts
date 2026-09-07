@@ -39,21 +39,29 @@ export class QuestionFeederService {
       }
     }
 
-    const { rows } = await this.pool.query<{ id: number }>(
-      `INSERT INTO question_topics (slug, name, category_id, generator_kind, config, schedule_cron, zone_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id`,
-      [
-        dto.slug,
-        dto.name,
-        dto.categoryId,
-        dto.generatorKind,
-        dto.config,
-        dto.scheduleCron ?? null,
-        dto.zoneId ?? null,
-      ]
-    );
-    const topicId = rows[0].id;
+    let topicId: number;
+    try {
+      const { rows } = await this.pool.query<{ id: number }>(
+        `INSERT INTO question_topics (slug, name, category_id, generator_kind, config, schedule_cron, zone_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id`,
+        [
+          dto.slug,
+          dto.name,
+          dto.categoryId,
+          dto.generatorKind,
+          dto.config,
+          dto.scheduleCron ?? null,
+          dto.zoneId ?? null,
+        ]
+      );
+      topicId = rows[0].id;
+    } catch (err) {
+      if ((err as { code?: string }).code === "23505") {
+        throw new BadRequestException(`A topic with slug "${dto.slug}" already exists — pick a different slug`);
+      }
+      throw err;
+    }
 
     if (dto.scheduleCron) {
       await this.queue.upsertJobScheduler(

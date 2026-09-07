@@ -102,7 +102,23 @@ export class DocumentGroundedGeneratorService {
 
     const config = DocumentGroundedConfigSchema.parse(topic.config);
     const prompt = buildQuestionPrompt(zoneUnderstanding, catRows[0].name, config);
-    const raw = await this.llm.complete(prompt, { maxTokens: 2048 });
-    return z.array(QuestionVariantSchema).parse(JSON.parse(stripCodeFences(raw)));
+
+    // 2048 was too tight for up to 10 questions x bilingual text/options —
+    // truncated mid-JSON, and (below) the resulting error wasn't caught, so
+    // it reached the portal as an opaque 500 instead of a readable message.
+    // Same maxTokens/error-wrapping posture as ZoneUnderstandingService.refresh().
+    let raw: string;
+    try {
+      raw = await this.llm.complete(prompt, { maxTokens: 8192 });
+    } catch (err) {
+      throw new BadRequestException((err as Error).message);
+    }
+    try {
+      return z.array(QuestionVariantSchema).parse(JSON.parse(stripCodeFences(raw)));
+    } catch (err) {
+      throw new BadRequestException(
+        `Couldn't parse the model's response as the expected JSON shape: ${(err as Error).message}`
+      );
+    }
   }
 }
