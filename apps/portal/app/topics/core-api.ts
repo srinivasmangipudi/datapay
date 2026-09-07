@@ -46,3 +46,38 @@ export function resolveCategory(name: string): Promise<{ id: number; created: bo
 export function translateText(text: string, targetLang: "kn"): Promise<{ translated: string }> {
   return apiFetch("/v1/admin/translate", { method: "POST", body: JSON.stringify({ text, targetLang }) });
 }
+
+// A document_grounded topic needs a zone with ingested intelligence before
+// "Generate now" can work at all — these three make "paste a link" possible
+// directly from the topic wizard instead of a separate portal page.
+export function connectIntelligenceSource(
+  zoneId: string,
+  externalRef: string,
+  displayName: string,
+  kind: "web_link" | "google_drive_folder" = "web_link"
+): Promise<{ id: number }> {
+  return apiFetch("/v1/admin/intelligence-sources", {
+    method: "POST",
+    body: JSON.stringify({ zoneId, externalRef, displayName, kind }),
+  });
+}
+
+export function syncIntelligenceSource(
+  sourceId: number
+): Promise<{ documentsListed: number; synced: number; unchanged: number; skipped: number; skippedFiles: string[] }> {
+  return apiFetch(`/v1/admin/intelligence-sources/${sourceId}/sync`, { method: "POST" });
+}
+
+export function refreshZoneUnderstanding(zoneId: string): Promise<{ summaryEn: string; generatedAt: string }> {
+  return apiFetch(`/v1/admin/zones/${zoneId}/understanding/refresh`, { method: "POST" });
+}
+
+export interface ZoneUnderstandingStatus {
+  summaryEn?: string;
+  generatedAt?: string;
+  message?: string; // "No understanding generated yet for this zone"
+}
+
+export function getZoneUnderstanding(zoneId: string): Promise<ZoneUnderstandingStatus> {
+  return apiFetch(`/v1/admin/zones/${zoneId}/understanding`);
+}

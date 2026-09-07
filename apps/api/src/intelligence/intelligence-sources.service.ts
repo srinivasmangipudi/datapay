@@ -3,6 +3,9 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from "@nes
 import { Pool } from "pg";
 import { PG_POOL } from "../db/db.module";
 import { DriveFile, DriveProvider, GoogleDriveProvider } from "./drive.provider";
+import { fetchWebLinkText } from "./web-link.provider";
+
+export type IntelligenceSourceKind = "google_drive_folder" | "web_link";
 
 // Whoever fills in the "folder ID" field is going to paste whatever's in
 // their browser's address bar most of the time, not go hunt for the bare
@@ -53,11 +56,17 @@ export class IntelligenceSourcesService {
     return this.driveInstance;
   }
 
-  async connectSource(zoneId: string, externalRef: string, displayName: string) {
+  async connectSource(
+    zoneId: string,
+    externalRef: string,
+    displayName: string,
+    kind: IntelligenceSourceKind = "google_drive_folder"
+  ) {
+    const ref = kind === "google_drive_folder" ? extractDriveFolderId(externalRef) : externalRef.trim();
     const { rows } = await this.pool.query<{ id: number }>(
       `INSERT INTO intelligence_sources (zone_id, kind, external_ref, display_name)
-       VALUES ($1, 'google_drive_folder', $2, $3) RETURNING id`,
-      [zoneId, extractDriveFolderId(externalRef), displayName]
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [zoneId, kind, ref, displayName]
     );
     return { id: rows[0].id };
   }
@@ -82,11 +91,15 @@ export class IntelligenceSourcesService {
    * response rather than silently dropped (no silent caps).
    */
   async sync(sourceId: number): Promise<SyncResult> {
-    const { rows: sourceRows } = await this.pool.query<{ external_ref: string }>(
-      `SELECT external_ref FROM intelligence_sources WHERE id = $1`,
-      [sourceId]
-    );
+    const { rows: sourceRows } = await this.pool.query<{
+      external_ref: string;
+      kind: IntelligenceSourceKind;
+    }>(`SELECT external_ref, kind FROM intelligence_sources WHERE id = $1`, [sourceId]);
     if (!sourceRows[0]) throw new NotFoundException(`Source ${sourceId} not found`);
+
+    if (sourceRows[0].kind === "web_link") {
+      return this.syncWebLink(sourceId, sourceRows[0].external_ref);
+    }
 
     let files: DriveFile[];
     try {
@@ -151,6 +164,51 @@ export class IntelligenceSourcesService {
     ]);
 
     return { documentsListed: files.length, synced, unchanged, skipped, skippedFiles };
+  }
+
+  // A web_link source is always exactly one "document" — the URL itself is
+  // a stable external_id, so re-syncing an unchanged page is a no-op same
+  // as an unchanged Drive file.
+  private async syncWebLink(sourceId: number, url: string): Promise<SyncResult> {
+    let content: { title: string; text: string };
+    try {
+      content = await fetchWebLinkText(url);
+    } catch (err) {
+      throw new BadRequestException((err as Error).message);
+    }
+
+    const hash = createHash("sha256").update(content.text).digest("hex");
+    const { rows: existing } = await this.pool.query<{ id: number; content_hash: string | null }>(
+      `SELECT id, content_hash FROM intelligence_documents WHERE source_id = $1 AND external_id = $2`,
+      [sourceId, url]
+    );
+
+    let unchanged = 0;
+    let synced = 0;
+    if (existing[0]?.content_hash === hash) {
+      unchanged = 1;
+    } else if (existing[0]) {
+      await this.pool.query(
+        `UPDATE intelligence_documents
+         SET title = $1, mime_type = 'text/html', content_text = $2, content_hash = $3, fetched_at = now()
+         WHERE id = $4`,
+        [content.title, content.text, hash, existing[0].id]
+      );
+      synced = 1;
+    } else {
+      await this.pool.query(
+        `INSERT INTO intelligence_documents (source_id, external_id, title, mime_type, content_text, content_hash)
+         VALUES ($1, $2, $3, 'text/html', $4, $5)`,
+        [sourceId, url, content.title, content.text, hash]
+      );
+      synced = 1;
+    }
+
+    await this.pool.query(`UPDATE intelligence_sources SET last_synced_at = now() WHERE id = $1`, [
+      sourceId,
+    ]);
+
+    return { documentsListed: 1, synced, unchanged, skipped: 0, skippedFiles: [] };
   }
 
   async listDocuments(sourceId: number) {

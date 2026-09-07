@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { createTopicAction, translateToKannada } from "./actions";
+import { useEffect, useState, useTransition } from "react";
+import {
+  createTopicAction,
+  getZoneUnderstandingStatus,
+  ingestLinkAction,
+  translateToKannada,
+  type IngestStatus,
+} from "./actions";
 import type { GeneratorKind } from "./core-api";
 
 interface Category {
@@ -60,11 +66,40 @@ export function TopicWizard({ categories, zones }: { categories: Category[]; zon
   const [focusAreas, setFocusAreas] = useState("");
   const [toneNote, setToneNote] = useState("");
 
+  // Ingestion status for whatever zone is currently selected — only
+  // meaningful (and only fetched) for document_grounded topics.
+  const [linkUrl, setLinkUrl] = useState("");
+  const [ingestStatus, setIngestStatus] = useState<IngestStatus | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [ingesting, setIngesting] = useState(false);
+
   const [clientError, setClientError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isTranslating, setIsTranslating] = useState(false);
 
   const needsOptions = type === "single" || type === "multi" || type === "yesno";
+
+  useEffect(() => {
+    if (generatorKind !== "document_grounded" || !zoneId) {
+      setIngestStatus(null);
+      return;
+    }
+    setCheckingStatus(true);
+    getZoneUnderstandingStatus(zoneId)
+      .then(setIngestStatus)
+      .finally(() => setCheckingStatus(false));
+  }, [generatorKind, zoneId]);
+
+  async function handleIngest() {
+    if (!zoneId || !linkUrl.trim()) return;
+    setIngesting(true);
+    try {
+      setIngestStatus(await ingestLinkAction(zoneId, linkUrl.trim()));
+      setLinkUrl("");
+    } finally {
+      setIngesting(false);
+    }
+  }
 
   async function handleTranslate() {
     if (!textEn.trim()) {
@@ -200,6 +235,41 @@ export function TopicWizard({ categories, zones }: { categories: Category[]; zon
             </option>
           ))}
         </select>
+
+        {generatorKind === "document_grounded" && zoneId && (
+          <div className="ingestPanel">
+            {checkingStatus && <p className="hint">Checking what's already known about this zone…</p>}
+
+            {!checkingStatus && ingestStatus?.ready && (
+              <div className="successBanner" style={{ marginTop: 0 }}>
+                <strong>This zone is ready to generate from.</strong>
+                <p style={{ margin: "4px 0 0" }}>{ingestStatus.message}</p>
+              </div>
+            )}
+
+            {!checkingStatus && ingestStatus && !ingestStatus.ready && (
+              <div className="errorBanner" style={{ marginTop: 0 }}>
+                <strong>Nothing to generate from yet:</strong> {ingestStatus.message}
+              </div>
+            )}
+
+            <p className="hint" style={{ marginTop: 8 }}>
+              Paste a link to an article, report, or page about this area — it gets read and
+              summarized into what "Generate now" will draft questions from. Add as many as you
+              like; each one adds to the same understanding.
+            </p>
+            <div className="optionRow">
+              <input
+                placeholder="https://…"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+              />
+              <button type="button" className="linkBtn" onClick={handleIngest} disabled={ingesting || !linkUrl.trim()}>
+                {ingesting ? "Reading & summarizing…" : "Ingest this link"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {generatorKind === "template" ? (

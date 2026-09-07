@@ -13,7 +13,7 @@ export class IntelligenceSourcesController {
   @Post()
   connect(@Body() body: unknown) {
     const dto = parseOrThrow(ConnectIntelligenceSourceDtoSchema, body);
-    return this.sources.connectSource(dto.zoneId, dto.externalRef, dto.displayName);
+    return this.sources.connectSource(dto.zoneId, dto.externalRef, dto.displayName, dto.kind);
   }
 
   @Get()

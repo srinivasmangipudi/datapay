@@ -205,11 +205,15 @@ export const TranslateDtoSchema = z.object({
 });
 export type TranslateDto = z.infer<typeof TranslateDtoSchema>;
 
-/** POST /v1/admin/intelligence-sources — connects a Drive folder to a zone (SPEC.md §20). */
+/**
+ * POST /v1/admin/intelligence-sources — connects a source (a Drive folder,
+ * or the simpler default, any public URL) to a zone (SPEC.md §20).
+ */
 export const ConnectIntelligenceSourceDtoSchema = z.object({
   zoneId: z.string().uuid(),
-  externalRef: z.string().min(1), // Drive folder ID
+  externalRef: z.string().min(1), // Drive folder ID/URL, or a plain web URL
   displayName: z.string().min(1).max(120),
+  kind: z.enum(["google_drive_folder", "web_link"]).default("web_link"),
 });
 export type ConnectIntelligenceSourceDto = z.infer<typeof ConnectIntelligenceSourceDtoSchema>;
 
