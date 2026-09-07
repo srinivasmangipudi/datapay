@@ -24,7 +24,14 @@ export function AdminNav(): JSX.Element | null {
   const pathname = usePathname();
   // "/org/..." is the separate company-login area (own nav below) — careful
   // not to match "/organizations", the ops-only page for creating those accounts.
-  if (pathname === "/login" || pathname === "/registry" || pathname.startsWith("/org/")) return null;
+  if (
+    pathname === "/login" ||
+    pathname === "/registry" ||
+    pathname === "/privacy" ||
+    pathname === "/delete-account" ||
+    pathname.startsWith("/org/")
+  )
+    return null;
 
   return (
     <nav className="adminNav">
