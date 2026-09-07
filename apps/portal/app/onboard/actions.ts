@@ -7,9 +7,11 @@ import {
   createTopic,
   createZone,
   CreateZonePayload,
+  DraftQuestion,
   generateNow,
   GenerateNowResult,
   getZoneUnderstanding,
+  listDraftQuestions,
   refreshZoneUnderstanding,
   resolveCategory,
   reviewQuestion,
@@ -100,6 +102,20 @@ export async function createQuestionDirectAction(
   try {
     const question = await createQuestion(payload);
     return { ok: true, data: question };
+  } catch (err) {
+    return { ok: false, message: (err as Error).message };
+  }
+}
+
+// AiDraftedQuestionStep needs this from client code — there's no dedicated
+// "questions from this run" endpoint, so it fetches all drafts and filters
+// by generation_run_id here, server-side (listDraftQuestions itself reads
+// CORE_API_INTERNAL_URL, which doesn't exist in the browser at all — it
+// must never be called directly from a "use client" component).
+export async function listRunDraftsAction(runId: number): Promise<ActionResult<DraftQuestion[]>> {
+  try {
+    const all = await listDraftQuestions();
+    return { ok: true, data: all.filter((q) => q.generation_run_id === runId) };
   } catch (err) {
     return { ok: false, message: (err as Error).message };
   }

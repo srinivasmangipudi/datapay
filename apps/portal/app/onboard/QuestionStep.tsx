@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createQuestionDirectAction } from "./actions";
+import { createQuestionDirectAction, listRunDraftsAction } from "./actions";
 import type { AnswerType, DraftQuestion } from "./core-api";
-import { listDraftQuestions } from "./core-api";
 
 interface OptionRow {
   labelEn: string;
@@ -144,10 +143,15 @@ export function AiDraftedQuestionStep({
   onContinue: (drafts: DraftQuestion[]) => void;
 }): JSX.Element {
   const [drafts, setDrafts] = useState<DraftQuestion[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listDraftQuestions().then((all) => {
-      setDrafts(all.filter((q) => q.generation_run_id === runId));
+    listRunDraftsAction(runId).then((result) => {
+      if (!result.ok) {
+        setError(result.message ?? "Couldn't load what was generated.");
+        return;
+      }
+      setDrafts(result.data ?? []);
     });
   }, [runId]);
 
@@ -155,7 +159,8 @@ export function AiDraftedQuestionStep({
     <div className="step">
       <span className="stepLabel">4. What got drafted</span>
 
-      {drafts === null && <p className="hint">Loading…</p>}
+      {error && <div className="clientError">{error}</div>}
+      {drafts === null && !error && <p className="hint">Loading…</p>}
       {drafts !== null && drafts.length === 0 && (
         <p className="empty">
           The run reported {questionsGenerated} question(s) generated, but they're not showing up
