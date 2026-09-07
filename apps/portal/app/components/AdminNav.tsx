@@ -6,6 +6,7 @@ import { logoutAction } from "../login/actions";
 
 const LINKS = [
   { href: "/", label: "Dashboard" },
+  { href: "/onboard", label: "Onboard a question" },
   { href: "/questions", label: "Questions" },
   { href: "/topics", label: "Topics" },
   { href: "/review", label: "Review queue" },
