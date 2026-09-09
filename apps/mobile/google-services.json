@@ -12,7 +12,20 @@
           "package_name": "org.datapay.mobile"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "81908487704-2o4spsalaigvcu15vbg9587a7ugjra4s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "org.datapay.mobile",
+            "certificate_hash": "7ff6757e09139459ea6fd0a66724eae932f28f4d"
+          }
+        },
+        {
+          "client_id": "81908487704-qb35eifupnrf7a5c0rnimiba32m8kvae.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBJadg3EJ2WmNofxlDYh3kAJbGQGHZRkc4"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "81908487704-qb35eifupnrf7a5c0rnimiba32m8kvae.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

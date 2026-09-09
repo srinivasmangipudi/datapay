@@ -29,6 +29,7 @@ export function AdminNav(): JSX.Element | null {
     pathname === "/registry" ||
     pathname === "/privacy" ||
     pathname === "/delete-account" ||
+    pathname === "/child-safety" ||
     pathname.startsWith("/org/")
   )
     return null;

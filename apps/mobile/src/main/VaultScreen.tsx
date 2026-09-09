@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { completeOnboarding, ConsentCategory, getConsents, getMe, getZones, MemberProfile, setConsent, Zone } from "../api";
 import { ZonePickerScreen } from "../onboarding/ZonePickerScreen";
@@ -68,6 +68,12 @@ export function VaultScreen({ session, onLogout }: Props) {
     await setConsent(session.token, categoryId, granted);
   }
 
+  function reportConcern() {
+    Linking.openURL(
+      "mailto:srinivas@socratus.org?subject=" + encodeURIComponent("DataPay — report a concern")
+    );
+  }
+
   function confirmLogout() {
     Alert.alert(
       "Log out?",
@@ -125,6 +131,10 @@ export function VaultScreen({ session, onLogout }: Props) {
         </View>
       ))}
 
+      <TouchableOpacity style={styles.reportBtn} onPress={reportConcern} activeOpacity={0.8}>
+        <Text style={styles.reportText}>Report a concern</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.logoutBtn} onPress={confirmLogout} activeOpacity={0.8}>
         <Text style={styles.logoutText}>Log out</Text>
       </TouchableOpacity>
@@ -158,8 +168,17 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, paddingRight: 12 },
   rowName: { fontSize: 15, fontWeight: "600" },
   rowNameKn: { fontSize: 13, color: "#888", marginTop: 2 },
-  logoutBtn: {
+  reportBtn: {
     marginTop: 32,
+    paddingVertical: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#8A939B",
+    alignItems: "center",
+  },
+  reportText: { color: "#8A939B", fontWeight: "700", fontSize: 15 },
+  logoutBtn: {
+    marginTop: 12,
     marginBottom: 24,
     paddingVertical: 14,
     borderRadius: 999,

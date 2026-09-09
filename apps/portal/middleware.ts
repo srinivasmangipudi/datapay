@@ -11,9 +11,10 @@ const ORG_SESSION_COOKIE = "org_session";
 // this doesn't guard; a favicon or a shared-link preview needs to load
 // whether or not the viewer is signed in. /registry (SPEC.md §29) is
 // deliberately public too — it's the demand registry + opportunities page,
-// meant for anyone to see, not an ops tool. /privacy and /delete-account
-// are public for the same reason every app store requires them to be:
-// reachable without signing in to anything, including this portal.
+// meant for anyone to see, not an ops tool. /privacy, /delete-account, and
+// /child-safety are public for the same reason every app store requires
+// them to be: reachable without signing in to anything, including this
+// portal.
 export function middleware(request: NextRequest): NextResponse {
   const pathname = request.nextUrl.pathname;
 
@@ -52,6 +53,6 @@ export function middleware(request: NextRequest): NextResponse {
 
 export const config = {
   matcher: [
-    "/((?!login|registry|privacy|delete-account|_next/static|_next/image|favicon\\.ico|icon\\.png|apple-icon\\.png|og-image\\.png|mark-primary\\.svg|logo-tagline-asset\\.svg|site\\.webmanifest).*)",
+    "/((?!login|registry|privacy|delete-account|child-safety|_next/static|_next/image|favicon\\.ico|icon\\.png|apple-icon\\.png|og-image\\.png|mark-primary\\.svg|logo-tagline-asset\\.svg|site\\.webmanifest).*)",
   ],
 };
