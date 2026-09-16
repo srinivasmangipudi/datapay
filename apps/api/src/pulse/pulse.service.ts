@@ -107,9 +107,14 @@ export class PulseService {
          AND q.active_from <= now()
          AND (q.active_to IS NULL OR q.active_to > now())
          AND (q.zone_id IS NULL OR q.zone_id IN (SELECT id FROM member_zone_chain))
+         -- Once a member has answered a question, it's retired for them for
+         -- good — every question is a real ask of someone's time, and
+         -- re-serving the same one after it's already answered wastes that
+         -- for no benefit. (Previously scoped to same-day only, which meant
+         -- every answered question came right back the very next day.)
          AND NOT EXISTS (
            SELECT 1 FROM responses r
-           WHERE r.question_id = q.id AND r.alias_id = $1 AND r.answered_at::date = now()::date
+           WHERE r.question_id = q.id AND r.alias_id = $1
          )
          -- the Vault off-switch (consents.granted = false) is absolute: a revoked
          -- category's questions stop being offered, not just excluded from sharing.
