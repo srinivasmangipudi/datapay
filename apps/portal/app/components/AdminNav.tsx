@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/questions", label: "Questions" },
   { href: "/topics", label: "Topics" },
   { href: "/review", label: "Review queue" },
+  { href: "/product-review", label: "Product review" },
   { href: "/intelligence", label: "Area intelligence" },
   { href: "/snaps", label: "Snap verification" },
   { href: "/token-economy", label: "Token economy" },

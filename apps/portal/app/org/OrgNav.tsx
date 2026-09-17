@@ -17,6 +17,9 @@ export function OrgNav({ orgName }: { orgName: string | null }): JSX.Element | n
       <a href="/org/questions" className={`adminNavLink ${pathname === "/org/questions" ? "adminNavLinkOn" : ""}`}>
         Submit a question
       </a>
+      <a href="/org/products" className={`adminNavLink ${pathname === "/org/products" ? "adminNavLinkOn" : ""}`}>
+        Products
+      </a>
       <span className="adminNavSpacer" />
       <form action={orgLogoutAction}>
         <button type="submit" className="adminNavLogout">
