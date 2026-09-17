@@ -37,7 +37,7 @@ export function MainApp({ session, onLogout }: Props) {
       <View style={styles.screen}>
         {tab === "home" && <HomeScreen session={session} onNavigate={setTab} />}
         {tab === "pulse" && <PulseScreen session={session} />}
-        {tab === "products" && <ProductsScreen />}
+        {tab === "products" && <ProductsScreen session={session} />}
         {tab === "community" && <CommunityScreen session={session} />}
         {tab === "vault" && <VaultScreen session={session} onLogout={onLogout} />}
       </View>

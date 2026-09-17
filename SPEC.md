@@ -1843,3 +1843,72 @@ actual collective price), a rewritten `admin-overview.integration.spec.ts` (delt
 redeeming, and buying all move the right numbers, corpus fund only grows at confirmed delivery), and
 a new `corpus-fund.integration.spec.ts` (contribution only at delivery not redemption, idempotent
 replay, append-only enforcement).
+
+## 42. ORGANIZATION PRODUCT CATALOG + RESERVE-ONLY ORDERING (2026-09-17)
+
+**42A. Organizations, documented retroactively.** The `organizations` table/module (company accounts,
+a separate login from ops' shared portal password, question submission always landing as
+`draft`/`org_submitted`) shipped earlier without ever getting a SPEC.md section — this addendum is
+also the first place that gap gets closed, not just where the new feature starts.
+
+**42B. Orgs get a real product catalog, sourced by pointing at a sheet.** New tables `org_products`,
+`org_product_import_runs`, `product_orders` (`infra/migrations/core/1739664000000_org_products.js`) —
+deliberately separate from the ops-curated `products` registry (§5B), which is intentionally
+"scrambled" across suppliers so competing sellers can't see each other's pull-through; an org's own
+catalog has no such constraint. An org pastes a public Google Sheets link (auto-converted to its CSV
+export URL) or any plain CSV URL; the raw text is fed directly to Gemini
+(`apps/api/src/org-products/org-products.service.ts`, same lazy-provider/schema-validation pattern
+§20D's document-grounded question engine already uses) — no CSV/XLSX parsing library, the model
+handles inconsistent layouts. Extracted products upsert by `(organization_id, dedup_key)` (normalized
+name): a genuinely new product lands as `review_state='draft'` (ops must approve before it's
+orderable); a re-import matching an already-approved product updates price/quantity/photo in place
+without re-entering review — routine stock sync shouldn't need a human every time, a new listing
+should.
+
+**42C. Ordering is reserve-only — no in-app payment, on purpose.** No payment gateway exists anywhere
+in this codebase. Tapping "Order" (`POST /v1/products/:id/order`,
+`apps/api/src/products/products.service.ts`) locks the product row `FOR UPDATE` (same pattern as
+`OffersService.join()`), checks and decrements `quantity_available`, and records a `product_orders`
+row for the org to fulfill outside the app — cash, UPI, whatever they already use. A concurrent-order
+integration test proves two simultaneous orders for the last unit resolve to exactly one success,
+never an oversell.
+
+**42D. Identity-blind fulfillment, matching offers/§7 — an org never sees a member directly.** Ordering
+generates a `relay_token` and registers it with Vault (`POST /relay-map`, unchanged) *before* touching
+any stock — unlike `OffersService.join()`'s commit-then-register ordering, a failed registration (no
+delivery address on file) must never leave a phantom decrement with no order to show for it; this was
+caught by an integration test during development, not spotted by inspection. `resolveRelay` explicitly
+reserves resolution for a node operator, never a supplier (§7) — an org selling its own catalog has no
+PACS node standing between it and the member, so resolution here is **ops-mediated**: the portal's
+Product review page has a "Reveal delivery info" action (calls the existing `POST /v1/relay/resolve`
+proxy) for ops to relay to the org out-of-band, the same real-world-coordination posture §18/§19's
+producer payouts already use for physical goods. No new Vault code.
+
+**42E. Real photo storage, backed by a Railway bucket — proxied, not linked directly.** Every prior
+photo path in this codebase (`StorageProvider`, `apps/api/src/snaps/storage.provider.ts`) was a
+dev-only stub that discarded the image; product photos need to actually display, so a real
+`S3StorageProvider` was added behind the same interface. Railway Buckets turned out to have **no
+public-URL mode** ("Public buckets are currently not supported" — confirmed via Railway's own docs
+mid-build, after the original design assumed otherwise) — photos are served through a new
+`GET /v1/photos/products/:filename` proxy (`apps/api/src/photos/`) instead, which does the real
+`GetObject` call server-side. Uploads stay base64-in-JSON (the only upload convention that exists
+anywhere in this app), not multipart — there's nothing to justify introducing a second one.
+
+**42F. What's honestly not built yet, on purpose:** dedup is exact-normalized-name matching, not fuzzy
+— two listings for "Basmati Rice" and "Basmati rice 5kg" won't merge; XLSX/binary sheet files aren't
+parsed (Google Sheets links and plain CSV URLs are), since text-in-to-the-LLM was the whole point of
+avoiding a parsing library; a member's "My orders" is a plain list with no status-change
+notifications; there's no scheduled/recurring re-import, an org re-triggers it by hand each time.
+
+**Acceptance:** migration `1739664000000_org_products.js` plus a follow-up grant migration
+(`1739750400000_grant_org_products_to_core_app.js` — the exact same "created via superuser, never
+granted to `core_app`" bug §-noted for `organizations` recurred and was caught the same way, by a live
+500 in production) — both applied and verified against the real production database, not just local.
+10 new Jest integration tests, all green: sheet-import dedup/upsert (new-vs-updated counts, an
+already-approved product's review_state surviving a re-import untouched, a bad LLM response failing
+the run loudly with zero partial writes), the org-facing order query never selecting `alias_id`,
+browse zone-scoping, the no-delivery-address failure path leaving stock untouched, and the concurrent
+oversell race. Full existing API suite re-run clean alongside them. `tsc --noEmit` clean on
+`apps/api`, `apps/portal`, `apps/mobile`; `next build` clean on the portal. Verified end-to-end
+against live production (not just locally): an org created, logged in, listed a product, ops approved
+it, the admin/org-facing queries all returned the right shape — then the test data was removed.

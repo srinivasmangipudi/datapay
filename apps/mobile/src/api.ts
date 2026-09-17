@@ -111,6 +111,29 @@ export interface ConsentCategory {
   updatedAt: string | null;
 }
 
+export interface Product {
+  id: number;
+  nameEn: string;
+  nameKn: string | null;
+  descriptionEn: string | null;
+  unitSpec: string | null;
+  marketPricePaise: number;
+  salePricePaise: number;
+  quantityAvailable: number;
+  photoUrl: string | null;
+  organizationName: string;
+}
+
+export interface MyOrder {
+  id: number;
+  quantity: number;
+  unit_price_paise: number;
+  status: string;
+  created_at: string;
+  name_en: string;
+  photo_url: string | null;
+}
+
 export interface FundBalance {
   zoneId: string;
   balancePaise: number;
@@ -305,6 +328,37 @@ export function proposeFundProject(
   return request(
     "/v1/fund/projects",
     { method: "POST", body: JSON.stringify({ title, estimatePaise }) },
+    token
+  );
+}
+
+// Required before a product order can succeed (Vault refuses to register a
+// relay mapping otherwise) — re-submitting just adds a newer address, which
+// registerRelay always uses (most-recent-first), so this doubles as "update
+// my delivery address" with no separate endpoint needed.
+export function setDeliveryAddress(token: string, address: string): Promise<{ ok: true }> {
+  return request("/v1/me/delivery-address", { method: "POST", body: JSON.stringify({ address }) }, token);
+}
+
+export function getProducts(token: string): Promise<Product[]> {
+  return request("/v1/products", {}, token);
+}
+
+export function getMyOrders(token: string): Promise<MyOrder[]> {
+  return request("/v1/products/orders", {}, token);
+}
+
+// Reserve-only — no in-app payment. A failed order (e.g. no delivery address
+// on file) touches nothing: the client should send the member to Vault's
+// set-delivery-address flow and let them retry.
+export function orderProduct(
+  token: string,
+  productId: number,
+  quantity: number
+): Promise<{ orderId: number; relayToken: string }> {
+  return request(
+    `/v1/products/${productId}/order`,
+    { method: "POST", body: JSON.stringify({ quantity }) },
     token
   );
 }
