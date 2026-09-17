@@ -1,63 +1,107 @@
 import { DataPayLogo } from "../components/DataPayLogo";
 import { PublicNav } from "../components/PublicNav";
+import { getLang } from "../lib/language";
 
-export const dynamic = "force-static";
+const CONTENT = {
+  en: {
+    tagline: "Your data is your asset",
+    title: "About DataPay",
+    ideaH2: "The idea",
+    ideaP1:
+      "Every day, households already generate the data that describes what a community actually needs — what they're buying, what they're running low on, what they'd pay for. That data has always been valuable to someone. Historically, it just hasn't been valuable to the household that generated it.",
+    ideaP2:
+      "DataPay changes who benefits. Households answer a few short questions a day and browse a real product catalog, earning tokens either way. Organizations get a direct, honest channel to that same community — never a household's identity, only an aggregated signal real enough to act on.",
+    wontH2: "What we won't do",
+    wont: [
+      "Sell or share an individual household's answers, identity, or location.",
+      "Publish a number before at least 50 households stand behind it.",
+      "Let an organization see a member directly — fulfillment stays identity-blind.",
+    ],
+    wontLast: "Pretend a feature is finished when it isn't — see our",
+    wontLastLink: "privacy policy",
+    wontLastEnd: "for exactly what's built today and what's still honestly in progress.",
+    whoH2: "Who it's for",
+    whoP:
+      "Household members who want a small, honest reward for information they're already generating — and organizations, brands, and local suppliers who want real demand signals instead of guesses, and a direct way to reach the community that produced them.",
+    contactP1: "Questions?",
+    contactP2: "— or see the",
+    contactP3: "for what's already being published.",
+    registryLink: "public demand registry",
+  },
+  kn: {
+    tagline: "ನಿಮ್ಮ ಡೇಟಾ ನಿಮ್ಮ ಆಸ್ತಿ",
+    title: "DataPay ಬಗ್ಗೆ",
+    ideaH2: "ಆಲೋಚನೆ",
+    ideaP1:
+      "ಪ್ರತಿ ದಿನ, ಮನೆಗಳು ಈಗಾಗಲೇ ಒಂದು ಸಮುದಾಯಕ್ಕೆ ನಿಜವಾಗಿ ಏನು ಬೇಕು ಎಂಬುದನ್ನು ವಿವರಿಸುವ ಡೇಟಾವನ್ನು ಉತ್ಪಾದಿಸುತ್ತವೆ — ಅವರು ಏನು ಖರೀದಿಸುತ್ತಿದ್ದಾರೆ, ಏನು ಕಡಿಮೆಯಾಗುತ್ತಿದೆ, ಯಾವುದಕ್ಕೆ ಪಾವತಿಸುತ್ತಾರೆ. ಆ ಡೇಟಾ ಯಾವಾಗಲೂ ಯಾರಿಗಾದರೂ ಮೌಲ್ಯಯುತವಾಗಿತ್ತು. ಐತಿಹಾಸಿಕವಾಗಿ, ಅದನ್ನು ಉತ್ಪಾದಿಸಿದ ಮನೆಗೆ ಮಾತ್ರ ಅದು ಮೌಲ್ಯಯುತವಾಗಿರಲಿಲ್ಲ.",
+    ideaP2:
+      "DataPay ಯಾರು ಲಾಭ ಪಡೆಯುತ್ತಾರೆ ಎಂಬುದನ್ನು ಬದಲಾಯಿಸುತ್ತದೆ. ಮನೆಗಳು ದಿನಕ್ಕೆ ಕೆಲವು ಸಣ್ಣ ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರಿಸುತ್ತವೆ ಮತ್ತು ನಿಜವಾದ ಉತ್ಪನ್ನ ಪಟ್ಟಿಯನ್ನು ಬ್ರೌಸ್ ಮಾಡುತ್ತವೆ, ಎರಡೂ ರೀತಿಯಲ್ಲಿ ಟೋಕನ್‌ಗಳನ್ನು ಗಳಿಸುತ್ತವೆ. ಸಂಸ್ಥೆಗಳಿಗೆ ಅದೇ ಸಮುದಾಯಕ್ಕೆ ನೇರ, ಪ್ರಾಮಾಣಿಕ ಮಾರ್ಗ ಸಿಗುತ್ತದೆ — ಎಂದಿಗೂ ಮನೆಯ ಗುರುತು ಅಲ್ಲ, ಕ್ರಮ ಕೈಗೊಳ್ಳಲು ಸಾಕಷ್ಟು ನಿಜವಾದ ಒಟ್ಟುಗೂಡಿಸಿದ ಸಂಕೇತ ಮಾತ್ರ.",
+    wontH2: "ನಾವು ಮಾಡದಿರುವುದು",
+    wont: [
+      "ಒಂದು ಮನೆಯ ಉತ್ತರಗಳು, ಗುರುತು, ಅಥವಾ ಸ್ಥಳವನ್ನು ಮಾರಾಟ ಮಾಡುವುದು ಅಥವಾ ಹಂಚಿಕೊಳ್ಳುವುದು.",
+      "ಕನಿಷ್ಠ 50 ಮನೆಗಳು ಬೆಂಬಲಿಸುವ ಮೊದಲು ಒಂದು ಸಂಖ್ಯೆಯನ್ನು ಪ್ರಕಟಿಸುವುದು.",
+      "ಒಂದು ಸಂಸ್ಥೆಗೆ ಸದಸ್ಯನನ್ನು ನೇರವಾಗಿ ನೋಡಲು ಬಿಡುವುದು — ಪೂರೈಕೆ ಯಾವಾಗಲೂ ಗುರುತು-ಕುರುಡಾಗಿರುತ್ತದೆ.",
+    ],
+    wontLast: "ಒಂದು ವೈಶಿಷ್ಟ್ಯ ಮುಗಿದಿಲ್ಲದಿದ್ದಾಗ ಮುಗಿದಿದೆ ಎಂದು ನಟಿಸುವುದು — ಇಂದು ಏನು ನಿರ್ಮಿಸಲಾಗಿದೆ ಮತ್ತು ಇನ್ನೂ ಪ್ರಾಮಾಣಿಕವಾಗಿ ಪ್ರಗತಿಯಲ್ಲಿದೆ ಎಂಬುದನ್ನು ನಮ್ಮ",
+    wontLastLink: "ಗೌಪ್ಯತಾ ನೀತಿ",
+    wontLastEnd: "ಯಲ್ಲಿ ನೋಡಿ.",
+    whoH2: "ಇದು ಯಾರಿಗಾಗಿ",
+    whoP:
+      "ಈಗಾಗಲೇ ಉತ್ಪಾದಿಸುತ್ತಿರುವ ಮಾಹಿತಿಗಾಗಿ ಸಣ್ಣ, ಪ್ರಾಮಾಣಿಕ ಬಹುಮಾನ ಬಯಸುವ ಮನೆಯ ಸದಸ್ಯರು — ಮತ್ತು ಊಹೆಗಳ ಬದಲು ನಿಜವಾದ ಬೇಡಿಕೆ ಸಂಕೇತಗಳನ್ನು ಬಯಸುವ ಸಂಸ್ಥೆಗಳು, ಬ್ರ್ಯಾಂಡ್‌ಗಳು, ಮತ್ತು ಸ್ಥಳೀಯ ಪೂರೈಕೆದಾರರು, ಮತ್ತು ಅವುಗಳನ್ನು ಉತ್ಪಾದಿಸಿದ ಸಮುದಾಯವನ್ನು ತಲುಪಲು ನೇರ ಮಾರ್ಗ.",
+    contactP1: "ಪ್ರಶ್ನೆಗಳಿವೆಯೇ?",
+    contactP2: "— ಅಥವಾ ಈಗಾಗಲೇ ಪ್ರಕಟವಾಗುತ್ತಿರುವುದನ್ನು ನೋಡಲು",
+    contactP3: "ನೋಡಿ.",
+    registryLink: "ಸಾರ್ವಜನಿಕ ಬೇಡಿಕೆ ನೋಂದಣಿ",
+  },
+} as const;
+
+export const dynamic = "force-dynamic";
 
 export default function AboutPage(): JSX.Element {
+  const lang = getLang();
+  const t = CONTENT[lang];
+
   return (
     <>
-      <PublicNav />
+      <PublicNav lang={lang} />
       <main className="page">
         <section className="hero">
           <span className="logoLight">
-            <DataPayLogo size={44} tagline="Your data is your asset" />
+            <DataPayLogo size={44} tagline={t.tagline} />
           </span>
           <span className="logoDark">
-            <DataPayLogo size={44} dark tagline="Your data is your asset" />
+            <DataPayLogo size={44} dark tagline={t.tagline} />
           </span>
-          <h1>About DataPay</h1>
+          <h1>{t.title}</h1>
         </section>
 
         <section className="section">
-          <h2>The idea</h2>
-          <p>
-            Every day, households already generate the data that describes what a community
-            actually needs — what they're buying, what they're running low on, what they'd pay
-            for. That data has always been valuable to someone. Historically, it just hasn't been
-            valuable to the household that generated it.
-          </p>
-          <p>
-            DataPay changes who benefits. Households answer a few short questions a day and
-            browse a real product catalog, earning tokens either way. Organizations get a direct,
-            honest channel to that same community — never a household's identity, only an
-            aggregated signal real enough to act on.
-          </p>
+          <h2>{t.ideaH2}</h2>
+          <p>{t.ideaP1}</p>
+          <p>{t.ideaP2}</p>
         </section>
 
         <section className="section">
-          <h2>What we won't do</h2>
+          <h2>{t.wontH2}</h2>
           <ul>
-            <li>Sell or share an individual household's answers, identity, or location.</li>
-            <li>Publish a number before at least 50 households stand behind it.</li>
-            <li>Let an organization see a member directly — fulfillment stays identity-blind.</li>
-            <li>Pretend a feature is finished when it isn't — see our <a href="/privacy">privacy policy</a> for exactly what's built today and what's still honestly in progress.</li>
+            {t.wont.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+            <li>
+              {t.wontLast} <a href="/privacy">{t.wontLastLink}</a> {t.wontLastEnd}
+            </li>
           </ul>
         </section>
 
         <section className="section">
-          <h2>Who it's for</h2>
-          <p>
-            Household members who want a small, honest reward for information they're already
-            generating — and organizations, brands, and local suppliers who want real demand
-            signals instead of guesses, and a direct way to reach the community that produced
-            them.
-          </p>
+          <h2>{t.whoH2}</h2>
+          <p>{t.whoP}</p>
         </section>
 
         <section className="section">
           <p>
-            Questions? <a href="mailto:srinivas@socratus.org">srinivas@socratus.org</a> — or see the{" "}
-            <a href="/registry">public demand registry</a> for what's already being published.
+            {t.contactP1} <a href="mailto:srinivas@socratus.org">srinivas@socratus.org</a> {t.contactP2}{" "}
+            <a href="/registry">{t.registryLink}</a> {t.contactP3}
           </p>
         </section>
 

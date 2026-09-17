@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { getLang } from "./lib/language";
 import { MarketingHome } from "./MarketingHome";
 import { OpsDashboard } from "./OpsDashboard";
 
@@ -13,5 +14,5 @@ export default async function RootPage(): Promise<JSX.Element> {
   const cookie = cookies().get("portal_session")?.value;
   const isOpsSession = Boolean(sessionSecret) && cookie === sessionSecret;
 
-  return isOpsSession ? <OpsDashboard /> : <MarketingHome />;
+  return isOpsSession ? <OpsDashboard /> : <MarketingHome lang={getLang()} />;
 }

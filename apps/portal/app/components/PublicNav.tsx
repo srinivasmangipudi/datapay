@@ -1,13 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { Lang } from "../lib/lang-constants";
 import { DataPayMark } from "./DataPayLogo";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
-// Shared across every public marketing page (home, about) — a real navbar
-// with proper CTAs, unlike the ops-only AdminNav this deliberately doesn't
-// reuse (different audience, different links, no shared-password gate).
-export function PublicNav(): JSX.Element {
+const T = {
+  en: { how: "How it works", forOrgs: "For organizations", about: "About", privacy: "Privacy", login: "Log in", signup: "Sign up" },
+  kn: { how: "ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ", forOrgs: "ಸಂಸ್ಥೆಗಳಿಗಾಗಿ", about: "ನಮ್ಮ ಬಗ್ಗೆ", privacy: "ಗೌಪ್ಯತೆ", login: "ಲಾಗಿನ್", signup: "ಸೈನ್ ಅಪ್" },
+} as const;
+
+// Shared across every public marketing page (home, about, privacy, ...) — a
+// real navbar with proper CTAs and a language switcher, unlike the ops-only
+// AdminNav this deliberately doesn't reuse (different audience, different
+// links, no shared-password gate).
+export function PublicNav({ lang }: { lang: Lang }): JSX.Element {
   const [scrolled, setScrolled] = useState(false);
+  const t = T[lang];
 
   useEffect(() => {
     function onScroll() {
@@ -25,17 +34,18 @@ export function PublicNav(): JSX.Element {
           <span>DataPay</span>
         </a>
         <div className="publicNavLinks">
-          <a href="/#how-it-works">How it works</a>
-          <a href="/#for-organizations">For organizations</a>
-          <a href="/about">About</a>
-          <a href="/privacy">Privacy</a>
+          <a href="/#how-it-works">{t.how}</a>
+          <a href="/#for-organizations">{t.forOrgs}</a>
+          <a href="/about">{t.about}</a>
+          <a href="/privacy">{t.privacy}</a>
         </div>
         <div className="publicNavActions">
+          <LanguageSwitcher lang={lang} />
           <a href="/org/login" className="publicNavGhost">
-            Log in
+            {t.login}
           </a>
           <a href="/org/signup" className="publicNavCta">
-            Sign up
+            {t.signup}
           </a>
         </div>
       </nav>
@@ -61,8 +71,8 @@ export function PublicNav(): JSX.Element {
         .publicNavGhost { color: var(--pn-ink, #101418); text-decoration: none; font-size: 14px; font-weight: 600; padding: 9px 14px; }
         .publicNavCta { background: #0E7A5C; color: #fff; text-decoration: none; font-size: 14px; font-weight: 700; padding: 10px 20px; border-radius: 999px; white-space: nowrap; }
         .publicNavCta:hover { background: #0B6249; }
-        @media (max-width: 720px) {
-          .publicNav { padding: 14px 18px; gap: 12px; }
+        @media (max-width: 780px) {
+          .publicNav { padding: 14px 18px; gap: 10px; }
           .publicNavLinks { display: none; }
           .publicNavGhost { display: none; }
         }

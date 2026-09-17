@@ -1,104 +1,193 @@
 import { DataPayLogo } from "./components/DataPayLogo";
 import { PublicNav } from "./components/PublicNav";
+import type { Lang } from "./lib/language";
 import { SystemDiagram } from "./SystemDiagram";
 
-const STEPS = [
-  {
-    title: "Answer & browse",
-    text: "A few daily questions, a token reward for each — plus a real product catalog to browse and reserve.",
-    icon: (
-      <path
-        d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    ),
-  },
-  {
-    title: "Aggregated privately",
-    text: "Every answer is tied to a private alias only — never a name or phone number an organization could see.",
-    icon: (
-      <path
-        d="M12 2l8 3.5v5c0 5-3.4 8.7-8 10.5-4.6-1.8-8-5.5-8-10.5v-5L12 2z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    ),
-  },
-  {
-    title: "Real signals surface",
-    text: "A number only ever publishes once at least 50 households stand behind it — never one household alone.",
-    icon: (
-      <path
-        d="M4 19V9M11 19V4M18 19v-7"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    ),
-  },
-  {
-    title: "Organizations respond",
-    text: "Ask priced questions, or list products directly — households browse and reserve, no middleman.",
-    icon: (
-      <path
-        d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    ),
-  },
+const ICONS = [
+  <path
+    key="1"
+    d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />,
+  <path
+    key="2"
+    d="M12 2l8 3.5v5c0 5-3.4 8.7-8 10.5-4.6-1.8-8-5.5-8-10.5v-5L12 2z"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />,
+  <path
+    key="3"
+    d="M4 19V9M11 19V4M18 19v-7"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />,
+  <path
+    key="4"
+    d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />,
 ];
 
-export function MarketingHome(): JSX.Element {
+// Kannada strings below are a first machine-assisted draft, same posture as
+// apps/mobile/src/i18n/strings.ts's own header comment: a starting point,
+// not a finished translation — worth a native-speaker review before being
+// treated as final copy. The SVG system diagram's own internal labels stay
+// English-only for now; translating fixed-width SVG text risks visual
+// overflow that needs per-language layout verification this pass didn't do.
+const CONTENT = {
+  en: {
+    tagline: "Your data is your asset",
+    heroTitle: "Real household demand, direct from real households",
+    heroLede:
+      "DataPay turns a few daily questions from local households into honest, aggregated demand signals — and gives organizations a direct channel to that same community: run priced survey questions, or list your own products for households to browse and reserve.",
+    ctaSignup: "Sign up your organization",
+    ctaHowItWorks: "See how it works",
+    howEyebrow: "How it works",
+    howTitle: "From a household's answer to a real business decision",
+    steps: [
+      { title: "Answer & browse", text: "A few daily questions, a token reward for each — plus a real product catalog to browse and reserve." },
+      { title: "Aggregated privately", text: "Every answer is tied to a private alias only — never a name or phone number an organization could see." },
+      { title: "Real signals surface", text: "A number only ever publishes once at least 50 households stand behind it — never one household alone." },
+      { title: "Organizations respond", text: "Ask priced questions, or list products directly — households browse and reserve, no middleman." },
+    ],
+    systemEyebrow: "The system",
+    systemTitle: "Two flows, always — data up, value back down",
+    systemLede: "Households never deal with organizations directly, and organizations never see a household directly. DataPay sits in between, on purpose.",
+    orgsEyebrow: "For organizations",
+    orgsTitle: "A direct channel to real local demand",
+    cards: [
+      { title: "Ask real households real questions", text: "Set your own token reward per question. Every submission is reviewed before it reaches anyone — never auto-published." },
+      { title: "List your own products", text: "Point at a spreadsheet or add items by hand; households browse and reserve directly. Fulfillment happens outside the app — no in-app payment to set up." },
+      { title: "See real demand, not guesses", text: "Aggregated signals only ever publish once at least 50 households stand behind a number — never one household's data alone." },
+    ],
+    protectionEyebrow: "Data protection",
+    protectionTitle: "Privacy isn't a policy here — it's the architecture",
+    protectionItems: [
+      { title: "Private alias, always.", text: "Organizations only ever see an alias — never a name, phone number, or address." },
+      { title: "Cohort floor of 50.", text: "No number publishes until at least 50 households stand behind it." },
+      { title: "No raw location stored.", text: "Approximate area only, used to match the nearest zone — never exact coordinates." },
+      { title: "You control sharing.", text: "Every category of data sharing can be turned off, any time, in the app." },
+    ],
+    protectionLink: "Read the full privacy policy →",
+    aboutEyebrow: "About",
+    aboutTitle: "Built for households first",
+    aboutLede:
+      "DataPay started from a simple idea: the data that already describes what a community needs is valuable, and the household generating it should be the one who benefits — in tokens, in better local availability, and in never being sold as a name and a phone number.",
+    aboutLink: "More about DataPay →",
+    finalTitle: "Ready to reach real local demand?",
+    ctaRegistry: "See the public demand registry",
+    footerLinks: {
+      about: "About",
+      privacy: "Privacy",
+      delete: "Delete account",
+      childSafety: "Child safety",
+      registry: "Demand registry",
+      orgLogin: "Organization login",
+      contact: "Contact",
+    },
+  },
+  kn: {
+    tagline: "ನಿಮ್ಮ ಡೇಟಾ ನಿಮ್ಮ ಆಸ್ತಿ",
+    heroTitle: "ನಿಜವಾದ ಮನೆಗಳ ನಿಜವಾದ ಬೇಡಿಕೆ, ನೇರವಾಗಿ ನಿಮಗೆ",
+    heroLede:
+      "DataPay ಸ್ಥಳೀಯ ಮನೆಗಳ ಕೆಲವು ದೈನಂದಿನ ಪ್ರಶ್ನೆಗಳನ್ನು ಪ್ರಾಮಾಣಿಕ, ಒಟ್ಟುಗೂಡಿಸಿದ ಬೇಡಿಕೆ ಸಂಕೇತಗಳಾಗಿ ಪರಿವರ್ತಿಸುತ್ತದೆ — ಮತ್ತು ಅದೇ ಸಮುದಾಯಕ್ಕೆ ಸಂಸ್ಥೆಗಳಿಗೆ ನೇರ ಮಾರ್ಗವನ್ನು ನೀಡುತ್ತದೆ: ಬೆಲೆ ನಿಗದಿತ ಸಮೀಕ್ಷೆ ಪ್ರಶ್ನೆಗಳನ್ನು ನಡೆಸಿ, ಅಥವಾ ಮನೆಗಳು ವೀಕ್ಷಿಸಲು ಮತ್ತು ಕಾಯ್ದಿರಿಸಲು ನಿಮ್ಮ ಸ್ವಂತ ಉತ್ಪನ್ನಗಳನ್ನು ಪಟ್ಟಿ ಮಾಡಿ.",
+    ctaSignup: "ನಿಮ್ಮ ಸಂಸ್ಥೆಯನ್ನು ಸೈನ್ ಅಪ್ ಮಾಡಿ",
+    ctaHowItWorks: "ಇದು ಹೇಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ ಎಂದು ನೋಡಿ",
+    howEyebrow: "ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ",
+    howTitle: "ಒಂದು ಮನೆಯ ಉತ್ತರದಿಂದ ನಿಜವಾದ ವ್ಯಾಪಾರ ನಿರ್ಧಾರದವರೆಗೆ",
+    steps: [
+      { title: "ಉತ್ತರಿಸಿ ಮತ್ತು ಬ್ರೌಸ್ ಮಾಡಿ", text: "ಕೆಲವು ದೈನಂದಿನ ಪ್ರಶ್ನೆಗಳು, ಪ್ರತಿಯೊಂದಕ್ಕೂ ಟೋಕನ್ ಬಹುಮಾನ — ಜೊತೆಗೆ ಬ್ರೌಸ್ ಮಾಡಲು ಮತ್ತು ಕಾಯ್ದಿರಿಸಲು ನಿಜವಾದ ಉತ್ಪನ್ನ ಪಟ್ಟಿ." },
+      { title: "ಖಾಸಗಿಯಾಗಿ ಒಟ್ಟುಗೂಡಿಸಲಾಗಿದೆ", text: "ಪ್ರತಿ ಉತ್ತರವು ಖಾಸಗಿ ಅಲಿಯಾಸ್‌ಗೆ ಮಾತ್ರ ಸಂಬಂಧಿಸಿದೆ — ಸಂಸ್ಥೆಯು ನೋಡಬಹುದಾದ ಹೆಸರು ಅಥವಾ ಫೋನ್ ಸಂಖ್ಯೆ ಎಂದಿಗೂ ಅಲ್ಲ." },
+      { title: "ನಿಜವಾದ ಸಂಕೇತಗಳು ಹೊರಹೊಮ್ಮುತ್ತವೆ", text: "ಕನಿಷ್ಠ 50 ಮನೆಗಳು ಬೆಂಬಲಿಸಿದ ನಂತರವೇ ಒಂದು ಸಂಖ್ಯೆ ಪ್ರಕಟವಾಗುತ್ತದೆ — ಎಂದಿಗೂ ಒಂದೇ ಮನೆ ಅಲ್ಲ." },
+      { title: "ಸಂಸ್ಥೆಗಳು ಪ್ರತಿಕ್ರಿಯಿಸುತ್ತವೆ", text: "ಬೆಲೆ ನಿಗದಿತ ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ, ಅಥವಾ ಉತ್ಪನ್ನಗಳನ್ನು ನೇರವಾಗಿ ಪಟ್ಟಿ ಮಾಡಿ — ಮನೆಗಳು ಬ್ರೌಸ್ ಮಾಡಿ ಕಾಯ್ದಿರಿಸುತ್ತವೆ, ಯಾವುದೇ ಮಧ್ಯವರ್ತಿ ಇಲ್ಲ." },
+    ],
+    systemEyebrow: "ವ್ಯವಸ್ಥೆ",
+    systemTitle: "ಎರಡು ಹರಿವುಗಳು, ಯಾವಾಗಲೂ — ಡೇಟಾ ಮೇಲಕ್ಕೆ, ಮೌಲ್ಯ ಕೆಳಗೆ",
+    systemLede: "ಮನೆಗಳು ಎಂದಿಗೂ ಸಂಸ್ಥೆಗಳೊಂದಿಗೆ ನೇರವಾಗಿ ವ್ಯವಹರಿಸುವುದಿಲ್ಲ, ಮತ್ತು ಸಂಸ್ಥೆಗಳು ಎಂದಿಗೂ ಮನೆಯನ್ನು ನೇರವಾಗಿ ನೋಡುವುದಿಲ್ಲ. DataPay ಉದ್ದೇಶಪೂರ್ವಕವಾಗಿ ನಡುವೆ ಇರುತ್ತದೆ.",
+    orgsEyebrow: "ಸಂಸ್ಥೆಗಳಿಗಾಗಿ",
+    orgsTitle: "ನಿಜವಾದ ಸ್ಥಳೀಯ ಬೇಡಿಕೆಗೆ ನೇರ ಮಾರ್ಗ",
+    cards: [
+      { title: "ನಿಜವಾದ ಮನೆಗಳಿಗೆ ನಿಜವಾದ ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ", text: "ಪ್ರತಿ ಪ್ರಶ್ನೆಗೆ ನಿಮ್ಮ ಸ್ವಂತ ಟೋಕನ್ ಬಹುಮಾನವನ್ನು ನಿಗದಿಪಡಿಸಿ. ಪ್ರತಿ ಸಲ್ಲಿಕೆಯನ್ನು ಯಾರಿಗಾದರೂ ತಲುಪುವ ಮೊದಲು ಪರಿಶೀಲಿಸಲಾಗುತ್ತದೆ — ಎಂದಿಗೂ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಪ್ರಕಟವಾಗುವುದಿಲ್ಲ." },
+      { title: "ನಿಮ್ಮ ಸ್ವಂತ ಉತ್ಪನ್ನಗಳನ್ನು ಪಟ್ಟಿ ಮಾಡಿ", text: "ಸ್ಪ್ರೆಡ್‌ಶೀಟ್ ಲಿಂಕ್ ನೀಡಿ ಅಥವಾ ಕೈಯಿಂದ ಐಟಂಗಳನ್ನು ಸೇರಿಸಿ; ಮನೆಗಳು ನೇರವಾಗಿ ಬ್ರೌಸ್ ಮಾಡಿ ಕಾಯ್ದಿರಿಸುತ್ತವೆ. ಪೂರೈಕೆ ಅಪ್ಲಿಕೇಶನ್‌ನ ಹೊರಗೆ ನಡೆಯುತ್ತದೆ — ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ಪಾವತಿ ಸೆಟಪ್ ಮಾಡುವ ಅಗತ್ಯವಿಲ್ಲ." },
+      { title: "ಊಹೆಗಳಲ್ಲ, ನಿಜವಾದ ಬೇಡಿಕೆಯನ್ನು ನೋಡಿ", text: "ಒಟ್ಟುಗೂಡಿಸಿದ ಸಂಕೇತಗಳು ಕನಿಷ್ಠ 50 ಮನೆಗಳು ಒಂದು ಸಂಖ್ಯೆಯನ್ನು ಬೆಂಬಲಿಸಿದಾಗ ಮಾತ್ರ ಪ್ರಕಟವಾಗುತ್ತವೆ — ಎಂದಿಗೂ ಒಂದೇ ಮನೆಯ ಡೇಟಾ ಅಲ್ಲ." },
+    ],
+    protectionEyebrow: "ಡೇಟಾ ಸಂರಕ್ಷಣೆ",
+    protectionTitle: "ಗೌಪ್ಯತೆ ಇಲ್ಲಿ ಕೇವಲ ನೀತಿಯಲ್ಲ — ಅದು ವಿನ್ಯಾಸವೇ ಆಗಿದೆ",
+    protectionItems: [
+      { title: "ಯಾವಾಗಲೂ ಖಾಸಗಿ ಅಲಿಯಾಸ್.", text: "ಸಂಸ್ಥೆಗಳು ಅಲಿಯಾಸ್ ಅನ್ನು ಮಾತ್ರ ನೋಡುತ್ತವೆ — ಹೆಸರು, ಫೋನ್ ಸಂಖ್ಯೆ ಅಥವಾ ವಿಳಾಸ ಎಂದಿಗೂ ಅಲ್ಲ." },
+      { title: "50ರ ಕನಿಷ್ಠ ಗುಂಪು ಮಿತಿ.", text: "ಕನಿಷ್ಠ 50 ಮನೆಗಳು ಬೆಂಬಲಿಸುವವರೆಗೆ ಯಾವುದೇ ಸಂಖ್ಯೆ ಪ್ರಕಟವಾಗುವುದಿಲ್ಲ." },
+      { title: "ನಿಖರ ಸ್ಥಳವನ್ನು ಸಂಗ್ರಹಿಸುವುದಿಲ್ಲ.", text: "ಅಂದಾಜು ಪ್ರದೇಶ ಮಾತ್ರ, ಹತ್ತಿರದ ವಲಯವನ್ನು ಹೊಂದಿಸಲು ಬಳಸಲಾಗುತ್ತದೆ — ನಿಖರ ನಿರ್ದೇಶಾಂಕಗಳು ಎಂದಿಗೂ ಅಲ್ಲ." },
+      { title: "ಹಂಚಿಕೆಯನ್ನು ನೀವೇ ನಿಯಂತ್ರಿಸುತ್ತೀರಿ.", text: "ಡೇಟಾ ಹಂಚಿಕೆಯ ಪ್ರತಿಯೊಂದು ವರ್ಗವನ್ನು ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ಯಾವುದೇ ಸಮಯದಲ್ಲಿ ಆಫ್ ಮಾಡಬಹುದು." },
+    ],
+    protectionLink: "ಸಂಪೂರ್ಣ ಗೌಪ್ಯತಾ ನೀತಿಯನ್ನು ಓದಿ →",
+    aboutEyebrow: "ನಮ್ಮ ಬಗ್ಗೆ",
+    aboutTitle: "ಮೊದಲು ಮನೆಗಳಿಗಾಗಿ ನಿರ್ಮಿಸಲಾಗಿದೆ",
+    aboutLede:
+      "DataPay ಒಂದು ಸರಳ ಆಲೋಚನೆಯಿಂದ ಪ್ರಾರಂಭವಾಯಿತು: ಒಂದು ಸಮುದಾಯಕ್ಕೆ ಏನು ಬೇಕು ಎಂಬುದನ್ನು ಈಗಾಗಲೇ ವಿವರಿಸುವ ಡೇಟಾ ಮೌಲ್ಯಯುತವಾಗಿದೆ, ಮತ್ತು ಅದನ್ನು ಉತ್ಪಾದಿಸುವ ಮನೆಯೇ ಅದರ ಲಾಭ ಪಡೆಯಬೇಕು — ಟೋಕನ್‌ಗಳಲ್ಲಿ, ಉತ್ತಮ ಸ್ಥಳೀಯ ಲಭ್ಯತೆಯಲ್ಲಿ, ಮತ್ತು ಹೆಸರು ಮತ್ತು ಫೋನ್ ಸಂಖ್ಯೆಯಾಗಿ ಎಂದಿಗೂ ಮಾರಾಟವಾಗದಿರುವುದರಲ್ಲಿ.",
+    aboutLink: "DataPay ಬಗ್ಗೆ ಇನ್ನಷ್ಟು →",
+    finalTitle: "ನಿಜವಾದ ಸ್ಥಳೀಯ ಬೇಡಿಕೆಯನ್ನು ತಲುಪಲು ಸಿದ್ಧರಿದ್ದೀರಾ?",
+    ctaRegistry: "ಸಾರ್ವಜನಿಕ ಬೇಡಿಕೆ ನೋಂದಣಿಯನ್ನು ನೋಡಿ",
+    footerLinks: {
+      about: "ನಮ್ಮ ಬಗ್ಗೆ",
+      privacy: "ಗೌಪ್ಯತೆ",
+      delete: "ಖಾತೆ ಅಳಿಸಿ",
+      childSafety: "ಮಕ್ಕಳ ಸುರಕ್ಷತೆ",
+      registry: "ಬೇಡಿಕೆ ನೋಂದಣಿ",
+      orgLogin: "ಸಂಸ್ಥೆ ಲಾಗಿನ್",
+      contact: "ಸಂಪರ್ಕಿಸಿ",
+    },
+  },
+} as const;
+
+export function MarketingHome({ lang }: { lang: Lang }): JSX.Element {
+  const t = CONTENT[lang];
+
   return (
     <>
-      <PublicNav />
+      <PublicNav lang={lang} />
       <main className="mkPage">
         <section className="mkHero">
           <span className="mkLogoLight">
-            <DataPayLogo size={52} tagline="Your data is your asset" />
+            <DataPayLogo size={52} tagline={t.tagline} />
           </span>
           <span className="mkLogoDark">
-            <DataPayLogo size={52} dark tagline="Your data is your asset" />
+            <DataPayLogo size={52} dark tagline={t.tagline} />
           </span>
-          <h1>Real household demand, direct from real households</h1>
-          <p className="mkLede">
-            DataPay turns a few daily questions from local households into honest, aggregated
-            demand signals — and gives organizations a direct channel to that same community: run
-            priced survey questions, or list your own products for households to browse and
-            reserve.
-          </p>
+          <h1>{t.heroTitle}</h1>
+          <p className="mkLede">{t.heroLede}</p>
           <div className="mkCtaRow">
             <a href="/org/signup" className="mkCtaPrimary">
-              Sign up your organization
+              {t.ctaSignup}
             </a>
             <a href="#how-it-works" className="mkCtaSecondary">
-              See how it works
+              {t.ctaHowItWorks}
             </a>
           </div>
         </section>
 
         <section id="how-it-works" className="mkSection">
-          <p className="mkEyebrow">How it works</p>
-          <h2>From a household's answer to a real business decision</h2>
+          <p className="mkEyebrow">{t.howEyebrow}</p>
+          <h2>{t.howTitle}</h2>
           <div className="mkSteps">
-            {STEPS.map((s, i) => (
+            {t.steps.map((s, i) => (
               <div className="mkStep" key={s.title}>
                 <span className="mkStepNum">{i + 1}</span>
                 <svg className="mkStepIcon" viewBox="0 0 24 24" width="26" height="26">
-                  {s.icon}
+                  {ICONS[i]}
                 </svg>
                 <h3>{s.title}</h3>
                 <p>{s.text}</p>
@@ -108,93 +197,62 @@ export function MarketingHome(): JSX.Element {
         </section>
 
         <section className="mkSection mkSectionDiagram">
-          <p className="mkEyebrow">The system</p>
-          <h2>Two flows, always — data up, value back down</h2>
-          <p className="mkSectionLede">
-            Households never deal with organizations directly, and organizations never see a
-            household directly. DataPay sits in between, on purpose.
-          </p>
+          <p className="mkEyebrow">{t.systemEyebrow}</p>
+          <h2>{t.systemTitle}</h2>
+          <p className="mkSectionLede">{t.systemLede}</p>
           <div className="mkDiagramWrap">
             <SystemDiagram />
           </div>
         </section>
 
         <section id="for-organizations" className="mkSection">
-          <p className="mkEyebrow">For organizations</p>
-          <h2>A direct channel to real local demand</h2>
+          <p className="mkEyebrow">{t.orgsEyebrow}</p>
+          <h2>{t.orgsTitle}</h2>
           <div className="mkCards">
-            <div className="mkCard">
-              <h3>Ask real households real questions</h3>
-              <p>
-                Set your own token reward per question. Every submission is reviewed before it
-                reaches anyone — never auto-published.
-              </p>
-            </div>
-            <div className="mkCard">
-              <h3>List your own products</h3>
-              <p>
-                Point at a spreadsheet or add items by hand; households browse and reserve
-                directly. Fulfillment happens outside the app — no in-app payment to set up.
-              </p>
-            </div>
-            <div className="mkCard">
-              <h3>See real demand, not guesses</h3>
-              <p>
-                Aggregated signals only ever publish once at least 50 households stand behind a
-                number — never one household's data alone.
-              </p>
-            </div>
+            {t.cards.map((c) => (
+              <div className="mkCard" key={c.title}>
+                <h3>{c.title}</h3>
+                <p>{c.text}</p>
+              </div>
+            ))}
           </div>
           <a href="/org/signup" className="mkCtaPrimary mkCtaInline">
-            Sign up your organization
+            {t.ctaSignup}
           </a>
         </section>
 
         <section className="mkSection mkSectionProtection">
-          <p className="mkEyebrow">Data protection</p>
-          <h2>Privacy isn't a policy here — it's the architecture</h2>
+          <p className="mkEyebrow">{t.protectionEyebrow}</p>
+          <h2>{t.protectionTitle}</h2>
           <div className="mkProtectionGrid">
-            <div className="mkProtectionItem">
-              <strong>Private alias, always.</strong>
-              <span>Organizations only ever see an alias — never a name, phone number, or address.</span>
-            </div>
-            <div className="mkProtectionItem">
-              <strong>Cohort floor of 50.</strong>
-              <span>No number publishes until at least 50 households stand behind it.</span>
-            </div>
-            <div className="mkProtectionItem">
-              <strong>No raw location stored.</strong>
-              <span>Approximate area only, used to match the nearest zone — never exact coordinates.</span>
-            </div>
-            <div className="mkProtectionItem">
-              <strong>You control sharing.</strong>
-              <span>Every category of data sharing can be turned off, any time, in the app.</span>
-            </div>
+            {t.protectionItems.map((p) => (
+              <div className="mkProtectionItem" key={p.title}>
+                <strong>{p.title}</strong>
+                <span>{p.text}</span>
+              </div>
+            ))}
           </div>
           <p className="mkProtectionLink">
-            <a href="/privacy">Read the full privacy policy →</a>
+            <a href="/privacy">{t.protectionLink}</a>
           </p>
         </section>
 
         <section className="mkSection mkSectionAbout">
-          <p className="mkEyebrow">About</p>
-          <h2>Built for households first</h2>
+          <p className="mkEyebrow">{t.aboutEyebrow}</p>
+          <h2>{t.aboutTitle}</h2>
           <p className="mkSectionLede">
-            DataPay started from a simple idea: the data that already describes what a community
-            needs is valuable, and the household generating it should be the one who benefits —
-            in tokens, in better local availability, and in never being sold as a name and a
-            phone number. <a href="/about">More about DataPay →</a>
+            {t.aboutLede} <a href="/about">{t.aboutLink}</a>
           </p>
         </section>
 
         <section className="mkSection mkSectionFinalCta">
-          <h2>Ready to reach real local demand?</h2>
+          <h2>{t.finalTitle}</h2>
           <div className="mkCtaRow">
             <a href="/org/signup" className="mkCtaPrimary">
-              Sign up your organization
+              {t.ctaSignup}
             </a>
             <a href="/registry" className="mkCtaSecondary">
-              See the public demand registry
+              {t.ctaRegistry}
             </a>
           </div>
         </section>
@@ -202,20 +260,20 @@ export function MarketingHome(): JSX.Element {
         <footer className="mkFooter">
           <div className="mkFooterBrand">
             <span className="mkLogoLight">
-              <DataPayLogo size={28} tagline="Your data is your asset" />
+              <DataPayLogo size={28} tagline={t.tagline} />
             </span>
             <span className="mkLogoDark">
-              <DataPayLogo size={28} dark tagline="Your data is your asset" />
+              <DataPayLogo size={28} dark tagline={t.tagline} />
             </span>
           </div>
           <div className="mkFooterLinks">
-            <a href="/about">About</a>
-            <a href="/privacy">Privacy</a>
-            <a href="/delete-account">Delete account</a>
-            <a href="/child-safety">Child safety</a>
-            <a href="/registry">Demand registry</a>
-            <a href="/org/login">Organization login</a>
-            <a href="mailto:srinivas@socratus.org">Contact</a>
+            <a href="/about">{t.footerLinks.about}</a>
+            <a href="/privacy">{t.footerLinks.privacy}</a>
+            <a href="/delete-account">{t.footerLinks.delete}</a>
+            <a href="/child-safety">{t.footerLinks.childSafety}</a>
+            <a href="/registry">{t.footerLinks.registry}</a>
+            <a href="/org/login">{t.footerLinks.orgLogin}</a>
+            <a href="mailto:srinivas@socratus.org">{t.footerLinks.contact}</a>
           </div>
         </footer>
       </main>
