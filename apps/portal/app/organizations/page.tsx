@@ -1,5 +1,5 @@
 import { listOrganizations } from "./core-api";
-import { createOrganizationAction } from "./actions";
+import { activateOrganizationAction, createOrganizationAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,9 @@ export default async function OrganizationsPage({
       <h1>Organizations</h1>
       <p className="lede">
         Company accounts that can log in separately, at <code>/org/login</code>, and submit their
-        own questions — every one lands in the review queue as a draft, never auto-approved.
+        own questions and products — every one lands in a review queue, never auto-approved.
+        Organizations created below are active immediately; ones that signed themselves up at{" "}
+        <code>/org/signup</code> land inactive and need the "Activate" action below first.
       </p>
 
       {searchParams.error && (
@@ -52,7 +54,9 @@ export default async function OrganizationsPage({
                 <tr>
                   <th>Name</th>
                   <th>Login email</th>
+                  <th>Status</th>
                   <th>Created</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -60,7 +64,18 @@ export default async function OrganizationsPage({
                   <tr key={o.id}>
                     <td>{o.name}</td>
                     <td className="mono small">{o.email}</td>
+                    <td className="small">{o.active ? "Active" : "Awaiting approval"}</td>
                     <td className="small muted">{formatWhen(o.created_at)}</td>
+                    <td className="actions">
+                      {!o.active && (
+                        <form action={activateOrganizationAction}>
+                          <input type="hidden" name="organizationId" value={o.id} />
+                          <button type="submit" className="approveBtn">
+                            Activate
+                          </button>
+                        </form>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

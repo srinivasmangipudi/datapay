@@ -64,6 +64,22 @@ export function createProduct(token: string, payload: CreateProductPayload): Pro
   });
 }
 
+export interface UpdateProductPayload {
+  nameEn?: string;
+  unitSpec?: string;
+  marketPricePaise?: number;
+  salePricePaise?: number;
+  quantityAvailable?: number;
+}
+
+export function updateProduct(token: string, productId: number, payload: UpdateProductPayload): Promise<OrgProduct> {
+  return apiFetch(`/v1/org/products/${productId}`, {
+    method: "PATCH",
+    headers: auth(token),
+    body: JSON.stringify(payload),
+  });
+}
+
 export function uploadProductPhoto(token: string, productId: number, imageBase64: string) {
   return apiFetch(`/v1/org/products/${productId}/photo`, {
     method: "POST",

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createOrganization } from "./core-api";
+import { activateOrganization, createOrganization } from "./core-api";
 
 export async function createOrganizationAction(formData: FormData): Promise<void> {
   const name = String(formData.get("name") ?? "").trim();
@@ -17,4 +17,16 @@ export async function createOrganizationAction(formData: FormData): Promise<void
   }
   revalidatePath("/organizations");
   redirect("/organizations?created=1");
+}
+
+export async function activateOrganizationAction(formData: FormData): Promise<void> {
+  const id = String(formData.get("organizationId"));
+  try {
+    await activateOrganization(id);
+  } catch (err) {
+    revalidatePath("/organizations");
+    redirect(`/organizations?error=${encodeURIComponent((err as Error).message)}`);
+  }
+  revalidatePath("/organizations");
+  redirect("/organizations");
 }

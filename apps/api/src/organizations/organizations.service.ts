@@ -1,4 +1,4 @@
-import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import type { CreateOrganizationDto, CreateQuestionDto } from "@datapay/shared";
 import * as bcrypt from "bcryptjs";
@@ -7,6 +7,11 @@ import { PG_POOL } from "../db/db.module";
 import { withTransaction } from "../db/tx.util";
 
 const PASSWORD_SALT_ROUNDS = 10;
+// Compared against when no such org exists, so login() takes the same time
+// either way — a real hash costs the same bcrypt work as any other, keeping
+// "wrong email" and "wrong password" indistinguishable by timing too, not
+// just by response message.
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync("no-such-organization", PASSWORD_SALT_ROUNDS);
 
 function slugify(name: string): string {
   return name
@@ -42,6 +47,33 @@ export class OrganizationsService {
     return rows[0];
   }
 
+  /**
+   * Self-serve — an organization creating its own account from the public
+   * marketing site, unlike `create()` (ops-only, via the admin endpoint,
+   * always immediately active). Lands `active=false`: a lightweight ops
+   * approval step before a brand-new, unverified account can submit
+   * questions or list products a real member would see.
+   */
+  async signup(dto: CreateOrganizationDto): Promise<{ id: string; slug: string }> {
+    const slug = dto.slug?.trim() || slugify(dto.name);
+    const passwordHash = await bcrypt.hash(dto.password, PASSWORD_SALT_ROUNDS);
+    const { rows } = await this.pool.query<{ id: string; slug: string }>(
+      `INSERT INTO organizations (slug, name, email, password_hash, active) VALUES ($1, $2, $3, $4, false)
+       RETURNING id, slug`,
+      [slug, dto.name, dto.email.toLowerCase(), passwordHash]
+    );
+    return rows[0];
+  }
+
+  async activate(id: string): Promise<{ id: string; active: boolean }> {
+    const { rows } = await this.pool.query<{ id: string; active: boolean }>(
+      `UPDATE organizations SET active = true WHERE id = $1 RETURNING id, active`,
+      [id]
+    );
+    if (!rows[0]) throw new NotFoundException("Organization not found");
+    return rows[0];
+  }
+
   async list() {
     const { rows } = await this.pool.query(
       `SELECT id, slug, name, email, active, created_at FROM organizations ORDER BY created_at DESC`
@@ -59,10 +91,17 @@ export class OrganizationsService {
       email.toLowerCase(),
     ]);
     const org = rows[0];
-    // Same generic error for "no such org" and "wrong password" — never
-    // reveal which email addresses are registered.
-    if (!org || !org.active || !(await bcrypt.compare(password, org.password_hash))) {
+    // Password checked FIRST, always against a real hash (a dummy one when
+    // no such org exists) — so "no such org," "wrong password," and
+    // "correct password, inactive account" all cost the same bcrypt work,
+    // and only someone who already proved they know the password ever
+    // learns their account is merely pending approval rather than wrong.
+    const passwordMatches = await bcrypt.compare(password, org?.password_hash ?? DUMMY_PASSWORD_HASH);
+    if (!org || !passwordMatches) {
       throw new UnauthorizedException("Incorrect email or password");
+    }
+    if (!org.active) {
+      throw new UnauthorizedException("Your organization account is awaiting approval");
     }
     const payload: OrgTokenPayload = { organizationId: org.id, type: "org" };
     const token = await this.jwt.signAsync(payload, { expiresIn: "30d" });

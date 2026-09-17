@@ -1,4 +1,5 @@
 import type { Viewport } from "next";
+import { cookies } from "next/headers";
 import { AdminNav } from "./components/AdminNav";
 import "./globals.css";
 
@@ -32,10 +33,14 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }): JSX.Element {
+  const sessionSecret = process.env.PORTAL_SESSION_SECRET;
+  const cookie = cookies().get("portal_session")?.value;
+  const isOpsSession = Boolean(sessionSecret) && cookie === sessionSecret;
+
   return (
     <html lang="en">
       <body>
-        <AdminNav />
+        <AdminNav isOpsSession={isOpsSession} />
         {children}
         {/* dangerouslySetInnerHTML, not <style>{`...`}</style> — a `"` inside a plain
             JSX-child string on a <style> tag hits a known React SSR/CSR escaping

@@ -18,13 +18,20 @@ const ORG_SESSION_COOKIE = "org_session";
 export function middleware(request: NextRequest): NextResponse {
   const pathname = request.nextUrl.pathname;
 
+  // Root is session-conditional, not path-gated: page.tsx itself checks for
+  // a valid ops session and renders the marketing homepage or the ops
+  // dashboard accordingly. Exempted here (rather than in the matcher regex
+  // below, which tests path segments, not "is this exactly root") so an
+  // anonymous visitor lands on real content instead of a login redirect.
+  if (pathname === "/") return NextResponse.next();
+
   // A separate, independent gate for company accounts (SPEC.md addendum:
   // organizations onboarding questions) — its own cookie, its own login
   // page, never the ops shared password. "/organizations" (no trailing
   // slash) is the ops-only page for creating those accounts and must NOT
   // match here.
   if (pathname === "/org" || pathname.startsWith("/org/")) {
-    if (pathname === "/org/login") return NextResponse.next();
+    if (pathname === "/org/login" || pathname === "/org/signup") return NextResponse.next();
     const orgCookie = request.cookies.get(ORG_SESSION_COOKIE)?.value;
     if (orgCookie) return NextResponse.next();
     const orgLoginUrl = new URL("/org/login", request.url);

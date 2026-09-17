@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post } from "@nestjs/common";
 import { CreateOrganizationDtoSchema } from "@datapay/shared";
 import { parseOrThrow } from "../zod.util";
 import { OrganizationsService } from "./organizations.service";
@@ -19,5 +19,10 @@ export class OrganizationsAdminController {
   create(@Body() body: unknown) {
     const dto = parseOrThrow(CreateOrganizationDtoSchema, body);
     return this.organizations.create(dto);
+  }
+
+  @Post(":id/activate")
+  activate(@Param("id") id: string) {
+    return this.organizations.activate(id);
   }
 }

@@ -6,6 +6,9 @@ import {
   createProduct,
   type CreateProductPayload,
   importProductsFromSheet,
+  type OrgProduct,
+  updateProduct,
+  type UpdateProductPayload,
   uploadProductPhoto,
 } from "./core-api";
 
@@ -34,6 +37,20 @@ export async function createProductAction(
   try {
     const token = requireOrgToken();
     const result = await createProduct(token, payload);
+    revalidatePath("/org/products");
+    return { ok: true, data: result };
+  } catch (err) {
+    return { ok: false, message: (err as Error).message };
+  }
+}
+
+export async function updateProductAction(
+  productId: number,
+  payload: UpdateProductPayload
+): Promise<ActionResult<OrgProduct>> {
+  try {
+    const token = requireOrgToken();
+    const result = await updateProduct(token, productId, payload);
     revalidatePath("/org/products");
     return { ok: true, data: result };
   } catch (err) {

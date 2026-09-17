@@ -1,37 +1,45 @@
 import { DataPayLogo } from "../../components/DataPayLogo";
-import { orgLoginAction } from "./actions";
+import { orgSignupAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export default function OrgLoginPage({
+export default function OrgSignupPage({
   searchParams,
 }: {
-  searchParams: { error?: string; next?: string };
+  searchParams: { error?: string; submitted?: string };
 }): JSX.Element {
   return (
     <main className="loginPage">
-      <form className="loginCard" action={orgLoginAction}>
+      <form className="loginCard" action={orgSignupAction}>
         <div className="loginLogo">
-          <DataPayLogo size={36} tagline="Organization sign-in" />
+          <DataPayLogo size={36} tagline="Organization sign-up" />
         </div>
-        <h1>Sign in</h1>
+        <h1>Create your account</h1>
         <p className="lede">
-          For companies onboarding their own questions and products onto DataPay.{" "}
-          <a href="/org/signup">Create an account</a> if you don't have one yet.
+          An ops reviewer activates every new organization before it can submit questions or list
+          products — check back and log in once approved. Already have an account?{" "}
+          <a href="/org/login">Sign in</a>.
         </p>
 
         {searchParams.error && <div className="errorBanner">{searchParams.error}</div>}
+        {searchParams.submitted && (
+          <div className="successBanner">
+            Account created — awaiting approval. Try logging in once you've heard it's active.
+          </div>
+        )}
 
-        <input type="hidden" name="next" value={searchParams.next ?? "/org/questions"} />
-        <input type="email" name="email" placeholder="Work email" autoFocus autoComplete="username" />
+        <input name="name" placeholder="Company name" autoFocus required />
+        <input type="email" name="email" placeholder="Work email" autoComplete="username" required />
         <input
           type="password"
           name="password"
-          placeholder="Password"
-          autoComplete="current-password"
+          placeholder="Password (min 8 characters)"
+          minLength={8}
+          autoComplete="new-password"
+          required
         />
         <button type="submit" className="submitBtn">
-          Sign in
+          Create account
         </button>
       </form>
 
@@ -44,17 +52,19 @@ export default function OrgLoginPage({
         h1 { font-size: 1.4rem; margin: 4px 0; }
         .lede { color: #898781; font-size: 13px; margin: 0 0 8px; line-height: 1.5; }
         .lede a { color: #0E7A5C; font-weight: 600; }
-        input[type="email"], input[type="password"] { padding: 10px 12px; border-radius: 6px; border: 1px solid #d8d7cf; background: #fcfcfb; font-size: 14px; font-family: inherit; }
+        input { padding: 10px 12px; border-radius: 6px; border: 1px solid #d8d7cf; background: #fcfcfb; font-size: 14px; font-family: inherit; }
         .submitBtn { padding: 10px 20px; border-radius: 999px; border: 1px solid #0E7A5C; background: #0E7A5C; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
         .errorBanner { background: #f3e4e2; border: 1px solid #8c3a34; color: #8c3a34; border-radius: 6px; padding: 10px 14px; font-size: 13px; }
+        .successBanner { background: #E3EFEA; border: 1px solid #0E7A5C; color: #0E7A5C; border-radius: 6px; padding: 10px 14px; font-size: 13px; }
         @media (prefers-color-scheme: dark) {
           .loginPage { background: #101418; }
           .loginCard { background: #14161b; border-color: #2c2c2a; }
           .lede { color: #9b9a94; }
           .lede a { color: #12946F; }
-          input[type="email"], input[type="password"] { background: #1a1a19; border-color: #2c2c2a; color: #fff; }
+          input { background: #1a1a19; border-color: #2c2c2a; color: #fff; }
           .submitBtn { border-color: #12946F; background: #12946F; }
           .errorBanner { background: #2e1f1e; border-color: #d98a83; color: #d98a83; }
+          .successBanner { background: #16211d; border-color: #12946F; color: #7fcab0; }
         }
       `,
         }}

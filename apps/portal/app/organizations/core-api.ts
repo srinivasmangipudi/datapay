@@ -22,3 +22,7 @@ export function listOrganizations(): Promise<Organization[]> {
 export function createOrganization(payload: CreateOrganizationPayload): Promise<{ id: string; slug: string }> {
   return apiFetch("/v1/admin/organizations", { method: "POST", body: JSON.stringify(payload) });
 }
+
+export function activateOrganization(id: string): Promise<{ id: string; active: boolean }> {
+  return apiFetch(`/v1/admin/organizations/${id}/activate`, { method: "POST" });
+}

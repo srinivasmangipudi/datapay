@@ -1,17 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { listCategories } from "../core-api";
+import { EditableProductRow } from "./EditableProductRow";
 import { ImportSheetForm } from "./ImportSheetForm";
 import { listImportRuns, listOwnOrders, listOwnProducts } from "./core-api";
 import { ProductForm } from "./ProductForm";
 
 export const dynamic = "force-dynamic";
-
-const REVIEW_STATE_LABEL: Record<string, string> = {
-  draft: "Awaiting review",
-  approved: "Live",
-  rejected: "Not approved",
-};
 
 function formatPaise(paise: number): string {
   return `₹${(paise / 100).toFixed(2)}`;
@@ -33,10 +28,14 @@ export default async function OrgProductsPage(): Promise<JSX.Element> {
       <p className="eyebrow">DataPay Portal · Organization</p>
       <h1>Products</h1>
       <p className="lede">
-        Point at a sheet to bulk-import your catalog, or add one product at a time. Every new
-        listing goes into DataPay's review queue first — an ops reviewer approves it before it
-        appears in a member's Products tab. Re-importing later just updates quantity/price on
-        products you've already listed, never creates duplicates.
+        <strong>1. Import.</strong> Point at a public sheet to bulk-import your catalog, or add
+        one product at a time. Every new listing goes into DataPay's review queue first — an ops
+        reviewer approves it before it appears in a member's Products tab. Re-importing later just
+        updates quantity/price on products you've already listed, never creates duplicates.
+        <br />
+        <strong>2. Review, edit, and save.</strong> Everything below is editable — fix a price or
+        quantity and hit Save, whether it just came in from an import or you're updating stock on
+        something already live.
       </p>
 
       <ImportSheetForm recentRuns={importRuns} />
@@ -52,28 +51,16 @@ export default async function OrgProductsPage(): Promise<JSX.Element> {
                 <tr>
                   <th>Product</th>
                   <th>Unit</th>
-                  <th>Market price</th>
-                  <th>Sale price</th>
+                  <th>Market price (₹)</th>
+                  <th>Sale price (₹)</th>
                   <th>Qty</th>
                   <th>Status</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
                 {products.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      {p.photo_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.photo_url} alt={p.name_en} className="productThumb" />
-                      )}
-                      {p.name_en}
-                    </td>
-                    <td className="small">{p.unit_spec ?? <span className="muted">—</span>}</td>
-                    <td className="num">{formatPaise(p.market_price_paise)}</td>
-                    <td className="num value">{formatPaise(p.sale_price_paise)}</td>
-                    <td className="num">{p.quantity_available}</td>
-                    <td className="small">{REVIEW_STATE_LABEL[p.review_state] ?? p.review_state}</td>
-                  </tr>
+                  <EditableProductRow key={p.id} product={p} />
                 ))}
               </tbody>
             </table>
@@ -118,7 +105,12 @@ export default async function OrgProductsPage(): Promise<JSX.Element> {
 
       <style
         dangerouslySetInnerHTML={{
-          __html: `.productThumb { width: 32px; height: 32px; object-fit: cover; border-radius: 6px; margin-right: 8px; vertical-align: middle; }`,
+          __html: `
+        .productThumb { width: 32px; height: 32px; object-fit: cover; border-radius: 6px; margin-right: 8px; vertical-align: middle; }
+        .cellInput { border: 1px solid transparent; background: transparent; font: inherit; color: inherit; padding: 4px 6px; border-radius: 4px; width: 100%; }
+        .cellInput:hover, .cellInput:focus { border-color: #d8d7cf; background: #fcfcfb; outline: none; }
+        .cellInputSmall { width: 80px; }
+      `,
         }}
       />
     </main>

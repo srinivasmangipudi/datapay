@@ -21,17 +21,21 @@ const LINKS = [
   { href: "/organizations", label: "Organizations" },
 ];
 
-export function AdminNav(): JSX.Element | null {
+export function AdminNav({ isOpsSession }: { isOpsSession: boolean }): JSX.Element | null {
   const pathname = usePathname();
   // "/org/..." is the separate company-login area (own nav below) — careful
   // not to match "/organizations", the ops-only page for creating those accounts.
+  // Root is the one path that's session-conditional content, not a fixed
+  // page — show the nav there only when it's actually the ops dashboard
+  // underneath, never over the public marketing homepage.
   if (
     pathname === "/login" ||
     pathname === "/registry" ||
     pathname === "/privacy" ||
     pathname === "/delete-account" ||
     pathname === "/child-safety" ||
-    pathname.startsWith("/org/")
+    pathname.startsWith("/org/") ||
+    (pathname === "/" && !isOpsSession)
   )
     return null;
 

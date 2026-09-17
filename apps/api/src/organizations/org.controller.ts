@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
-import { CreateQuestionDtoSchema, OrgLoginDtoSchema } from "@datapay/shared";
+import { CreateOrganizationDtoSchema, CreateQuestionDtoSchema, OrgLoginDtoSchema } from "@datapay/shared";
 import { parseOrThrow } from "../zod.util";
 import { OrgAuthGuard, OrgRequest } from "./org-auth.guard";
 import { OrganizationsService } from "./organizations.service";
@@ -9,6 +9,14 @@ import { OrganizationsService } from "./organizations.service";
 @Controller("v1/org")
 export class OrgController {
   constructor(private readonly organizations: OrganizationsService) {}
+
+  // Public, unauthenticated — same posture as login below. Lands inactive;
+  // see OrganizationsService.signup().
+  @Post("signup")
+  signup(@Body() body: unknown) {
+    const dto = parseOrThrow(CreateOrganizationDtoSchema, body);
+    return this.organizations.signup(dto);
+  }
 
   @Post("login")
   login(@Body() body: unknown) {

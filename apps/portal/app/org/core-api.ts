@@ -35,6 +35,11 @@ export function orgLogin(email: string, password: string): Promise<{ token: stri
   return apiFetch("/v1/org/login", { method: "POST", body: JSON.stringify({ email, password }) });
 }
 
+// Self-serve — lands inactive pending ops approval (/organizations page).
+export function signupOrg(name: string, email: string, password: string): Promise<{ id: string; slug: string }> {
+  return apiFetch("/v1/org/signup", { method: "POST", body: JSON.stringify({ name, email, password }) });
+}
+
 export function submitOrgQuestion(token: string, payload: OrgQuestionPayload): Promise<{ id: number }> {
   return apiFetch("/v1/org/questions", {
     method: "POST",
