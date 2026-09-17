@@ -8,19 +8,24 @@ export interface ZoneNode {
 
 /**
  * LAW 3 — walks village → panchayat → hobli → constituency, coarsening the zone
- * until `cohortSizeAt` reports a cohort >= K_ANON_FLOOR. Returns null if even the
- * constituency-level cohort can't clear the floor (aggregate must not be produced).
+ * until `cohortSizeAt` reports a cohort >= `floor`. Returns null if even the
+ * constituency-level cohort can't clear it (aggregate must not be produced).
+ *
+ * `floor` defaults to K_ANON_FLOOR so an un-updated caller keeps production
+ * behaviour; only a caller that deliberately threads a configured floor
+ * through gets anything else.
  */
 export function coarsenZoneUntilKAnon(
   startZoneId: string,
   zonesById: Map<string, ZoneNode>,
-  cohortSizeAt: (zoneId: string) => number
+  cohortSizeAt: (zoneId: string) => number,
+  floor: number = K_ANON_FLOOR
 ): { zoneId: string; level: ZoneLevel } | null {
   let current = zonesById.get(startZoneId);
   if (!current) return null;
 
   while (current) {
-    if (cohortSizeAt(current.id) >= K_ANON_FLOOR) {
+    if (cohortSizeAt(current.id) >= floor) {
       return { zoneId: current.id, level: current.level };
     }
     if (!current.parentId) return null;
@@ -29,8 +34,8 @@ export function coarsenZoneUntilKAnon(
   return null;
 }
 
-export function meetsKAnonFloor(cohortSize: number): boolean {
-  return cohortSize >= K_ANON_FLOOR;
+export function meetsKAnonFloor(cohortSize: number, floor: number = K_ANON_FLOOR): boolean {
+  return cohortSize >= floor;
 }
 
 export function nextCoarserLevel(level: ZoneLevel): ZoneLevel | null {

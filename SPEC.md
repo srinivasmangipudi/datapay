@@ -1912,3 +1912,106 @@ oversell race. Full existing API suite re-run clean alongside them. `tsc --noEmi
 `apps/api`, `apps/portal`, `apps/mobile`; `next build` clean on the portal. Verified end-to-end
 against live production (not just locally): an org created, logged in, listed a product, ops approved
 it, the admin/org-facing queries all returned the right shape — then the test data was removed.
+
+---
+
+## 43. THE PUBLIC DEMAND REGISTRY, PART TWO: TWO BUCKETS AND A CONFIGURABLE FLOOR (2026-09-17)
+
+§29 built `/registry` as two sections over `demand_aggregates`: published demand, and the subset of it
+with no open offer ("opportunities"). Both are category × zone rows carrying a cohort size and nothing
+else — `demand_aggregates.metric` has always held the per-option tallies, and no endpoint has ever
+returned it. This addendum publishes what was already being computed and thrown away, split into the
+two buckets the registry is actually for: **what households buy** (a market signal, addressed to
+producers and brands) and **what households report about everything else** (a civic signal, addressed
+to anyone). Same page, same public-by-design posture as §29B, same LAW 3 floor.
+
+**43A. The product/non-product split is declared, not inferred — because inference isn't available.**
+The obvious signals both turn out to be empty: `products.category_id` is populated for exactly one
+category out of seventeen, and **zero** `question_options` rows carry a `product_code` (checked
+directly, not assumed). Deriving "is this a product category" from either would have silently
+classified `rice` and `health` identically. `categories.kind` (`'product'|'topic'`) is therefore an
+explicit column, backfilled to `topic` for `health` and `free-time` and left `product` for the twelve
+grocery categories. A row's bucket is resolved at read time from its question's category kind, which
+is why both buckets come from one aggregate table rather than two — they are the same computation over
+the same responses, and separate tables would let the two drift apart on exactly the constraint that
+matters most.
+
+**43B. `categories.published` defaults to FALSE, and that default is the point.** Every integration
+spec in this repo creates a throwaway category (`kanon-test-*`, `zone-scope-test-*`, `lang-res-test-*`
+— three families of them are in the table right now), and `CategoriesService.create()` lets an ops
+admin make one inline from a wizard. A `published` column defaulting to true would put every one of
+those on a public page the moment it accumulated enough answers. Defaulting to false means a category
+reaches the public registry only because a human said so; the migration turns on the fourteen real
+ones by name and nothing else. Both the per-question query and §29's two original queries filter on
+it.
+
+**43C. LAW 3's floor is now runtime-configurable, and is still enforced by the database.** The user's
+explicit choice, over shipping a page that renders empty: `K_ANON_FLOOR` is read from the environment
+by `resolveKAnonFloor()`, which **fails closed** on everything ambiguous — missing, blank, `"abc"`,
+`"0"`, `"-5"`, `"2.5"`, `"1e3"`, `"Infinity"` all resolve to 50 (a plain-decimal-integer regex, not
+`Number()`, which would have accepted `1e3` as 1000 — caught by the test, not by review). Production
+sets nothing and stays at 50. `K_ANON_FLOOR` in `constants.ts` remains a plain constant and remains
+the default argument of `meetsKAnonFloor`/`coarsenZoneUntilKAnon`, so a call site that doesn't
+deliberately thread a configured floor through cannot accidentally get a weaker one.
+
+`demand_aggregates.cohort_size CHECK (cohort_size >= 50)` could not survive this — a CHECK constraint
+can only reference its own row. It is replaced by an `enforce_k_anon_floor()` **trigger** reading
+`system_settings.k_anon_floor`, which is strictly stronger than the CHECK it replaces: it covers the
+new `question_stat_aggregates` table too, it raises a message naming LAW 3 explicitly, and the floor
+can be raised without a migration. `KAnonService` writes the environment's resolved floor into
+`system_settings` at boot, so the job's floor and the trigger's floor are the same number by
+construction rather than by convention — and logs a `WARN` naming the production floor whenever the
+configured one is below it.
+
+**43D. A relaxed floor is disclosed on the page itself, not just in a log.** `GET /v1/public/registry`
+returns a `meta` block (`k_anon_floor`, `relaxed_floor`, `production_floor`, `generated_at`), and the
+page renders a "Pilot deployment" notice whenever `relaxed_floor` is true, stating the configured
+floor and the production one. A page whose entire claim is that its numbers are real and anonymous has
+to say so itself when it is running on a weaker guarantee; leaving that fact in a server log where no
+reader will ever see it would make the page quietly dishonest. The lede, the empty states, and the
+methodology footer all interpolate the actual floor rather than a hardcoded "50".
+
+**43E. `free_text` answers are never aggregated or published, at any cohort size.** An open-ended
+answer in a member's own words is re-identifying regardless of how many households surround it, so
+k-anonymity is simply the wrong control for it — the exclusion lives in `loadPublishableQuestions()`
+and is asserted directly (seed 60 free-text answers containing a known marker, then assert both zero
+`question_stat_aggregates` rows and that the marker appears nowhere in the serialized public
+response). `responses.text_value` and `photo_storage_key` are never selected by any query in
+`public.service.ts` at all.
+
+**43F. Option percentages are shares of the cohort, and bars are drawn against a full 100%.** On a
+`multi` question the percentages deliberately sum past 100% — a household stocking three pulses is in
+three buckets, and renormalising would misreport "48% of households stock toor" as something else.
+The bars were initially scaled against the largest option in each question, which reads better on
+sparse data and is exactly the wrong choice here: it rendered "25% buy Sona Masuri" as a full-width
+bar. Changed to scale against 100%, so a question where every answer sits low looks low.
+
+**43G. One query per pass, not one per aggregate.** §29's `computeMetric()` issues a recursive CTE per
+published aggregate — fine for seventeen categories, quadratic for fifty questions across every zone.
+The per-question pass computes cohorts, option tallies, and numeric summaries in three total queries
+over a shared `DESCENDANTS_CTE`, then coarsens in memory. `question_stat_aggregates` has a unique
+constraint on `(question_id, zone_id, window)` and the job upserts onto it, so re-running refreshes in
+place rather than accumulating a new historical row every hour the way `demand_aggregates` does.
+
+**43H. What this deliberately does not do.** Numeric answers are published as their own distribution
+(median/mean/range) but are **not** projected into a total quantity — "52 kg/household × 1,240
+households = 64 tonnes/month" needs a unit and a period on each numeric question, and the seven
+existing numeric questions carry no unit metadata at all ("kilograms of rice per month", "rupees per
+week", "cups per day" are distinguishable only by reading the English text). `org_products` and
+`product_orders` are not wired in either — both tables are empty, so a reserved-quantity layer would
+contribute nothing today. Both were offered and both were explicitly left out of this pass.
+
+**Acceptance:** migration `1739836800000_public_demand_registry.js` applied, and its `down` verified to
+round-trip (it correctly *refused* to restore the strict CHECK while sub-50 pilot rows existed — the
+constraint working, not a bug). 6 new Jest integration tests, all green against a real database at
+floor 50: the two buckets are a partition (neither category appears in the other's bucket), an
+unpublished category never appears however large its cohort, a free_text answer never appears, the
+trigger rejects a sub-floor `question_stat_aggregates` insert with a `LAW 3` message, and the job's
+floor equals the trigger's floor. 9 new shared unit tests covering `resolveKAnonFloor`'s fail-closed
+parsing and the threaded floor's effect on coarsening. Full API suite re-run: 30 of 31 suites green;
+the two failures in `zones/geo-resolution.integration.spec.ts` are pre-existing and were confirmed to
+fail identically on a clean tree. `tsc --noEmit` clean on `apps/api` and `apps/portal`; `next build`
+clean with `ƒ /registry` still server-rendered. End-to-end verified by running the API at
+`K_ANON_FLOOR=3` and `=1` against real seeded responses and rendering the live page: both buckets
+populated, both distribution kinds rendered, the pilot notice shown, test categories absent — then the
+pilot aggregates were deleted and the floor returned to 50.

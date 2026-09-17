@@ -12,6 +12,7 @@ import { DbModule } from "./db/db.module";
 import { FraudModule } from "./fraud/fraud.module";
 import { IntelligenceModule } from "./intelligence/intelligence.module";
 import { JobsModule } from "./jobs/bullmq.module";
+import { KAnonModule } from "./k-anon/k-anon.module";
 import { LedgerModule } from "./ledger/ledger.module";
 import { LinkagesModule } from "./linkages/linkages.module";
 import { MeModule } from "./me/me.module";
@@ -37,6 +38,7 @@ import { ZonesModule } from "./zones/zones.module";
   imports: [
     DbModule,
     JobsModule,
+    KAnonModule,
     AuthModule,
     MeModule,
     ZonesModule,

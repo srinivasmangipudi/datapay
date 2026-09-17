@@ -9,7 +9,9 @@ export class AggregationController {
   constructor(private readonly aggregation: AggregationService) {}
 
   @Post("run")
-  run() {
-    return this.aggregation.runForAllCategories();
+  async run() {
+    const categories = await this.aggregation.runForAllCategories();
+    const questionStats = await this.aggregation.runQuestionStats();
+    return { categories, questionStats };
   }
 }
