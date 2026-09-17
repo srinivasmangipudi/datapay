@@ -2015,3 +2015,35 @@ clean with `ƒ /registry` still server-rendered. End-to-end verified by running 
 `K_ANON_FLOOR=3` and `=1` against real seeded responses and rendering the live page: both buckets
 populated, both distribution kinds rendered, the pilot notice shown, test categories absent — then the
 pilot aggregates were deleted and the floor returned to 50.
+
+---
+
+## 44. FIX: FIREBASE PHONE AUTH REJECTING A CORRECT CODE ON A DEBUG BUILD (2026-09-18)
+
+Commit b155f3a ("Replace phone OTP with Firebase Phone Auth") registered exactly one SHA certificate
+fingerprint with the Firebase Android app — the release keystore's (`datapay-release.keystore`). A
+debug build (`./gradlew assembleDebug`, or `expo run:android`) is signed with a different keystore
+(`android/app/debug.keystore`) whose fingerprint Firebase had never seen. Sending the SMS doesn't
+require a fingerprint match, so that step always looked fine; but `confirmation.confirm(code)` did,
+because Firebase's device-attestation check (Play Integrity) fails silently for an unrecognized
+signing cert — the symptom was "the SMS arrives, but even the correct code is rejected," which reads
+exactly like a broken OTP flow rather than a signing-certificate mismatch.
+
+**Fix:** added the debug keystore's SHA-1 and SHA-256 fingerprints (`keytool -list -v -keystore
+android/app/debug.keystore -alias androiddebugkey -storepass android`) to the Firebase console's
+Android app, alongside the existing release fingerprint, and re-downloaded `google-services.json`
+(both copies — `apps/mobile/google-services.json` and `apps/mobile/android/app/google-services.json`
+must stay identical) so it carries all three `oauth_client` entries.
+
+**Every signing certificate that will ever build this app needs its fingerprint registered
+separately** — this isn't a one-time setup step. A new developer's local debug keystore, a CI
+pipeline's own debug signing, or rotating the release upload key all produce a fingerprint Firebase
+has never seen, and every one of them reproduces this exact symptom until added. Check with:
+`apksigner verify --print-certs <apk>` against the `certificate_hash` values already present in
+`google-services.json` before assuming the auth code itself is broken.
+
+**Acceptance:** confirmed the release keystore's SHA-1 (`7F:F6:75:7E:...`) matched an existing
+`google-services.json` entry exactly, and the debug keystore's did not — root-causing the report
+before touching any code. After the Firebase console update, rebuilt `assembleDebug` and verified
+with `apksigner verify --print-certs` that the produced APK's SHA-1
+(`5e8f16062ea3cd2c4a0d547876baa6f38cabf625`) matches the newly-added `google-services.json` entry.

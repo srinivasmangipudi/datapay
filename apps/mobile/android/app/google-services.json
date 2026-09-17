@@ -22,6 +22,22 @@
           }
         },
         {
+          "client_id": "81908487704-bo457eif8gq8rall2ujl5h0uvbal614g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "org.datapay.mobile",
+            "certificate_hash": "45324d4b485b710d6ae76a2d380ad65858e5470f"
+          }
+        },
+        {
+          "client_id": "81908487704-pmquk5m7p1bf7991ltj8pb6jajqj6rqa.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "org.datapay.mobile",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
           "client_id": "81908487704-qb35eifupnrf7a5c0rnimiba32m8kvae.apps.googleusercontent.com",
           "client_type": 3
         }
