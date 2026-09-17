@@ -3,6 +3,34 @@ import { PublicNav } from "./components/PublicNav";
 import type { Lang } from "./lib/language";
 import { SystemDiagram } from "./SystemDiagram";
 
+function AppleIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <mask id="mkAppleBite">
+        <rect x="0" y="0" width="24" height="24" fill="white" />
+        <circle cx="16.6" cy="9.2" r="3.6" fill="black" />
+      </mask>
+      <g mask="url(#mkAppleBite)">
+        <circle cx="9" cy="13.6" r="6" fill="currentColor" />
+        <circle cx="15" cy="13.6" r="6" fill="currentColor" />
+      </g>
+      <rect x="11.2" y="2.4" width="1.6" height="4.4" rx="0.8" fill="currentColor" />
+      <ellipse cx="15.6" cy="4.4" rx="2.6" ry="1.4" transform="rotate(-35 15.6 4.4)" fill="currentColor" />
+    </svg>
+  );
+}
+
+function AndroidIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path
+        d="M5.5 3.4c-.4-.2-.9-.2-1.2.1-.4.2-.6.6-.6 1v15c0 .4.2.8.6 1 .3.3.8.3 1.2.1l12.6-8.5c.3-.2.5-.6.5-.9 0-.4-.2-.7-.5-.9L5.5 3.4z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 const ICONS = [
   <path
     key="1"
@@ -56,6 +84,8 @@ const CONTENT = {
       "DataPay turns a few daily questions from local households into honest, aggregated demand signals — and gives organizations a direct channel to that same community: run priced survey questions, or list your own products for households to browse and reserve.",
     ctaSignup: "Sign up your organization",
     ctaHowItWorks: "See how it works",
+    getApp: "Get the DataPay app",
+    comingSoon: "Coming soon",
     howEyebrow: "How it works",
     howTitle: "From a household's answer to a real business decision",
     steps: [
@@ -107,6 +137,8 @@ const CONTENT = {
       "DataPay ಸ್ಥಳೀಯ ಮನೆಗಳ ಕೆಲವು ದೈನಂದಿನ ಪ್ರಶ್ನೆಗಳನ್ನು ಪ್ರಾಮಾಣಿಕ, ಒಟ್ಟುಗೂಡಿಸಿದ ಬೇಡಿಕೆ ಸಂಕೇತಗಳಾಗಿ ಪರಿವರ್ತಿಸುತ್ತದೆ — ಮತ್ತು ಅದೇ ಸಮುದಾಯಕ್ಕೆ ಸಂಸ್ಥೆಗಳಿಗೆ ನೇರ ಮಾರ್ಗವನ್ನು ನೀಡುತ್ತದೆ: ಬೆಲೆ ನಿಗದಿತ ಸಮೀಕ್ಷೆ ಪ್ರಶ್ನೆಗಳನ್ನು ನಡೆಸಿ, ಅಥವಾ ಮನೆಗಳು ವೀಕ್ಷಿಸಲು ಮತ್ತು ಕಾಯ್ದಿರಿಸಲು ನಿಮ್ಮ ಸ್ವಂತ ಉತ್ಪನ್ನಗಳನ್ನು ಪಟ್ಟಿ ಮಾಡಿ.",
     ctaSignup: "ನಿಮ್ಮ ಸಂಸ್ಥೆಯನ್ನು ಸೈನ್ ಅಪ್ ಮಾಡಿ",
     ctaHowItWorks: "ಇದು ಹೇಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ ಎಂದು ನೋಡಿ",
+    getApp: "DataPay ಆ್ಯಪ್ ಪಡೆಯಿರಿ",
+    comingSoon: "ಶೀಘ್ರದಲ್ಲಿ ಬರಲಿದೆ",
     howEyebrow: "ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ",
     howTitle: "ಒಂದು ಮನೆಯ ಉತ್ತರದಿಂದ ನಿಜವಾದ ವ್ಯಾಪಾರ ನಿರ್ಧಾರದವರೆಗೆ",
     steps: [
@@ -176,6 +208,26 @@ export function MarketingHome({ lang }: { lang: Lang }): JSX.Element {
             <a href="#how-it-works" className="mkCtaSecondary">
               {t.ctaHowItWorks}
             </a>
+          </div>
+
+          <div className="mkAppBadges">
+            <span className="mkAppBadgesLabel">{t.getApp}</span>
+            <div className="mkBadgeRow">
+              <div className="mkBadge" aria-label={`App Store — ${t.comingSoon}`}>
+                <AppleIcon />
+                <span className="mkBadgeText">
+                  <small>{t.comingSoon}</small>
+                  <strong>App Store</strong>
+                </span>
+              </div>
+              <div className="mkBadge" aria-label={`Google Play — ${t.comingSoon}`}>
+                <AndroidIcon />
+                <span className="mkBadgeText">
+                  <small>{t.comingSoon}</small>
+                  <strong>Google Play</strong>
+                </span>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -292,6 +344,14 @@ export function MarketingHome({ lang }: { lang: Lang }): JSX.Element {
         .mkCtaPrimary:hover { background: var(--mk-jade-deep); }
         .mkCtaSecondary { border: 1px solid var(--mk-border); color: var(--mk-ink); padding: 13px 24px; border-radius: 999px; font-weight: 600; font-size: 14.5px; text-decoration: none; }
         .mkCtaInline { display: inline-block; margin-top: 8px; }
+
+        .mkAppBadges { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
+        .mkAppBadgesLabel { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mk-mist); }
+        .mkBadgeRow { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .mkBadge { display: flex; align-items: center; gap: 9px; border: 1px dashed var(--mk-border); border-radius: 12px; padding: 8px 14px; color: var(--mk-subtle); background: var(--mk-surface); opacity: 0.85; }
+        .mkBadgeText { display: flex; flex-direction: column; text-align: left; line-height: 1.25; }
+        .mkBadgeText small { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mk-mist); }
+        .mkBadgeText strong { font-size: 14px; font-weight: 700; color: var(--mk-ink); }
 
         .mkSection { max-width: 980px; margin: 0 auto; padding: 56px 24px; border-top: 1px solid var(--mk-border); }
         .mkEyebrow { text-transform: uppercase; letter-spacing: 0.1em; font-size: 12px; font-weight: 700; color: var(--mk-jade); margin: 0 0 10px; }
