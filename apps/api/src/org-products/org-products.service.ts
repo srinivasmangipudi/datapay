@@ -229,28 +229,32 @@ export class OrgProductsService {
   // gate as a sheet-extracted one, consistent with how org_submitted
   // questions always land as 'draft' regardless of authoring method.
   async createProduct(organizationId: string, dto: CreateOrgProductDto): Promise<{ id: number }> {
-    const { rows } = await this.pool.query<{ id: number }>(
-      `INSERT INTO org_products
-         (organization_id, category_id, name_en, name_kn, description_en, unit_spec,
-          market_price_paise, sale_price_paise, quantity_available, dedup_key, source,
-          review_state, zone_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'manual', 'draft', $11)
-       RETURNING id`,
-      [
-        organizationId,
-        dto.categoryId ?? null,
-        dto.nameEn,
-        dto.nameKn ?? null,
-        dto.descriptionEn ?? null,
-        dto.unitSpec ?? null,
-        dto.marketPricePaise,
-        dto.salePricePaise,
-        dto.quantityAvailable,
-        normalizeDedupKey(dto.nameEn),
-        dto.zoneId ?? null,
-      ]
-    );
-    return { id: rows[0].id };
+    return withTransaction(this.pool, async (client) => {
+      const { rows } = await client.query<{ id: number }>(
+        `INSERT INTO org_products
+           (organization_id, category_id, name_en, name_kn, description_en, unit_spec,
+            market_price_paise, sale_price_paise, quantity_available, dedup_key, source,
+            review_state, zone_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'manual', 'draft', $11)
+         RETURNING id`,
+        [
+          organizationId,
+          dto.categoryId ?? null,
+          dto.nameEn,
+          dto.nameKn ?? null,
+          dto.descriptionEn ?? null,
+          dto.unitSpec ?? null,
+          dto.marketPricePaise,
+          dto.salePricePaise,
+          dto.quantityAvailable,
+          normalizeDedupKey(dto.nameEn),
+          dto.zoneId ?? null,
+        ]
+      );
+      const productId = rows[0].id;
+      await this.ensureProductQuestion(client, productId, dto.categoryId ?? null, dto.nameEn, dto.salePricePaise);
+      return { id: productId };
+    });
   }
 
   // Editing price/quantity/etc never touches review_state — an
@@ -285,14 +289,66 @@ export class OrgProductsService {
     }
 
     params.push(productId, organizationId);
-    const { rows } = await this.pool.query<OrgProductRow>(
-      `UPDATE org_products SET ${setClauses.join(", ")}
-       WHERE id = $${params.length - 1} AND organization_id = $${params.length}
-       RETURNING *`,
-      params
+
+    return withTransaction(this.pool, async (client) => {
+      const { rows } = await client.query<OrgProductRow>(
+        `UPDATE org_products SET ${setClauses.join(", ")}
+         WHERE id = $${params.length - 1} AND organization_id = $${params.length}
+         RETURNING *`,
+        params
+      );
+      if (!rows[0]) throw new NotFoundException(`Product ${productId} not found`);
+      const row = rows[0];
+      await this.ensureProductQuestion(client, row.id, row.category_id, row.name_en, row.sale_price_paise);
+      return row;
+    });
+  }
+
+  // Default rule: every org product should have a matching demand-intent
+  // question. Fires after both create and update, but is a no-op once a
+  // question already exists for this product — a routine price/quantity
+  // edit doesn't spawn a duplicate on every save; it only backfills a
+  // question the product doesn't have yet (e.g. categorizing a previously
+  // uncategorized product on an otherwise-unrelated edit). Same 'draft' gate
+  // as every other generated question — ops still reviews before it can
+  // reach a member (SPEC.md §14).
+  private async ensureProductQuestion(
+    client: PoolClient,
+    orgProductId: number,
+    categoryId: number | null,
+    nameEn: string,
+    salePricePaise: number
+  ): Promise<void> {
+    if (!categoryId) return; // questions require a category; nothing to generate against yet
+
+    const { rows: existing } = await client.query<{ id: number }>(
+      `SELECT id FROM questions WHERE org_product_id = $1 LIMIT 1`,
+      [orgProductId]
     );
-    if (!rows[0]) throw new NotFoundException(`Product ${productId} not found`);
-    return rows[0];
+    if (existing.length > 0) return;
+
+    const priceRupees = Math.round(salePricePaise / 100);
+    const textEn = `Would you be interested in buying "${nameEn}" for ₹${priceRupees}?`;
+    const textKn = `"${nameEn}" ಅನ್ನು ₹${priceRupees}ಗೆ ಖರೀದಿಸಲು ನೀವು ಆಸಕ್ತಿ ಹೊಂದಿದ್ದೀರಾ?`;
+
+    const { rows: qRows } = await client.query<{ id: number }>(
+      `INSERT INTO questions
+         (category_id, type, text_en, reward_tokens, intent_window, source, review_state, org_product_id)
+       VALUES ($1, 'intent_window', $2, 2, '3m', 'product_generated', 'draft', $3)
+       RETURNING id`,
+      [categoryId, textEn, orgProductId]
+    );
+    const questionId = qRows[0].id;
+
+    await client.query(
+      `INSERT INTO question_translations (question_id, language_code, text) VALUES ($1, 'kn', $2)`,
+      [questionId, textKn]
+    );
+    await client.query(
+      `INSERT INTO question_options (question_id, label_en, label_kn, sort) VALUES
+         ($1, 'Yes', 'ಹೌದು', 1), ($1, 'Maybe', 'ಬಹುಶಃ', 2), ($1, 'No', 'ಇಲ್ಲ', 3)`,
+      [questionId]
+    );
   }
 
   async uploadPhoto(

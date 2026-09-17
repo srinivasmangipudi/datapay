@@ -62,6 +62,17 @@ describe("Org product catalog — sheet import dedup/upsert + review gating", ()
   });
 
   afterEach(async () => {
+    const generatedQuestionIds = await pool
+      .query<{ id: number }>(
+        `SELECT id FROM questions WHERE org_product_id IN (SELECT id FROM org_products WHERE organization_id = $1)`,
+        [organizationId]
+      )
+      .then((r) => r.rows.map((row) => row.id));
+    if (generatedQuestionIds.length > 0) {
+      await pool.query(`DELETE FROM question_options WHERE question_id = ANY($1)`, [generatedQuestionIds]);
+      await pool.query(`DELETE FROM question_translations WHERE question_id = ANY($1)`, [generatedQuestionIds]);
+      await pool.query(`DELETE FROM questions WHERE id = ANY($1)`, [generatedQuestionIds]);
+    }
     await pool.query(`DELETE FROM product_orders WHERE org_product_id IN (SELECT id FROM org_products WHERE organization_id = $1)`, [organizationId]);
     await pool.query(`DELETE FROM org_product_import_runs WHERE organization_id = $1`, [organizationId]);
     await pool.query(`DELETE FROM org_products WHERE organization_id = $1`, [organizationId]);
@@ -168,5 +179,70 @@ describe("Org product catalog — sheet import dedup/upsert + review gating", ()
     const [run] = await orgProducts.listImportRuns(organizationId);
     expect(run.status).toBe("failed");
     expect(run.error_message).toBeTruthy();
+  });
+
+  describe("default rule: every categorized product gets a matching demand question", () => {
+    let riceCategoryId: number;
+
+    beforeAll(async () => {
+      const { rows } = await pool.query<{ id: number }>(`SELECT id FROM categories WHERE slug = 'rice'`);
+      riceCategoryId = rows[0].id;
+    });
+
+    it("creating a product with a category generates a draft intent question tied back to it", async () => {
+      const { id: productId } = await orgProducts.createProduct(organizationId, {
+        nameEn: "Solar Lantern",
+        categoryId: riceCategoryId,
+        marketPricePaise: 150000,
+        salePricePaise: 99900,
+        quantityAvailable: 10,
+      });
+
+      const { rows } = await pool.query(
+        `SELECT type, source, review_state, text_en, reward_tokens FROM questions WHERE org_product_id = $1`,
+        [productId]
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].source).toBe("product_generated");
+      expect(rows[0].review_state).toBe("draft"); // never auto-approved, same review gate as everything else
+      expect(rows[0].type).toBe("intent_window");
+      expect(rows[0].text_en).toContain("Solar Lantern");
+      expect(rows[0].text_en).toContain("999");
+
+      const options = await pool.query(`SELECT label_en FROM question_options WHERE question_id = (SELECT id FROM questions WHERE org_product_id = $1)`, [productId]);
+      expect(options.rows.map((r) => r.label_en).sort()).toEqual(["Maybe", "No", "Yes"]);
+    });
+
+    it("creating a product with no category yet generates no question", async () => {
+      const { id: productId } = await orgProducts.createProduct(organizationId, {
+        nameEn: "Uncategorized Widget",
+        marketPricePaise: 10000,
+        salePricePaise: 8000,
+        quantityAvailable: 5,
+      });
+
+      const { rows } = await pool.query(`SELECT id FROM questions WHERE org_product_id = $1`, [productId]);
+      expect(rows).toHaveLength(0);
+    });
+
+    it("updating a previously-uncategorized product backfills its question exactly once", async () => {
+      const { id: productId } = await orgProducts.createProduct(organizationId, {
+        nameEn: "Cold Box",
+        marketPricePaise: 500000,
+        salePricePaise: 349900,
+        quantityAvailable: 8,
+      });
+      expect((await pool.query(`SELECT id FROM questions WHERE org_product_id = $1`, [productId])).rows).toHaveLength(0);
+
+      await orgProducts.updateProduct(organizationId, productId, { categoryId: riceCategoryId });
+      const afterFirstUpdate = await pool.query(`SELECT id, text_en FROM questions WHERE org_product_id = $1`, [productId]);
+      expect(afterFirstUpdate.rows).toHaveLength(1);
+
+      // A later, unrelated edit (price change) must not spawn a duplicate.
+      await orgProducts.updateProduct(organizationId, productId, { salePricePaise: 299900 });
+      const afterSecondUpdate = await pool.query(`SELECT id FROM questions WHERE org_product_id = $1`, [productId]);
+      expect(afterSecondUpdate.rows).toHaveLength(1);
+      expect(afterSecondUpdate.rows[0].id).toBe(afterFirstUpdate.rows[0].id);
+    });
   });
 });
