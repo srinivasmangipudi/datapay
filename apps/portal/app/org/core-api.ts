@@ -40,6 +40,10 @@ export function signupOrg(name: string, email: string, password: string): Promis
   return apiFetch("/v1/org/signup", { method: "POST", body: JSON.stringify({ name, email, password }) });
 }
 
+export function getOwnProfile(token: string): Promise<{ name: string; slug: string }> {
+  return apiFetch("/v1/org/me", { headers: { Authorization: `Bearer ${token}` } });
+}
+
 export function submitOrgQuestion(token: string, payload: OrgQuestionPayload): Promise<{ id: number }> {
   return apiFetch("/v1/org/questions", {
     method: "POST",

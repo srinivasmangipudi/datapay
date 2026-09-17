@@ -167,6 +167,15 @@ export class OrganizationsService {
     });
   }
 
+  async getOwnProfile(organizationId: string): Promise<{ name: string; slug: string }> {
+    const { rows } = await this.pool.query<{ name: string; slug: string }>(
+      `SELECT name, slug FROM organizations WHERE id = $1`,
+      [organizationId]
+    );
+    if (!rows[0]) throw new NotFoundException(`Organization ${organizationId} not found`);
+    return rows[0];
+  }
+
   async listOwnQuestions(organizationId: string) {
     const { rows } = await this.pool.query(
       `SELECT id, category_id, type, text_en, reward_tokens, review_state, active_from

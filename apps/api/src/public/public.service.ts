@@ -58,6 +58,57 @@ export class PublicService {
     private readonly kAnon: KAnonService
   ) {}
 
+  // Public storefront (no auth, mirrors getRegistry's posture) — an org's
+  // own catalog page, reachable by slug. Only ever an active org and its
+  // already-approved products: never a draft/rejected listing, and never an
+  // org still pending ops activation.
+  async getOrganizationCatalog(slug: string) {
+    const { rows: orgRows } = await this.pool.query<{ id: string; name: string; slug: string }>(
+      `SELECT id, name, slug FROM organizations WHERE slug = $1 AND active = true`,
+      [slug]
+    );
+    const org = orgRows[0];
+    if (!org) return null;
+
+    const { rows: products } = await this.pool.query<{
+      id: number;
+      name_en: string;
+      name_kn: string | null;
+      description_en: string | null;
+      unit_spec: string | null;
+      market_price_paise: number;
+      sale_price_paise: number;
+      quantity_available: number;
+      photo_url: string | null;
+      category_name: string | null;
+    }>(
+      `SELECT p.id, p.name_en, p.name_kn, p.description_en, p.unit_spec,
+              p.market_price_paise, p.sale_price_paise, p.quantity_available, p.photo_url,
+              c.name AS category_name
+       FROM org_products p
+       LEFT JOIN categories c ON c.id = p.category_id
+       WHERE p.organization_id = $1 AND p.review_state = 'approved'
+       ORDER BY p.id`,
+      [org.id]
+    );
+
+    return {
+      organization: { name: org.name, slug: org.slug },
+      products: products.map((p) => ({
+        id: p.id,
+        nameEn: p.name_en,
+        nameKn: p.name_kn,
+        descriptionEn: p.description_en,
+        unitSpec: p.unit_spec,
+        marketPricePaise: p.market_price_paise,
+        salePricePaise: p.sale_price_paise,
+        quantityAvailable: p.quantity_available,
+        photoUrl: p.photo_url,
+        categoryName: p.category_name,
+      })),
+    };
+  }
+
   async getRegistry() {
     const [registry, opportunities, groups] = await Promise.all([
       this.loadRegistryRows(),

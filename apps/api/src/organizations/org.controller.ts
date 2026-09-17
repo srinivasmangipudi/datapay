@@ -25,6 +25,12 @@ export class OrgController {
   }
 
   @UseGuards(OrgAuthGuard)
+  @Get("me")
+  getOwnProfile(@Req() req: OrgRequest) {
+    return this.organizations.getOwnProfile(req.organizationId);
+  }
+
+  @UseGuards(OrgAuthGuard)
   @Post("questions")
   submitQuestion(@Req() req: OrgRequest, @Body() body: unknown) {
     const dto = parseOrThrow(CreateQuestionDtoSchema, body);

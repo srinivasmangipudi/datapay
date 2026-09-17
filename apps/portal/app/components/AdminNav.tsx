@@ -36,6 +36,7 @@ export function AdminNav({ isOpsSession }: { isOpsSession: boolean }): JSX.Eleme
     pathname === "/child-safety" ||
     pathname === "/about" ||
     pathname.startsWith("/org/") ||
+    pathname.startsWith("/store/") ||
     (pathname === "/" && !isOpsSession)
   )
     return null;

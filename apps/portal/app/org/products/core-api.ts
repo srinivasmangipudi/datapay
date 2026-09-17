@@ -66,6 +66,8 @@ export function createProduct(token: string, payload: CreateProductPayload): Pro
 
 export interface UpdateProductPayload {
   nameEn?: string;
+  descriptionEn?: string;
+  categoryId?: number;
   unitSpec?: string;
   marketPricePaise?: number;
   salePricePaise?: number;
