@@ -414,3 +414,63 @@ export const AdvanceLinkageDtoSchema = z.object({
   toState: z.enum(["producer_interested", "negotiating", "agreed", "completed", "declined"]),
 });
 export type AdvanceLinkageDto = z.infer<typeof AdvanceLinkageDtoSchema>;
+
+/**
+ * POST /v1/org/products/import — an organization points at a public sheet
+ * (a Google Sheets share link, or any plain CSV URL); products are extracted
+ * and upserted, never duplicated on re-import.
+ */
+export const ImportOrgProductsDtoSchema = z.object({
+  sheetUrl: z.string().url(),
+});
+export type ImportOrgProductsDto = z.infer<typeof ImportOrgProductsDtoSchema>;
+
+/** POST /v1/org/products — an org adds one product to its catalog by hand. */
+export const CreateOrgProductDtoSchema = z.object({
+  nameEn: z.string().min(1).max(200),
+  nameKn: z.string().max(200).optional(),
+  descriptionEn: z.string().max(1000).optional(),
+  unitSpec: z.string().max(60).optional(),
+  categoryId: z.number().int().positive().optional(),
+  marketPricePaise: z.number().int().positive(),
+  salePricePaise: z.number().int().positive(),
+  quantityAvailable: z.number().int().min(0),
+  zoneId: z.string().uuid().optional(),
+});
+export type CreateOrgProductDto = z.infer<typeof CreateOrgProductDtoSchema>;
+
+/**
+ * PATCH /v1/org/products/:id — every field optional; at least one must be
+ * present. Editing price/quantity never touches review_state — an
+ * already-approved product stays approved through routine edits.
+ */
+export const UpdateOrgProductDtoSchema = z
+  .object({
+    nameEn: z.string().min(1).max(200).optional(),
+    nameKn: z.string().max(200).optional(),
+    descriptionEn: z.string().max(1000).optional(),
+    unitSpec: z.string().max(60).optional(),
+    categoryId: z.number().int().positive().optional(),
+    marketPricePaise: z.number().int().positive().optional(),
+    salePricePaise: z.number().int().positive().optional(),
+    quantityAvailable: z.number().int().min(0).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Provide at least one field to update" });
+export type UpdateOrgProductDto = z.infer<typeof UpdateOrgProductDtoSchema>;
+
+/** POST /v1/org/products/:id/photo — base64-in-JSON, same convention as every other upload in this app. */
+export const UploadOrgProductPhotoDtoSchema = z.object({
+  imageBase64: z.string().min(1),
+});
+export type UploadOrgProductPhotoDto = z.infer<typeof UploadOrgProductPhotoDtoSchema>;
+
+/**
+ * POST /v1/products/:id/order — reserve-only (no in-app payment): decrements
+ * quantity_available and creates an order record for the org to fulfill
+ * outside the app. Identity-blind, same posture as offers/§7 — the org never
+ * sees the member directly, only a relay_token.
+ */
+export const OrderProductDtoSchema = z.object({
+  quantity: z.number().int().positive().default(1),
+});
+export type OrderProductDto = z.infer<typeof OrderProductDtoSchema>;

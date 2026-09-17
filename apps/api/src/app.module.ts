@@ -17,8 +17,11 @@ import { LinkagesModule } from "./linkages/linkages.module";
 import { MeModule } from "./me/me.module";
 import { OffersModule } from "./offers/offers.module";
 import { OrganizationsModule } from "./organizations/organizations.module";
+import { OrgProductsModule } from "./org-products/org-products.module";
+import { PhotosModule } from "./photos/photos.module";
 import { ProduceModule } from "./produce/produce.module";
 import { ProducerPayoutsModule } from "./producer-payouts/producer-payouts.module";
+import { ProductsModule } from "./products/products.module";
 import { PublicModule } from "./public/public.module";
 import { PulseModule } from "./pulse/pulse.module";
 import { QuestionFeederModule } from "./question-feeder/question-feeder.module";
@@ -53,6 +56,9 @@ import { ZonesModule } from "./zones/zones.module";
     ProduceModule,
     ProducerPayoutsModule,
     OrganizationsModule,
+    OrgProductsModule,
+    ProductsModule,
+    PhotosModule,
     FraudModule,
     AuditModule,
     IntelligenceModule,

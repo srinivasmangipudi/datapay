@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.5",
+    "@aws-sdk/client-s3": "^3.699.0",
     "@datapay/shared": "workspace:*",
     "@google/generative-ai": "^0.24.1",
     "@nestjs/bullmq": "^10.2.3",
