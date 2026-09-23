@@ -31,6 +31,22 @@ function AndroidIcon(): JSX.Element {
   );
 }
 
+function CheckIcon(): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" fill="var(--mk-jade-tint)" />
+      <path
+        d="M8 12.5l2.5 2.5L16 9.5"
+        fill="none"
+        stroke="var(--mk-jade)"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const ICONS = [
   <path
     key="1"
@@ -94,6 +110,26 @@ const CONTENT = {
       { title: "Real signals surface", text: "A number only ever publishes once at least 50 households stand behind it — never one household alone." },
       { title: "Organizations respond", text: "Ask priced questions, or list products directly — households browse and reserve, no middleman." },
     ],
+    benefitsEyebrow: "Why DataPay",
+    benefitsTitle: "Real benefits, for everyone in the loop",
+    benefitsHouseholds: "For households",
+    benefitsOrganizations: "For organizations",
+    householdBenefits: [
+      { title: "Earn tokens for answering", text: "Small, real rewards for a few minutes a day — no strings attached." },
+      { title: "Better prices, locally", text: "Combined demand gives your area real bargaining power with suppliers." },
+      { title: "A real say in what's stocked", text: "Organizations see what your community actually needs, not what a distributor assumes." },
+      { title: "Browse and reserve real products", text: "A genuine catalog, fair pricing, no in-app payment required." },
+      { title: "Total privacy", text: "Only ever a private alias leaves the vault — never your name, phone, or exact location." },
+      { title: "You're always in control", text: "Turn off any category of data sharing, any time." },
+    ],
+    orgBenefits: [
+      { title: "Real demand, not guesses", text: "Every number is a genuine aggregated signal from real households — never a survey panel or estimate." },
+      { title: "Ask your own questions", text: "Set a token reward and get direct answers from the community that matters to you." },
+      { title: "Sell directly", text: "List your catalog and let households browse and reserve — no distributor markup." },
+      { title: "Privacy-safe by design", text: "You never see a household's identity — only anonymized cohorts of at least 50." },
+      { title: "Fast to start", text: "No SDK, no integration work — sign up, get approved, and you're live." },
+      { title: "Full control over spend", text: "You set your own reward per question — you only pay for what you ask." },
+    ],
     systemEyebrow: "The system",
     systemTitle: "Two flows, always — data up, value back down",
     systemLede: "Households never deal with organizations directly, and organizations never see a household directly. DataPay sits in between, on purpose.",
@@ -146,6 +182,26 @@ const CONTENT = {
       { title: "ಖಾಸಗಿಯಾಗಿ ಒಟ್ಟುಗೂಡಿಸಲಾಗಿದೆ", text: "ಪ್ರತಿ ಉತ್ತರವು ಖಾಸಗಿ ಅಲಿಯಾಸ್‌ಗೆ ಮಾತ್ರ ಸಂಬಂಧಿಸಿದೆ — ಸಂಸ್ಥೆಯು ನೋಡಬಹುದಾದ ಹೆಸರು ಅಥವಾ ಫೋನ್ ಸಂಖ್ಯೆ ಎಂದಿಗೂ ಅಲ್ಲ." },
       { title: "ನಿಜವಾದ ಸಂಕೇತಗಳು ಹೊರಹೊಮ್ಮುತ್ತವೆ", text: "ಕನಿಷ್ಠ 50 ಮನೆಗಳು ಬೆಂಬಲಿಸಿದ ನಂತರವೇ ಒಂದು ಸಂಖ್ಯೆ ಪ್ರಕಟವಾಗುತ್ತದೆ — ಎಂದಿಗೂ ಒಂದೇ ಮನೆ ಅಲ್ಲ." },
       { title: "ಸಂಸ್ಥೆಗಳು ಪ್ರತಿಕ್ರಿಯಿಸುತ್ತವೆ", text: "ಬೆಲೆ ನಿಗದಿತ ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ, ಅಥವಾ ಉತ್ಪನ್ನಗಳನ್ನು ನೇರವಾಗಿ ಪಟ್ಟಿ ಮಾಡಿ — ಮನೆಗಳು ಬ್ರೌಸ್ ಮಾಡಿ ಕಾಯ್ದಿರಿಸುತ್ತವೆ, ಯಾವುದೇ ಮಧ್ಯವರ್ತಿ ಇಲ್ಲ." },
+    ],
+    benefitsEyebrow: "DataPay ಏಕೆ",
+    benefitsTitle: "ಪ್ರತಿಯೊಬ್ಬರಿಗೂ ನಿಜವಾದ ಪ್ರಯೋಜನಗಳು",
+    benefitsHouseholds: "ಮನೆಗಳಿಗಾಗಿ",
+    benefitsOrganizations: "ಸಂಸ್ಥೆಗಳಿಗಾಗಿ",
+    householdBenefits: [
+      { title: "ಉತ್ತರಿಸಿದ್ದಕ್ಕೆ ಟೋಕನ್ ಗಳಿಸಿ", text: "ದಿನಕ್ಕೆ ಕೆಲವು ನಿಮಿಷಗಳಿಗೆ ಸಣ್ಣ, ನಿಜವಾದ ಬಹುಮಾನಗಳು — ಯಾವುದೇ ಷರತ್ತುಗಳಿಲ್ಲ." },
+      { title: "ಸ್ಥಳೀಯವಾಗಿ ಉತ್ತಮ ಬೆಲೆಗಳು", text: "ಒಟ್ಟುಗೂಡಿದ ಬೇಡಿಕೆ ನಿಮ್ಮ ಪ್ರದೇಶಕ್ಕೆ ಪೂರೈಕೆದಾರರೊಂದಿಗೆ ನಿಜವಾದ ಚೌಕಾಸಿ ಶಕ್ತಿಯನ್ನು ನೀಡುತ್ತದೆ." },
+      { title: "ಏನು ದಾಸ್ತಾನು ಇಡಬೇಕು ಎಂಬುದರಲ್ಲಿ ನಿಜವಾದ ಧ್ವನಿ", text: "ವಿತರಕರು ಊಹಿಸುವುದನ್ನಲ್ಲ, ನಿಮ್ಮ ಸಮುದಾಯಕ್ಕೆ ನಿಜವಾಗಿ ಏನು ಬೇಕು ಎಂಬುದನ್ನು ಸಂಸ್ಥೆಗಳು ನೋಡುತ್ತವೆ." },
+      { title: "ನಿಜವಾದ ಉತ್ಪನ್ನಗಳನ್ನು ಬ್ರೌಸ್ ಮಾಡಿ ಮತ್ತು ಕಾಯ್ದಿರಿಸಿ", text: "ನಿಜವಾದ ಪಟ್ಟಿ, ನ್ಯಾಯಯುತ ಬೆಲೆ, ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ಪಾವತಿಯ ಅಗತ್ಯವಿಲ್ಲ." },
+      { title: "ಸಂಪೂರ್ಣ ಗೌಪ್ಯತೆ", text: "ವಾಲ್ಟ್‌ನಿಂದ ಖಾಸಗಿ ಅಲಿಯಾಸ್ ಮಾತ್ರ ಹೊರಬರುತ್ತದೆ — ನಿಮ್ಮ ಹೆಸರು, ಫೋನ್, ಅಥವಾ ನಿಖರ ಸ್ಥಳ ಎಂದಿಗೂ ಅಲ್ಲ." },
+      { title: "ನೀವು ಯಾವಾಗಲೂ ನಿಯಂತ್ರಣದಲ್ಲಿರುತ್ತೀರಿ", text: "ಯಾವುದೇ ಸಮಯದಲ್ಲಿ ಯಾವುದೇ ವರ್ಗದ ಡೇಟಾ ಹಂಚಿಕೆಯನ್ನು ಆಫ್ ಮಾಡಿ." },
+    ],
+    orgBenefits: [
+      { title: "ಊಹೆಗಳಲ್ಲ, ನಿಜವಾದ ಬೇಡಿಕೆ", text: "ಪ್ರತಿ ಸಂಖ್ಯೆಯೂ ನಿಜವಾದ ಮನೆಗಳಿಂದ ನಿಜವಾದ ಒಟ್ಟುಗೂಡಿಸಿದ ಸಂಕೇತ — ಎಂದಿಗೂ ಸಮೀಕ್ಷಾ ಪ್ಯಾನಲ್ ಅಥವಾ ಅಂದಾಜು ಅಲ್ಲ." },
+      { title: "ನಿಮ್ಮ ಸ್ವಂತ ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ", text: "ಟೋಕನ್ ಬಹುಮಾನವನ್ನು ನಿಗದಿಪಡಿಸಿ ಮತ್ತು ನಿಮಗೆ ಮುಖ್ಯವಾದ ಸಮುದಾಯದಿಂದ ನೇರ ಉತ್ತರಗಳನ್ನು ಪಡೆಯಿರಿ." },
+      { title: "ನೇರವಾಗಿ ಮಾರಾಟ ಮಾಡಿ", text: "ನಿಮ್ಮ ಪಟ್ಟಿಯನ್ನು ಪಟ್ಟಿ ಮಾಡಿ ಮತ್ತು ಮನೆಗಳು ಬ್ರೌಸ್ ಮಾಡಿ ಕಾಯ್ದಿರಿಸಲಿ — ವಿತರಕರ ಮಾರ್ಕ್‌ಅಪ್ ಇಲ್ಲ." },
+      { title: "ವಿನ್ಯಾಸದಿಂದಲೇ ಗೌಪ್ಯತೆ-ಸುರಕ್ಷಿತ", text: "ನೀವು ಎಂದಿಗೂ ಮನೆಯ ಗುರುತನ್ನು ನೋಡುವುದಿಲ್ಲ — ಕನಿಷ್ಠ 50ರ ಅನಾಮಧೇಯ ಗುಂಪುಗಳು ಮಾತ್ರ." },
+      { title: "ಪ್ರಾರಂಭಿಸಲು ವೇಗವಾಗಿದೆ", text: "ಯಾವುದೇ SDK ಇಲ್ಲ, ಯಾವುದೇ ಸಂಯೋಜನೆ ಕೆಲಸವಿಲ್ಲ — ಸೈನ್ ಅಪ್ ಮಾಡಿ, ಅನುಮೋದನೆ ಪಡೆಯಿರಿ, ಮತ್ತು ನೀವು ಲೈವ್ ಆಗಿರುತ್ತೀರಿ." },
+      { title: "ಖರ್ಚಿನ ಮೇಲೆ ಸಂಪೂರ್ಣ ನಿಯಂತ್ರಣ", text: "ಪ್ರತಿ ಪ್ರಶ್ನೆಗೆ ನಿಮ್ಮ ಸ್ವಂತ ಬಹುಮಾನವನ್ನು ನೀವೇ ನಿಗದಿಪಡಿಸುತ್ತೀರಿ — ನೀವು ಕೇಳಿದ್ದಕ್ಕೆ ಮಾತ್ರ ಪಾವತಿಸುತ್ತೀರಿ." },
     ],
     systemEyebrow: "ವ್ಯವಸ್ಥೆ",
     systemTitle: "ಎರಡು ಹರಿವುಗಳು, ಯಾವಾಗಲೂ — ಡೇಟಾ ಮೇಲಕ್ಕೆ, ಮೌಲ್ಯ ಕೆಳಗೆ",
@@ -245,6 +301,39 @@ export function MarketingHome({ lang }: { lang: Lang }): JSX.Element {
                 <p>{s.text}</p>
               </div>
             ))}
+          </div>
+        </section>
+
+        <section className="mkSection mkSectionBenefits">
+          <p className="mkEyebrow">{t.benefitsEyebrow}</p>
+          <h2>{t.benefitsTitle}</h2>
+          <div className="mkBenefitsGrid">
+            <div className="mkBenefitsCol">
+              <h3 className="mkBenefitsColHeading">{t.benefitsHouseholds}</h3>
+              <ul className="mkBenefitsList">
+                {t.householdBenefits.map((b) => (
+                  <li key={b.title}>
+                    <CheckIcon />
+                    <span>
+                      <strong>{b.title}.</strong> {b.text}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="mkBenefitsCol">
+              <h3 className="mkBenefitsColHeading">{t.benefitsOrganizations}</h3>
+              <ul className="mkBenefitsList">
+                {t.orgBenefits.map((b) => (
+                  <li key={b.title}>
+                    <CheckIcon />
+                    <span>
+                      <strong>{b.title}.</strong> {b.text}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
@@ -368,6 +457,15 @@ export function MarketingHome({ lang }: { lang: Lang }): JSX.Element {
 
         .mkDiagramWrap { margin-top: 28px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: 20px; padding: 28px 20px; overflow-x: auto; }
 
+        .mkBenefitsGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 32px; }
+        .mkBenefitsCol { background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: 18px; padding: 26px 24px; }
+        .mkBenefitsColHeading { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mk-jade); margin: 0 0 18px; }
+        .mkBenefitsList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+        .mkBenefitsList li { display: flex; align-items: flex-start; gap: 10px; }
+        .mkBenefitsList li svg { flex-shrink: 0; margin-top: 2px; }
+        .mkBenefitsList li span { font-size: 13.5px; line-height: 1.6; color: var(--mk-subtle); }
+        .mkBenefitsList li strong { color: var(--mk-ink); font-weight: 700; }
+
         .mkCards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 28px; }
         .mkCard { background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: 16px; padding: 24px; }
         .mkCard h3 { font-size: 15.5px; margin: 0 0 10px; }
@@ -393,6 +491,7 @@ export function MarketingHome({ lang }: { lang: Lang }): JSX.Element {
           .mkSteps { grid-template-columns: repeat(2, 1fr); }
           .mkCards { grid-template-columns: 1fr; }
           .mkProtectionGrid { grid-template-columns: 1fr; }
+          .mkBenefitsGrid { grid-template-columns: 1fr; }
         }
         @media (max-width: 520px) {
           .mkSteps { grid-template-columns: 1fr; }
