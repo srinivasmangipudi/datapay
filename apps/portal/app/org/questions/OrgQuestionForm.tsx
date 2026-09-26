@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { CategoryPicker } from "../CategoryPicker";
 import type { AnswerType, Category } from "../core-api";
 import { submitOrgQuestionAction } from "./actions";
 
@@ -30,7 +31,7 @@ function emptyOptions(count: number): OptionRow[] {
 }
 
 export function OrgQuestionForm({ categories }: { categories: Category[] }): JSX.Element {
-  const [categoryId, setCategoryId] = useState<number | "">(categories[0]?.id ?? "");
+  const [categoryName, setCategoryName] = useState("");
   const [textEn, setTextEn] = useState("");
   const [type, setType] = useState<AnswerType>("single");
   const [options, setOptions] = useState<OptionRow[]>(emptyOptions(2));
@@ -71,8 +72,8 @@ export function OrgQuestionForm({ categories }: { categories: Category[] }): JSX
     e.preventDefault();
     setClientError(null);
 
-    if (categoryId === "") {
-      setClientError("Pick a category.");
+    if (!categoryName.trim()) {
+      setClientError("Pick or type a category.");
       return;
     }
     if (!textEn.trim()) {
@@ -89,7 +90,7 @@ export function OrgQuestionForm({ categories }: { categories: Category[] }): JSX
 
     startTransition(() => {
       submitOrgQuestionAction({
-        categoryId,
+        categoryName: categoryName.trim(),
         textEn: textEn.trim(),
         type,
         rewardTokens,
@@ -111,14 +112,12 @@ export function OrgQuestionForm({ categories }: { categories: Category[] }): JSX
 
       <div className="step">
         <span className="stepLabel">1. Category &amp; question</span>
-        <select value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))}>
-          {categories.length === 0 && <option value="">No categories yet</option>}
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <CategoryPicker
+          categories={categories}
+          value={categoryName}
+          onChange={setCategoryName}
+          id="orgQuestionCategories"
+        />
         <input
           placeholder="Question text (English)"
           value={textEn}
@@ -207,7 +206,7 @@ export function OrgQuestionForm({ categories }: { categories: Category[] }): JSX
         <span className="rewardSuffix">tokens for answering</span>
       </div>
 
-      <button type="submit" className="submitBtn" disabled={isPending || categories.length === 0}>
+      <button type="submit" className="submitBtn" disabled={isPending}>
         {isPending ? "Submitting…" : "Submit for review"}
       </button>
       <p className="hint">

@@ -18,7 +18,7 @@ export default async function OrgProductsPage(): Promise<JSX.Element> {
 
   const [profile, categories, products, importRuns, orders] = await Promise.all([
     getOwnProfile(token),
-    listCategories(),
+    listCategories(token),
     listOwnProducts(token),
     listImportRuns(token),
     listOwnOrders(token),

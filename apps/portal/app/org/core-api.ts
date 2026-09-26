@@ -2,6 +2,7 @@ import { apiFetch } from "../lib/core-api-client";
 
 export type AnswerType = "single" | "multi" | "yesno" | "intent_window" | "numeric" | "free_text";
 
+/** What the API expects — a category already resolved to an id. */
 export interface OrgQuestionPayload {
   categoryId: number;
   textEn: string;
@@ -12,6 +13,11 @@ export interface OrgQuestionPayload {
   allowPhoto: boolean;
   allowVoice: boolean;
 }
+
+/** What the form sends — a category NAME, resolved (or created) server-side. */
+export type OrgQuestionFormPayload = Omit<OrgQuestionPayload, "categoryId"> & {
+  categoryName: string;
+};
 
 export interface OwnQuestion {
   id: number;
@@ -56,9 +62,23 @@ export function listOwnQuestions(token: string): Promise<OwnQuestion[]> {
   return apiFetch("/v1/org/questions", { headers: { Authorization: `Bearer ${token}` } });
 }
 
-// Organizations pick from the existing category list rather than typing free
-// text (unlike the ops wizard) — one less way a company account can leave
-// stray/duplicate categories behind.
-export function listCategories(): Promise<Category[]> {
-  return apiFetch("/v1/admin/categories");
+// Org-scoped, not the /v1/admin/* route this used to call — a company-facing
+// page shouldn't reach into an ops surface just because admin routes happen
+// to be unauthenticated today.
+export function listCategories(token: string): Promise<Category[]> {
+  return apiFetch("/v1/org/categories", { headers: { Authorization: `Bearer ${token}` } });
+}
+
+/**
+ * Find-or-create by slug. Orgs used to be limited to a fixed dropdown to
+ * avoid stray duplicates; typing is allowed now, and the duplicate problem is
+ * handled where it actually can be — "Solar Lights", "solar lights" and
+ * "Solar  Lights" all slugify to `solar-lights` and resolve to one row.
+ */
+export function resolveCategory(token: string, name: string): Promise<{ id: number; created: boolean }> {
+  return apiFetch("/v1/org/categories", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ name }),
+  });
 }

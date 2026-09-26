@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { resolveCategory } from "../core-api";
 import {
   createProduct,
   type CreateProductPayload,
@@ -31,12 +32,29 @@ export async function importProductsAction(sheetUrl: string): Promise<ActionResu
   }
 }
 
+/**
+ * The form sends a category NAME (typed or picked from the datalist), not an
+ * id — resolving it here rather than in the client keeps the org token on the
+ * server and lets an unrecognised name create the category in the same pass.
+ */
+async function resolveCategoryId(
+  token: string,
+  categoryName: string | undefined
+): Promise<number | undefined> {
+  const name = categoryName?.trim();
+  if (!name) return undefined;
+  const { id } = await resolveCategory(token, name);
+  return id;
+}
+
 export async function createProductAction(
-  payload: CreateProductPayload
+  payload: CreateProductPayload & { categoryName?: string }
 ): Promise<ActionResult<{ id: number }>> {
   try {
     const token = requireOrgToken();
-    const result = await createProduct(token, payload);
+    const { categoryName, ...rest } = payload;
+    const categoryId = await resolveCategoryId(token, categoryName);
+    const result = await createProduct(token, { ...rest, categoryId });
     revalidatePath("/org/products");
     return { ok: true, data: result };
   } catch (err) {
@@ -46,11 +64,13 @@ export async function createProductAction(
 
 export async function updateProductAction(
   productId: number,
-  payload: UpdateProductPayload
+  payload: UpdateProductPayload & { categoryName?: string }
 ): Promise<ActionResult<OrgProduct>> {
   try {
     const token = requireOrgToken();
-    const result = await updateProduct(token, productId, payload);
+    const { categoryName, ...rest } = payload;
+    const categoryId = await resolveCategoryId(token, categoryName);
+    const result = await updateProduct(token, productId, { ...rest, categoryId });
     revalidatePath("/org/products");
     return { ok: true, data: result };
   } catch (err) {

@@ -19,7 +19,7 @@ export default async function OrgQuestionsPage({
   const token = cookies().get("org_session")?.value;
   if (!token) redirect("/org/login");
 
-  const [categories, ownQuestions] = await Promise.all([listCategories(), listOwnQuestions(token)]);
+  const [categories, ownQuestions] = await Promise.all([listCategories(token), listOwnQuestions(token)]);
 
   return (
     <main className="page">

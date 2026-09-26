@@ -32,7 +32,9 @@ export function ProductCard({
 }): JSX.Element {
   const [nameEn, setNameEn] = useState(product.name_en);
   const [descriptionEn, setDescriptionEn] = useState(product.description_en ?? "");
-  const [categoryId, setCategoryId] = useState(product.category_id ? String(product.category_id) : "");
+  const [categoryName, setCategoryName] = useState(
+    categories.find((c) => c.id === product.category_id)?.name ?? ""
+  );
   const [unitSpec, setUnitSpec] = useState(product.unit_spec ?? "");
   const [marketPrice, setMarketPrice] = useState((product.market_price_paise / 100).toFixed(2));
   const [salePrice, setSalePrice] = useState((product.sale_price_paise / 100).toFixed(2));
@@ -52,7 +54,7 @@ export function ProductCard({
         const result = await updateProductAction(product.id, {
           nameEn: nameEn.trim(),
           descriptionEn: descriptionEn.trim() || undefined,
-          categoryId: categoryId ? Number(categoryId) : undefined,
+          categoryName: categoryName.trim() || undefined,
           unitSpec: unitSpec.trim() || undefined,
           marketPricePaise: Math.round(Number(marketPrice) * 100),
           salePricePaise: Math.round(Number(salePrice) * 100),
@@ -123,14 +125,18 @@ export function ProductCard({
         <div className="productCardFieldsRow">
           <label className="productCardField">
             <span>Category</span>
-            <select className="cellInput" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-              <option value="">Uncategorized</option>
+            <input
+              className="cellInput"
+              list={`productCategories-${product.id}`}
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+              placeholder="Pick or type a new one"
+            />
+            <datalist id={`productCategories-${product.id}`}>
               {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
+                <option key={c.id} value={c.name} />
               ))}
-            </select>
+            </datalist>
           </label>
           <label className="productCardField">
             <span>Unit</span>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { Category } from "../core-api";
+import { CategoryPicker } from "../CategoryPicker";
 import { createProductAction, uploadPhotoAction } from "./actions";
 
 function readAsBase64(file: File): Promise<string> {
@@ -16,7 +17,7 @@ function readAsBase64(file: File): Promise<string> {
 export function ProductForm({ categories }: { categories: Category[] }): JSX.Element {
   const [nameEn, setNameEn] = useState("");
   const [unitSpec, setUnitSpec] = useState("");
-  const [categoryId, setCategoryId] = useState<number | "">("");
+  const [categoryName, setCategoryName] = useState("");
   const [marketPrice, setMarketPrice] = useState("");
   const [salePrice, setSalePrice] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -35,7 +36,7 @@ export function ProductForm({ categories }: { categories: Category[] }): JSX.Ele
   function reset() {
     setNameEn("");
     setUnitSpec("");
-    setCategoryId("");
+    setCategoryName("");
     setMarketPrice("");
     setSalePrice("");
     setQuantity("");
@@ -60,7 +61,7 @@ export function ProductForm({ categories }: { categories: Category[] }): JSX.Ele
         const result = await createProductAction({
           nameEn: nameEn.trim(),
           unitSpec: unitSpec.trim() || undefined,
-          categoryId: categoryId === "" ? undefined : categoryId,
+          categoryName: categoryName.trim() || undefined,
           marketPricePaise,
           salePricePaise,
           quantityAvailable,
@@ -93,14 +94,13 @@ export function ProductForm({ categories }: { categories: Category[] }): JSX.Ele
 
       <input placeholder="Product name" value={nameEn} onChange={(e) => setNameEn(e.target.value)} />
       <input placeholder="Unit (e.g. 1kg, 500ml)" value={unitSpec} onChange={(e) => setUnitSpec(e.target.value)} />
-      <select value={categoryId} onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : "")}>
-        <option value="">No category</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
+      <CategoryPicker
+        categories={categories}
+        value={categoryName}
+        onChange={setCategoryName}
+        id="newProductCategories"
+        allowEmpty
+      />
       <input
         type="number"
         placeholder="Market price (₹)"
