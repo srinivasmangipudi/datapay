@@ -66,6 +66,7 @@ export function HomeScreen({ session, onNavigate }: Props) {
     >
       <View style={styles.header}>
         <DataPayMark size={22} />
+        <Text style={styles.betaBadge}>BETA</Text>
         <Text style={styles.greeting}>{session.displayAlias}</Text>
       </View>
 
@@ -123,6 +124,18 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.paper },
   header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.base },
   greeting: { fontSize: 13, color: colors.faint, fontWeight: "500" },
+  // Open testing: testers should never be unsure whether this is the real thing.
+  betaBadge: {
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 0.9,
+    color: colors.teal,
+    backgroundColor: colors.tealTint,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
   balanceCard: { marginBottom: spacing.md },
   balance: { color: colors.brassOnDark, fontSize: 34, fontWeight: "700", marginTop: spacing.sm },
   pulseCard: {

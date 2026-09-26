@@ -58,6 +58,7 @@ export function PhoneEntryScreen({ onSent }: Props) {
 
         <View style={styles.logoWrap}>
           <DataPayLogo size={44} tagline="Your data is your asset" />
+          <Text style={styles.betaBadge}>BETA · OPEN TESTING</Text>
         </View>
 
         <Text style={styles.title}>Let's get your village on the map</Text>
@@ -127,7 +128,19 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: colors.brassTint,
   },
-  logoWrap: { alignItems: "center", marginTop: spacing.xxl, marginBottom: spacing.lg },
+  logoWrap: { alignItems: "center", marginTop: spacing.xxl, marginBottom: spacing.lg, gap: spacing.sm },
+  // First thing a new tester sees — say plainly that this is a beta.
+  betaBadge: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1,
+    color: colors.teal,
+    backgroundColor: colors.tealTint,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+    overflow: "hidden",
+  },
   title: { ...type.title, textAlign: "center", color: colors.ink, marginTop: spacing.md },
   titleKn: { ...type.subtitle, textAlign: "center", color: colors.subtle, marginTop: 4, fontWeight: "600" },
   subtitle: {

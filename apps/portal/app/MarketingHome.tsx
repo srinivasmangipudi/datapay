@@ -140,6 +140,8 @@ const CONTENT = {
     ctaHowItWorks: "See how it works",
     getApp: "Get the DataPay app",
     comingSoon: "Coming soon",
+    openBeta: "Open beta",
+    betaNote: "DataPay is in open beta. Everything here is real — real questions, real catalogs, real tokens — but expect rough edges, and tell us when you find one.",
     heroKicker: "Household demand, collectivised",
     phone: {
       eyebrow: "Today's question",
@@ -234,6 +236,8 @@ const CONTENT = {
     ctaHowItWorks: "ಇದು ಹೇಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ ಎಂದು ನೋಡಿ",
     getApp: "DataPay ಆ್ಯಪ್ ಪಡೆಯಿರಿ",
     comingSoon: "ಶೀಘ್ರದಲ್ಲಿ ಬರಲಿದೆ",
+    openBeta: "ಓಪನ್ ಬೀಟಾ",
+    betaNote: "DataPay ಓಪನ್ ಬೀಟಾದಲ್ಲಿದೆ. ಇಲ್ಲಿರುವುದೆಲ್ಲವೂ ನಿಜ — ನಿಜವಾದ ಪ್ರಶ್ನೆಗಳು, ನಿಜವಾದ ಪಟ್ಟಿಗಳು, ನಿಜವಾದ ಟೋಕನ್‌ಗಳು — ಆದರೆ ಕೆಲವು ಸಣ್ಣ ದೋಷಗಳಿರಬಹುದು; ಕಂಡರೆ ನಮಗೆ ತಿಳಿಸಿ.",
     heroKicker: "ಮನೆಗಳ ಬೇಡಿಕೆ, ಒಟ್ಟಾಗಿ",
     phone: {
       eyebrow: "ಇಂದಿನ ಪ್ರಶ್ನೆ",
@@ -360,10 +364,10 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
                       <strong>App Store</strong>
                     </span>
                   </div>
-                  <div className="mkBadge" aria-label={`Google Play — ${t.comingSoon}`}>
+                  <div className="mkBadge mkBadgeLive" aria-label={`Google Play — ${t.openBeta}`}>
                     <AndroidIcon />
                     <span className="mkBadgeText">
-                      <small>{t.comingSoon}</small>
+                      <small>{t.openBeta}</small>
                       <strong>Google Play</strong>
                     </span>
                   </div>
@@ -691,6 +695,11 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkBadgeText { display: flex; flex-direction: column; text-align: left; line-height: 1.25; }
         .mkBadgeText small { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mk-mist); }
         .mkBadgeText strong { font-size: 14px; font-weight: 700; color: var(--mk-ink); }
+        /* The Android build is real and installable; iOS isn't, so only this
+           one loses the dashed "not yet" treatment. */
+        .mkBadgeLive { border-style: solid; border-color: var(--mk-jade); opacity: 1; }
+        .mkBadgeLive .mkBadgeText small { color: var(--mk-jade); }
+        .mkBetaNote { font-size: 12.5px; line-height: 1.5; color: var(--mk-mist); max-width: 46ch; margin: 12px 0 0; }
 
         .mkSection { max-width: 1200px; margin: 0 auto; padding: var(--section-y) var(--gutter); border-top: 1px solid var(--mk-border); }
         .mkEyebrow { font-family: "Spline Sans Mono", monospace; text-transform: uppercase; letter-spacing: 0.16em; font-size: 11px; font-weight: 500; color: var(--mk-jade); margin: 0 0 14px; }
