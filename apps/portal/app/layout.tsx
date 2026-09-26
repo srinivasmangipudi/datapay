@@ -40,6 +40,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
 
   return (
     <html lang="en">
+      <head>
+        {/* The two faces that paint above the fold — preloaded so the first
+            heading and the body copy don't land in a fallback and reflow. */}
+        <link rel="preload" href="/fonts/Switzer-400.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link
+          rel="preload"
+          href="/fonts/CabinetGrotesk-800.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body>
         <AdminNav isOpsSession={isOpsSession} />
         {children}
@@ -50,16 +62,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }):
         <style
           dangerouslySetInnerHTML={{
             __html: `
-          :root { color-scheme: light; --page-bg: #F6F5F1; --ink: #101418; }
+          :root { color-scheme: light; --page-bg: #FBFAF7; --ink: #12151A; }
           @media (prefers-color-scheme: dark) {
-            :root:not([data-theme="light"]) { color-scheme: dark; --page-bg: #101418; --ink: #F6F5F1; }
+            :root:not([data-theme="light"]) { color-scheme: dark; --page-bg: #0F1114; --ink: #F4F2ED; }
           }
-          :root[data-theme="dark"] { color-scheme: dark; --page-bg: #101418; --ink: #F6F5F1; }
+          :root[data-theme="dark"] { color-scheme: dark; --page-bg: #0F1114; --ink: #F4F2ED; }
           body {
             margin: 0;
             background: var(--page-bg);
             color: var(--ink);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            font-family: "Switzer", system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
           }
         `,
           }}

@@ -77,7 +77,7 @@ function CheckIcon(): JSX.Element {
         d="M8 12.5l2.5 2.5L16 9.5"
         fill="none"
         stroke="var(--mk-jade)"
-        strokeWidth="2"
+        strokeWidth="1.4"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -91,7 +91,7 @@ const ICONS = [
     d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
     fill="none"
     stroke="currentColor"
-    strokeWidth="1.8"
+    strokeWidth="1.2"
     strokeLinecap="round"
     strokeLinejoin="round"
   />,
@@ -100,7 +100,7 @@ const ICONS = [
     d="M12 2l8 3.5v5c0 5-3.4 8.7-8 10.5-4.6-1.8-8-5.5-8-10.5v-5L12 2z"
     fill="none"
     stroke="currentColor"
-    strokeWidth="1.8"
+    strokeWidth="1.2"
     strokeLinecap="round"
     strokeLinejoin="round"
   />,
@@ -109,7 +109,7 @@ const ICONS = [
     d="M4 19V9M11 19V4M18 19v-7"
     fill="none"
     stroke="currentColor"
-    strokeWidth="1.8"
+    strokeWidth="1.2"
     strokeLinecap="round"
     strokeLinejoin="round"
   />,
@@ -118,7 +118,7 @@ const ICONS = [
     d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"
     fill="none"
     stroke="currentColor"
-    strokeWidth="1.8"
+    strokeWidth="1.2"
     strokeLinecap="round"
     strokeLinejoin="round"
   />,
@@ -552,9 +552,15 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        .mkPage { --mk-bg: #F6F5F1; --mk-surface: #fff; --mk-border: #E7E4DC; --mk-ink: #101418; --mk-subtle: #5B6672; --mk-mist: #8A939B; --mk-jade: #0E7A5C; --mk-jade-deep: #0B6249; --mk-jade-tint: #E3EFEA; --mk-brass: #B98F2F;
-          background: var(--mk-bg); color: var(--mk-ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        .mkPage {
+          --mk-bg: #FBFAF7; --mk-surface: #FFFFFF; --mk-sunken: #F3F1EB;
+          --mk-border: rgba(18,21,26,0.09); --mk-border-strong: rgba(18,21,26,0.16);
+          --mk-ink: #12151A; --mk-subtle: #585F68; --mk-mist: #8C939C;
+          --mk-jade: #0E7A5C; --mk-jade-deep: #0B6249; --mk-jade-tint: #E7F0EC; --mk-brass: #A67C21;
+          background: var(--mk-bg); color: var(--mk-ink);
+          font-family: "Switzer", system-ui, sans-serif;
         }
+        .mkPage h1, .mkPage h2, .mkPage h3 { font-family: "Cabinet Grotesk", system-ui, sans-serif; font-weight: 800; }
         /* ---- Hero band ---------------------------------------------------
            Two columns, left-aligned: the old hero was a centered column of
            text that gave the page nothing to look at above the fold. */
@@ -569,9 +575,9 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkHero {
           position: relative;
           z-index: 1;
-          max-width: 1120px;
+          max-width: 1200px;
           margin: 0 auto;
-          padding: 64px 32px 56px;
+          padding: clamp(64px, 8vw, 104px) var(--gutter) clamp(48px, 5vw, 72px);
           display: grid;
           grid-template-columns: 1.05fr 0.95fr;
           gap: 56px;
@@ -579,12 +585,13 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         }
         .mkHeroCopy { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
         .mkHeroKicker {
-          display: inline-block; font-size: 12.5px; font-weight: 700; letter-spacing: 0.1em;
+          display: inline-block; font-family: "Spline Sans Mono", monospace;
+          font-size: 11px; font-weight: 500; letter-spacing: 0.16em;
           text-transform: uppercase; color: var(--mk-jade);
           background: var(--mk-surface); border: 1px solid var(--mk-border);
           border-radius: 999px; padding: 7px 14px;
         }
-        .mkHero h1 { font-size: 3.1rem; line-height: 1.06; margin: 0; letter-spacing: -0.035em; }
+        .mkHero h1 { font-size: clamp(2.75rem, 5.4vw, 4.25rem); line-height: 1.02; margin: 0; letter-spacing: -0.045em; }
         .mkLede { font-size: 17px; line-height: 1.65; color: var(--mk-subtle); max-width: 520px; margin: 0; }
         .mkCtaRow { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
 
@@ -595,7 +602,7 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
           background: var(--mk-jade); opacity: 0.1; filter: blur(60px);
         }
         .mkPhone {
-          position: relative; width: 278px; aspect-ratio: 9 / 15.2;
+          position: relative; width: 278px; aspect-ratio: 9 / 13.4;
           background: #0c0f12; border-radius: 40px; padding: 9px;
           box-shadow: 0 30px 70px rgba(16, 20, 24, 0.28), 0 2px 0 rgba(255,255,255,0.12) inset;
         }
@@ -634,14 +641,14 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         /* ---- Trust strip -------------------------------------------------- */
         .mkTrustStrip {
           position: relative; z-index: 1;
-          max-width: 1120px; margin: 0 auto; padding: 0 32px 56px;
+          max-width: 1200px; margin: 0 auto; padding: 0 var(--gutter) clamp(56px, 7vw, 88px);
           display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
         }
         .mkTrustItem {
           display: flex; align-items: baseline; gap: 12px;
           border-left: 2px solid var(--mk-jade); padding-left: 16px;
         }
-        .mkTrustStat { font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; color: var(--mk-ink); line-height: 1; }
+        .mkTrustStat { font-family: "Cabinet Grotesk", sans-serif; font-size: clamp(2rem, 3vw, 2.6rem); font-weight: 700; letter-spacing: -0.03em; color: var(--mk-ink); line-height: 1; }
         .mkTrustLabel { font-size: 13px; line-height: 1.45; color: var(--mk-subtle); }
 
         /* ---- Live catalog shelf ------------------------------------------- */
@@ -649,9 +656,9 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkShelfCard {
           display: flex; flex-direction: column; text-decoration: none; color: inherit;
           background: var(--mk-surface); border: 1px solid var(--mk-border);
-          border-radius: 16px; overflow: hidden; transition: transform 0.15s ease, box-shadow 0.15s ease;
+          border-radius: 12px; overflow: hidden; transition: border-color 0.18s ease, background 0.18s ease;
         }
-        .mkShelfCard:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(16,20,24,0.10); }
+        .mkShelfCard:hover { border-color: var(--mk-border-strong); background: var(--mk-sunken); }
         /* The ratio has to live on the <img>, not the wrapper: height:100%
            against an auto-height parent resolves to auto, so each photo sized
            itself from its own intrinsic height and the shelf came out ragged. */
@@ -660,8 +667,8 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkShelfBody { display: flex; flex-direction: column; gap: 7px; padding: 14px 15px 16px; }
         .mkShelfName { font-size: 13.5px; font-weight: 700; line-height: 1.35; }
         .mkShelfPrices { display: flex; align-items: baseline; gap: 8px; }
-        .mkShelfPrice { font-size: 16px; font-weight: 700; color: var(--mk-jade); }
-        .mkShelfWas { font-size: 12px; color: var(--mk-mist); text-decoration: line-through; }
+        .mkShelfPrice { font-family: "Spline Sans Mono", monospace; font-size: 15px; font-weight: 500; color: var(--mk-jade); font-variant-numeric: tabular-nums; }
+        .mkShelfWas { font-family: "Spline Sans Mono", monospace; font-size: 12px; color: var(--mk-mist); text-decoration: line-through; }
         .mkShelfFoot {
           display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
           gap: 12px; margin-top: 20px; font-size: 14px; color: var(--mk-subtle);
@@ -673,16 +680,16 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkCtaInline { display: inline-block; margin-top: 8px; }
 
         .mkAppBadges { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
-        .mkAppBadgesLabel { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mk-mist); }
+        .mkAppBadgesLabel { font-family: "Spline Sans Mono", monospace; font-size: 10.5px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mk-mist); }
         .mkBadgeRow { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
         .mkBadge { display: flex; align-items: center; gap: 9px; border: 1px dashed var(--mk-border); border-radius: 12px; padding: 8px 14px; color: var(--mk-subtle); background: var(--mk-surface); opacity: 0.85; }
         .mkBadgeText { display: flex; flex-direction: column; text-align: left; line-height: 1.25; }
         .mkBadgeText small { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mk-mist); }
         .mkBadgeText strong { font-size: 14px; font-weight: 700; color: var(--mk-ink); }
 
-        .mkSection { max-width: 980px; margin: 0 auto; padding: 56px 24px; border-top: 1px solid var(--mk-border); }
-        .mkEyebrow { text-transform: uppercase; letter-spacing: 0.1em; font-size: 12px; font-weight: 700; color: var(--mk-jade); margin: 0 0 10px; }
-        .mkSection h2 { font-size: 1.6rem; margin: 0 0 14px; letter-spacing: -0.01em; max-width: 640px; }
+        .mkSection { max-width: 1200px; margin: 0 auto; padding: var(--section-y) var(--gutter); border-top: 1px solid var(--mk-border); }
+        .mkEyebrow { font-family: "Spline Sans Mono", monospace; text-transform: uppercase; letter-spacing: 0.16em; font-size: 11px; font-weight: 500; color: var(--mk-jade); margin: 0 0 14px; }
+        .mkSection h2 { font-size: clamp(1.75rem, 3vw, 2.5rem); margin: 0 0 18px; letter-spacing: -0.035em; line-height: 1.08; max-width: 18ch; }
         .mkSectionLede { color: var(--mk-subtle); font-size: 15px; line-height: 1.7; max-width: 640px; margin: 0 0 8px; }
         .mkSectionLede a { color: var(--mk-jade); font-weight: 600; }
 

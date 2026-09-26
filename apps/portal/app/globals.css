@@ -2,6 +2,51 @@
    hand-wrote its own near-identical <style dangerouslySetInnerHTML> block.
    Page-specific rules still live locally; only what's common lives here. */
 
+/* ---- Brand typefaces --------------------------------------------------
+   apps/assets/tokens.ts has named these three since the brand system was
+   written, but nothing ever loaded them, so every surface silently fell
+   back to system-ui. Self-hosted from /public/fonts rather than a CDN or
+   next/font: DataPayLogo sets `font-family: 'Cabinet Grotesk'` in an inline
+   style, which can only resolve against a real declared family name — a
+   next/font hashed class can't reach it. */
+@font-face {
+  font-family: "Cabinet Grotesk";
+  src: url("/fonts/CabinetGrotesk-800.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Switzer";
+  src: url("/fonts/Switzer-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Switzer";
+  src: url("/fonts/Switzer-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Switzer";
+  src: url("/fonts/Switzer-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+/* One variable file covers the whole range — the 400 and 500 downloads from
+   Google were byte-identical. */
+@font-face {
+  font-family: "Spline Sans Mono";
+  src: url("/fonts/SplineSansMono-400.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* DataPay brand tokens (SPEC.md §28, apps/assets/tokens.ts) — the portal
    previously used an ad hoc blue (#2a78d6) as its primary accent, which was
    never part of the actual brand system. Jade is the real primary accent;
@@ -12,33 +57,44 @@
    page that wants a card writes var(--surface), not a hex that then has to
    be remembered again in the dark-mode block at the bottom. */
 :root {
-  --ink: #101418;
-  --porcelain: #f6f5f1;
-  --porcelain2: #efede6;
+  --font-display: "Cabinet Grotesk", system-ui, sans-serif;
+  --font-body: "Switzer", system-ui, sans-serif;
+  --font-mono: "Spline Sans Mono", ui-monospace, Menlo, monospace;
+
+  --ink: #12151a;
+  --porcelain: #fbfaf7;
+  --porcelain2: #f3f1eb;
   --jade: #0e7a5c;
   --jade-bright: #12946f;
-  --jade-soft: #e3efea;
-  --jade-soft-dark: #123128;
-  --brass: #b98f2f;
+  --jade-soft: #e7f0ec;
+  --jade-soft-dark: #102a22;
+  /* Deepened from the token file's #B98F2F, which sat at 2.9:1 on paper —
+     under the 3:1 floor for a non-text graphic. Reserved for value/money. */
+  --brass: #a67c21;
   --brass-bright: #d4aa45;
-  --mist: #8a939b;
+  --mist: #8c939c;
 
   --surface: #ffffff;
-  --surface-2: #fbfaf7;
-  --edge: #e7e4dc;
-  --edge-strong: #d8d5cb;
-  --text: #101418;
-  --text-2: #4a5560;
-  --text-3: #7d8792;
-  --danger: #a63f37;
-  --danger-soft: #f7ece9;
+  --surface-2: #f7f5f0;
+  --edge: rgba(18, 21, 26, 0.09);
+  --edge-strong: rgba(18, 21, 26, 0.16);
+  --text: #12151a;
+  --text-2: #585f68;
+  --text-3: #8c939c;
+  --danger: #9c3c34;
+  --danger-soft: #f8efec;
 
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 16px;
-  --r-xl: 20px;
-  --shadow-sm: 0 1px 2px rgba(16, 20, 24, 0.04), 0 1px 3px rgba(16, 20, 24, 0.03);
-  --shadow-md: 0 2px 4px rgba(16, 20, 24, 0.04), 0 8px 24px rgba(16, 20, 24, 0.06);
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  /* Surfaces separate by hairline and hue, not elevation. The one ambient
+     shadow is reserved for genuinely floating objects (modals, the phone). */
+  --shadow-sm: none;
+  --shadow-md: 0 8px 30px rgba(18, 21, 26, 0.05);
+
+  --gutter: clamp(24px, 5vw, 64px);
+  --section-y: clamp(80px, 9vw, 132px);
 }
 
 /* Tabular figures for numbers read DOWN A COLUMN, where digits have to line
@@ -47,6 +103,7 @@
    display sizes. Those keep the font's proportional figures. */
 .value,
 .num {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
@@ -57,32 +114,43 @@
 }
 
 .page {
-  max-width: 1180px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 40px 32px 96px;
+  padding: 40px var(--gutter) 112px;
 }
 
+/* Micro-labels ride the mono face — the one place a monospace earns its
+   keep outside figures, and what keeps the eyebrow from reading as just
+   small bold text. */
 .eyebrow {
-  font-size: 12px;
-  letter-spacing: 0.14em;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--jade);
-  font-weight: 700;
-  margin: 0 0 10px;
+  font-weight: 500;
+  margin: 0 0 12px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 800;
 }
 
 h1 {
-  font-size: 2.15rem;
-  line-height: 1.15;
-  letter-spacing: -0.022em;
-  margin: 0 0 14px;
+  font-size: clamp(2rem, 3.4vw, 2.6rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  margin: 0 0 16px;
 }
 
 .lede {
   color: var(--text-2);
-  max-width: 72ch;
-  margin: 0 0 24px;
-  font-size: 15.5px;
+  max-width: 68ch;
+  margin: 0 0 28px;
+  font-size: 16px;
   line-height: 1.65;
 }
 
@@ -121,6 +189,7 @@ h1 {
   display: inline-flex;
   align-items: center;
   gap: 9px;
+  font-family: var(--font-display);
   font-weight: 800;
   color: var(--ink);
   margin-right: 16px;
@@ -207,8 +276,8 @@ h1 {
   margin-top: 52px;
 }
 .section h2 {
-  font-size: 1.4rem;
-  letter-spacing: -0.015em;
+  font-size: clamp(1.4rem, 2.2vw, 1.75rem);
+  letter-spacing: -0.03em;
   margin: 0 0 18px;
 }
 
@@ -229,10 +298,11 @@ th {
   padding: 14px 18px;
   background: var(--surface-2);
   color: var(--text-3);
-  font-weight: 700;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.12em;
   border-bottom: 1px solid var(--edge);
   white-space: nowrap;
 }
@@ -290,15 +360,17 @@ td input {
 }
 .tileLabel {
   display: block;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.14em;
   color: var(--text-3);
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.35;
 }
 .tileValue {
   display: block;
+  font-family: var(--font-display);
   font-size: 2.4rem;
   line-height: 1.05;
   font-weight: 700;
@@ -394,14 +466,16 @@ td input {
 }
 .statCardLabel {
   display: block;
-  font-size: 12.5px;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.14em;
   color: var(--text-3);
 }
 .statCardValue {
   display: block;
+  font-family: var(--font-display);
   font-size: 2.6rem;
   line-height: 1;
   font-weight: 700;
@@ -440,8 +514,9 @@ td input {
   margin-bottom: 4px;
 }
 .emptyStateTitle {
-  font-size: 16px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
   color: var(--text);
 }
 .emptyStateBody {
@@ -485,11 +560,12 @@ td input {
   gap: 10px;
 }
 .stepLabel {
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   color: var(--text-3);
-  font-weight: 700;
+  font-weight: 500;
 }
 .step input,
 .step select,
@@ -677,7 +753,7 @@ td input {
   font-size: 13px;
 }
 .mono {
-  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.94em;
 }
 
