@@ -47,7 +47,7 @@ export function IconToken(props: IconProps): JSX.Element {
   );
 }
 
-/** The corpus fund. A bank facade, not a safe — a dial-and-door safe turns
+/** The reward pool. A bank facade, not a safe — a dial-and-door safe turns
     into an unreadable aperture once it's down at 22px. */
 export function IconVault(props: IconProps): JSX.Element {
   return (

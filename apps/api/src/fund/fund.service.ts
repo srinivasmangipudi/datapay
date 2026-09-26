@@ -7,16 +7,18 @@ import { LedgerService } from "../ledger/ledger.service";
 
 // The community's cut of the collective-buy savings on a delivered offer.
 // This is the pre-existing §17 mechanism (20% of savings, spent on
-// member-voted local projects) — deliberately left as-is. Whether it merges
-// with the new corpus fund below is an open question
-// (TOKEN_ECONOMY_REDESIGN.md), not decided here; the two coexist for now.
+// member-voted local projects) — deliberately left as-is. Note this accrues
+// from savings DataPay negotiated, not from member money: nothing members
+// paid or hold is pooled here. Whether it merges with the reward pool below
+// is an open question (TOKEN_ECONOMY_REDESIGN.md), not decided here.
 const FUND_ACCRUAL_RATE = 0.2;
 
 // TOKEN_ECONOMY_REDESIGN.md — the new revenue mechanism. On every confirmed
-// purchase: the supplier's cut funds the corpus (never spent, only its
-// future investment returns are meant to be distributed as dividends — not
-// built yet); the buyer's cut comes back to them as ordinary tokens, the
-// same kind earned by answering questions. Both computed off the same
+// purchase: the supplier's cut builds the reward pool, a share of which is
+// meant to go back to members as a discretionary reward for contribution —
+// not a dividend, not a return on a holding, and not built yet; the buyer's
+// cut comes back to them as ordinary tokens, the same kind earned by
+// answering questions. Both computed off the same
 // number — what the buyer actually paid (qty × collective_price_paise) —
 // which is the honest, real "amount spent" already tracked in this system,
 // independent of how payment is actually collected.

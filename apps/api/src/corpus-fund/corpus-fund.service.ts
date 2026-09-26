@@ -3,12 +3,18 @@ import { Pool, PoolClient } from "pg";
 import { PG_POOL } from "../db/db.module";
 
 // TOKEN_ECONOMY_REDESIGN.md — replaces ReserveService (SPEC.md §40). A
-// supplier pays 2% of the sale price into this corpus on every confirmed
-// delivery. The corpus is never spent down — only its eventual investment
-// returns are meant to be distributed as dividends, which isn't built yet
-// (no decided distribution cadence, no real banking/FD integration — see
-// the design doc's open questions). This service only tracks contributions
-// accumulating toward that; it does not invent a fake "your dividend" number.
+// supplier pays 2% of the sale price into this pool on every confirmed
+// delivery. It is DataPay's own revenue, and a share of it is meant to go
+// back to the members whose demand earned it — a discretionary reward for
+// contribution, decided by DataPay, never a return on a holding and never a
+// dividend. Framing matters legally as much as it does in copy: tokens are
+// earned and never sold, no member money is pooled here, and nothing is
+// invested on anyone's behalf. Sharing isn't built yet (no decided cadence —
+// see the design doc's open questions), so this service only tracks what has
+// accumulated; it does not invent a fake "your share" number.
+//
+// The table is still named corpus_fund_ledger — renaming an append-only
+// ledger with live production rows is a migration, not a copy change.
 @Injectable()
 export class CorpusFundService {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}

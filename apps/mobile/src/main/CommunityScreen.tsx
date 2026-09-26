@@ -107,9 +107,12 @@ export function CommunityScreen({ session }: Props) {
     >
       <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.balanceCard}>
-          <Text style={styles.cap}>Village fund</Text>
+          <Text style={styles.cap}>Village share</Text>
           <Text style={styles.balance}>{formatRupees(balancePaise)}</Text>
-          <Text style={styles.balanceNote}>Accrues automatically from completed collective buys.</Text>
+          <Text style={styles.balanceNote}>
+            Your village's share of the savings on every collective buy. None of this is your money —
+            it's spent only on projects your village votes for.
+          </Text>
         </View>
 
         <View style={styles.sectionHeaderRow}>
@@ -195,8 +198,8 @@ export function CommunityScreen({ session }: Props) {
           </View>
         ))}
 
-        <Text style={styles.sectionTitle}>Funded so far</Text>
-        {history.length === 0 && <Text style={styles.empty}>Nothing funded yet — that's next.</Text>}
+        <Text style={styles.sectionTitle}>Paid for so far</Text>
+        {history.length === 0 && <Text style={styles.empty}>Nothing paid for yet — that's next.</Text>}
         {history.map((p) => (
           <View key={p.id} style={styles.historyRow}>
             <Text style={styles.historyTitle}>{p.title}</Text>

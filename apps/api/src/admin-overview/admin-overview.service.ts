@@ -6,11 +6,13 @@ import { CorpusFundService } from "../corpus-fund/corpus-fund.service";
 // TOKEN_ECONOMY_REDESIGN.md — the "main company page" numbers, simplified.
 // Every token is equal now (no issued/realised split, replacing SPEC.md
 // §40 in full): how many members, how many tokens exist in total, and how
-// much has accumulated in the corpus fund so far. No "current token price"
-// is published here anymore — that would require actual distributed
-// investment returns, which don't exist yet (the corpus isn't invested,
-// there's no decided distribution cadence — see TOKEN_ECONOMY_REDESIGN.md's
-// open questions). Showing a number here would be inventing one.
+// much has accumulated in the reward pool so far. Deliberately no "current
+// token price" and no per-member rupee figure: a token has no promised cash
+// value, and publishing one would read as a rate of return on something
+// members hold, which is exactly what this isn't. Any sharing out of the
+// pool is DataPay's discretionary reward for contribution, and it isn't
+// built yet (no decided cadence — see TOKEN_ECONOMY_REDESIGN.md's open
+// questions), so any number here would be an invented one.
 @Injectable()
 export class AdminOverviewService {
   constructor(

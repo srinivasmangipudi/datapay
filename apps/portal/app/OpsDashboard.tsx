@@ -50,10 +50,11 @@ export async function OpsDashboard(): Promise<JSX.Element> {
         </div>
         <p className="lede">
           Every token is equal: answering a question and buying through the platform earn the same
-          kind. A 2% supplier fee on each confirmed delivery accumulates in the corpus fund, which
-          is never spent down — only its future investment returns are meant to be paid out as
-          dividends. That payout isn&apos;t built yet, so the fund is currently accumulating, not
-          distributing.
+          kind. Tokens are earned, never sold — no one can buy them, and they carry no promised cash
+          value. A 2% supplier fee on each confirmed delivery builds the reward pool DataPay shares
+          back with the members who created that demand. Any such share is a discretionary reward for
+          contribution, not a return on a holding. Sharing isn&apos;t built yet, so the pool is
+          currently only accumulating.
         </p>
 
         <div className="statRow">
@@ -86,12 +87,12 @@ export async function OpsDashboard(): Promise<JSX.Element> {
               <IconVault size={22} />
             </span>
             <span>
-              <span className="statCardLabel">Corpus fund</span>
+              <span className="statCardLabel">Reward pool</span>
               <span className="statCardValue value">
                 ₹{rupees.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </span>
-            <span className="statCardFoot">Accumulating from supplier fees — not yet distributing</span>
+            <span className="statCardFoot">Accumulating from supplier fees — not yet shared out</span>
           </div>
         </div>
       </section>

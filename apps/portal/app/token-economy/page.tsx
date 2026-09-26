@@ -18,10 +18,12 @@ export default async function TokenEconomyPage({
         <h1>Token economy</h1>
         <p className="lede">
           Every token is equal: answering a question and buying through the platform earn the same
-          kind. A 2% supplier fee on each confirmed delivery accumulates in the corpus fund, which is
-          never spent down — only its future investment returns are meant to be paid out as dividends,
-          and that payout isn't built yet. Demand aggregates refresh hourly on their own; the button
-          below triggers an extra run.
+          kind. Tokens are earned, never sold — no one can buy them, and they carry no promised cash
+          value. A 2% supplier fee on each confirmed delivery builds the reward pool DataPay shares
+          back with the members who created that demand, as a discretionary reward for contribution
+          rather than a return on a holding. Sharing isn't built yet, so the pool is currently only
+          accumulating. Demand aggregates refresh hourly on their own; the button below triggers an
+          extra run.
         </p>
       </header>
 
@@ -42,7 +44,7 @@ export default async function TokenEconomyPage({
           <span className="tileValue">{overview.totalTokens}</span>
         </div>
         <div className="tile">
-          <span className="tileLabel">Corpus fund (accumulated)</span>
+          <span className="tileLabel">Reward pool (accumulated)</span>
           <span className="tileValue value">₹{(overview.corpusFundPaise / 100).toFixed(2)}</span>
         </div>
         <div className="tile">

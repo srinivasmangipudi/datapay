@@ -276,7 +276,7 @@ export default async function RegistryPage(): Promise<JSX.Element> {
       <footer className="footer">
         <p>
           DataPay collectivises household demand — anonymously — so people get better prices,
-          communities get a fund, and producers reach the market directly.
+          communities get a share of the savings, and producers reach the market directly.
         </p>
         <p className="method">
           Method: responses are aggregated per question and per region, then the region is widened

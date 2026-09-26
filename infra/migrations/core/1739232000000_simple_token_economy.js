@@ -12,12 +12,13 @@ export const up = async (pgm) => {
   pgm.dropTable("reserve_ledger");
 
   // The new revenue mechanism: a supplier pays 2% of the sale price into
-  // this corpus on every confirmed delivery. The corpus is never spent down
-  // — only its eventual investment returns get distributed as dividends
+  // this reward pool on every confirmed delivery. It is DataPay's own
+  // revenue; a share of it is meant to go back to members as a discretionary
+  // reward for contribution — never a dividend or a return on a holding
   // (not yet built; see TOKEN_ECONOMY_REDESIGN.md's open questions on
   // cadence and the real banking/legal entity this eventually needs).
   // Global, not per-zone, same reasoning as the old reserve_ledger — tokens
-  // themselves aren't zone-partitioned — though whether the corpus should
+  // themselves aren't zone-partitioned — though whether the pool should
   // eventually split per-zone (matching the "buy local first" origin) is
   // one of those open questions, deliberately not decided here.
   pgm.createTable("corpus_fund_ledger", {

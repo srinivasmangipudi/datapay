@@ -30,9 +30,10 @@ export default async function FundPage({
         <p className="eyebrow">DataPay Portal · Ops</p>
         <h1>Fund &amp; governance</h1>
         <p className="lede">
-          Zone-level community funds accrue from a share of token redemptions. Propose a project for a
-          zone here; members in that zone vote yes/no in the app — this page never approves a project
-          for them.
+          When a collective buy is delivered, 20% of the savings it created goes back to that zone as
+          a community pool, spent only on local projects the zone votes for. No member money is
+          pooled or held here. Propose a project for a zone; members in that zone vote yes/no in the
+          app — this page never approves a project for them.
         </p>
       </header>
 
