@@ -42,7 +42,7 @@ export default async function TopicsPage({
       <p className="lede">
         A topic is a standing question-generator: template (you write the variant) or
         document-grounded (an LLM drafts from a zone's ingested intelligence). Give it a schedule and
-        it runs unattended (SPEC.md §24) — leave it blank and trigger it yourself with "Generate now."
+        it runs unattended — leave it blank and trigger it yourself with "Generate now."
       </p>
 
       {searchParams.error && (

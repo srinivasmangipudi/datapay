@@ -44,7 +44,17 @@ export function AdminNav({ isOpsSession }: { isOpsSession: boolean }): JSX.Eleme
   return (
     <nav className="adminNav">
       <span className="adminNavBrand">
-        <DataPayMark size={20} />
+        {/* DataPayMark colors its ring via SVG stroke attributes driven by its
+            own `dark` prop, which a stylesheet can't override after the fact —
+            so the ink half of the ring vanished against the dark-mode page
+            background. Render both variants and let CSS pick, same fix the
+            marketing pages use. */}
+        <span className="brandMarkLight">
+          <DataPayMark size={20} />
+        </span>
+        <span className="brandMarkDark">
+          <DataPayMark size={20} dark />
+        </span>
         DataPay Ops
       </span>
       {LINKS.map((link) => (

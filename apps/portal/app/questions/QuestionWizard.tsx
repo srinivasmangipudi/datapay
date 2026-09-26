@@ -36,7 +36,7 @@ const ANSWER_TYPES: { value: AnswerType; label: string; hint: string }[] = [
   {
     value: "intent_window",
     label: "Buying intent",
-    hint: "Yes / Maybe / No over a timeframe — the answer becomes a declared demand (LAW 2)",
+    hint: "Yes / Maybe / No over a timeframe — the answer becomes a declared demand",
   },
   { value: "numeric", label: "Number", hint: "Member types a number — no options needed" },
   { value: "free_text", label: "Free text", hint: "Member types their own answer — no options needed" },
@@ -191,7 +191,7 @@ export function QuestionWizard({
         </datalist>
         <p className="hint">
           Typing a name that doesn't exist yet creates it — no need to visit Zones &amp; Categories
-          first (SPEC.md §26).
+          first.
         </p>
         <input
           placeholder="Question text (English)"
@@ -232,8 +232,8 @@ export function QuestionWizard({
         )}
         <p className="hint">
           Auto-translated by Gemini — always a starting draft, review and edit before creating the
-          question (SPEC.md §27). English is always shown; Hindi and the region's local language
-          (from step 4) fill in when set (SPEC.md §39).
+          question. English is always shown; Hindi and the region's local language
+          (from step 4) fill in when set.
         </p>
       </div>
 
@@ -299,7 +299,7 @@ export function QuestionWizard({
           </select>
           <p className="hint">
             Options are fixed to Yes / Maybe / No — a "Yes" or "Maybe" answer becomes a declared
-            purchase intent a member can later redeem tokens against (LAW 2).
+            purchase intent a member can later redeem tokens against.
           </p>
         </div>
       )}
@@ -332,8 +332,8 @@ export function QuestionWizard({
           Allow a voice note as evidence
         </label>
         <p className="hint">
-          Both on by default — turn either off if this question shouldn't offer that input at all
-          (SPEC.md §34). The member's own tap/typed answer is never affected either way.
+          Both on by default — turn either off if this question shouldn't offer that input at all.
+          The member's own tap/typed answer is never affected either way.
         </p>
       </div>
 
@@ -352,7 +352,7 @@ export function QuestionWizard({
         {isPending ? "Creating…" : "Create question"}
       </button>
       <p className="hint">
-        No draft step — an admin authoring a question directly is itself the review (SPEC.md §14).
+        No draft step — an admin authoring a question directly is itself the review.
         It becomes selectable in Pulse immediately.
       </p>
     </form>

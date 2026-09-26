@@ -12,8 +12,8 @@ export default async function AuditPage(): Promise<JSX.Element> {
       <h1>Audit &amp; fraud</h1>
       <p className="lede">
         Every real-money movement (tokens, fund ledger, producer payouts) is exportable as one CSV.
-        Quality flags and trust scores are alias-only, same as everywhere else in core_db — LAW 1
-        holds here too.
+        Quality flags and trust scores are tied to an alias only — never to a member's identity,
+        same as everywhere else in the portal.
       </p>
 
       <div className="actions">

@@ -20,9 +20,9 @@ export default async function SnapsPage({
       <p className="lede">
         A member snaps what they use as photo evidence for a category. Verifying a snap moves it to{" "}
         <span className="mono small">ops_verified</span> and gives the member a small trust-score
-        bump (SPEC.md §6); rejecting closes it out with no penalty. Real image storage isn't wired up
+        bump; rejecting closes it out with no penalty. Real image storage isn't wired up
         yet — <span className="mono small">storageKey</span> below is a dev-stub reference, not a
-        real photo URL. "AI tags" is Gemini's own guess at what the photo shows (SPEC.md §32) — ops-
+        real photo URL. "AI tags" is Gemini's own guess at what the photo shows — ops-
         assist only, never a substitute for actually looking at the evidence.
       </p>
 

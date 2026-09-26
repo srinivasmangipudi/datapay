@@ -16,7 +16,7 @@ export default async function ReviewQueuePage({
       <h1>Review queue</h1>
       <p className="lede">
         Every generated question — template or document-grounded, from any zone or global — lands
-        here as a draft before it can ever reach a member (SPEC.md §14). Nothing is auto-approved.
+        here as a draft before it can ever reach a member. Nothing is auto-approved.
         This is the cross-zone view; the same queue is also filterable per-zone on the Area
         Intelligence page.
       </p>

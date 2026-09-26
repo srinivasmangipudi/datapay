@@ -123,7 +123,7 @@ export function ManualQuestionStep({
         {submitting ? "Creating…" : "Create — this goes live immediately →"}
       </button>
       <p className="hint">
-        No draft step — you authoring it directly is itself the review (SPEC.md §14/§21).
+        No draft step — you authoring it directly is itself the review.
       </p>
     </div>
   );

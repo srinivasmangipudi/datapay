@@ -15,19 +15,17 @@ export async function OpsDashboard(): Promise<JSX.Element> {
       <p className="eyebrow">DataPay Portal · Ops</p>
       <h1>Demand &amp; token economy</h1>
       <p className="lede">
-        Aggregates only — every row below cleared the k-anonymity floor (cohort ≥ 50) before it
-        could reach this screen. This portal's database role has no grant on member-level tables.
+        Aggregated numbers only. Every row here is backed by at least 50 households — nothing
+        smaller is ever published, and this portal has no access to individual member data at all.
       </p>
 
       <section className="section">
         <h2>Token economy</h2>
         <p className="lede">
-          Every token is equal — answering a question and buying something through the platform
-          both earn the same kind of token, no separate "realised" state (TOKEN_ECONOMY_REDESIGN.md).
-          On every confirmed delivery, the supplier's 2% fee goes into the corpus fund below; the
-          corpus is never spent down — only its future investment returns are meant to be
-          distributed as dividends, which isn't built yet (no decided distribution cadence, no
-          real banking/FD integration). This is the honest current state: accumulating, not yet
+          Every token is equal: answering a question and buying through the platform earn the same
+          kind. A 2% supplier fee on each confirmed delivery accumulates in the corpus fund, which
+          is never spent down — only its future investment returns are meant to be paid out as
+          dividends. That payout isn't built yet, so the fund is currently accumulating, not
           distributing.
         </p>
         <div className="tiles">

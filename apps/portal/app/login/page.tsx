@@ -15,7 +15,7 @@ export default function LoginPage({
           <DataPayLogo size={36} tagline="Ops portal" />
         </div>
         <h1>Ops sign-in</h1>
-        <p className="lede">One shared password for the ops team — see SPEC.md §25.</p>
+        <p className="lede">One shared password for the ops team.</p>
 
         {searchParams.error && <div className="errorBanner">{searchParams.error}</div>}
 

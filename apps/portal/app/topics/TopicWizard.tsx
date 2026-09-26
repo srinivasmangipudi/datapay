@@ -219,7 +219,7 @@ export function TopicWizard({ categories, zones }: { categories: Category[]; zon
             />
             <span className="typeCardLabel">Document-grounded</span>
             <span className="typeCardHint">
-              An LLM drafts questions from a zone's ingested-document understanding (SPEC.md §20).
+              An LLM drafts questions from a zone's ingested-document understanding.
             </span>
           </label>
         </div>
@@ -361,7 +361,7 @@ export function TopicWizard({ categories, zones }: { categories: Category[]; zon
         />
         <p className="hint">
           Manual only means you trigger generation yourself with "Generate now" below — nothing
-          runs unattended (SPEC.md §24).
+          runs unattended.
         </p>
       </div>
 
@@ -370,7 +370,7 @@ export function TopicWizard({ categories, zones }: { categories: Category[]; zon
       </button>
       <p className="hint">
         Generated questions always land as drafts awaiting review — this never bypasses the review
-        queue (SPEC.md §14).
+        queue.
       </p>
     </form>
   );

@@ -42,10 +42,11 @@ export default async function ZonesPage({
       <p className="eyebrow">DataPay Portal · Ops</p>
       <h1>Zones &amp; categories</h1>
       <p className="lede">
-        Zones form the region hierarchy questions and funds are scoped to (village ⊂ panchayat ⊂
-        hobli ⊂ constituency). Categories are what demand aggregation and Pulse questions are grouped
-        by. A zone's centroid (below) is a representative point — used only to match a member's
-        phone GPS to the nearest zone when they answer a question (SPEC.md §35), not a real boundary.
+        Zones are the region hierarchy that questions and funds are scoped to — a village sits
+        inside a panchayat, inside a hobli, inside a constituency. Categories are how demand and
+        Pulse questions are grouped. A zone's centroid is just a representative point (say, the
+        town center) used to match a member's phone location to the nearest zone — not a real
+        boundary.
       </p>
 
       {searchParams.error && (

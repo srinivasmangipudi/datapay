@@ -16,11 +16,11 @@ export default async function TokenEconomyPage({
       <p className="eyebrow">DataPay Portal · Ops</p>
       <h1>Token economy</h1>
       <p className="lede">
-        Every token is equal now — answering a question and buying something through the platform
-        both earn the same kind of token (TOKEN_ECONOMY_REDESIGN.md). The supplier's 2% fee on every
-        confirmed delivery accumulates in the corpus fund below; it's never spent down — only its
-        future investment returns are meant to be distributed as dividends, which isn't built yet.
-        Demand aggregates refresh hourly on a scheduled job; this button triggers an out-of-cycle run.
+        Every token is equal: answering a question and buying through the platform earn the same
+        kind. A 2% supplier fee on each confirmed delivery accumulates in the corpus fund, which is
+        never spent down — only its future investment returns are meant to be paid out as dividends,
+        and that payout isn't built yet. Demand aggregates refresh hourly on their own; the button
+        below triggers an extra run.
       </p>
 
       {searchParams.error && (

@@ -85,7 +85,7 @@ export function ZoneWizard({ zones }: { zones: Zone[] }): JSX.Element {
         )}
         <p className="hint">
           A representative point (e.g. the town center) — used only to match a member's phone GPS to
-          the nearest zone (SPEC.md §35), not a real boundary. Leave blank if unknown; it can be set
+          the nearest zone, not a real boundary. Leave blank if unknown; it can be set
           later.
         </p>
         <button type="submit" className="submitBtn" disabled={isPending}>

@@ -131,7 +131,7 @@ export function ZoneCentroidMapModal({ zoneName, initialLat, initialLng, onSave,
         </div>
         <p className="hint" style={{ margin: "0 0 12px" }}>
           Tap anywhere on the map to drop a marker, or drag it once placed. This is only a
-          representative point (SPEC.md §35) — not a real boundary.
+          representative point — not a real boundary.
         </p>
         <div ref={containerRef} className="mapContainer" />
         <div className="modalFooter">

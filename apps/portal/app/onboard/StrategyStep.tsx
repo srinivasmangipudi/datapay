@@ -152,7 +152,7 @@ export function StrategyStep({
             ))}
           </select>
           <p className="hint">
-            Runs once right now either way — a schedule just adds future runs on top (SPEC.md §24).
+            Runs once right now either way — a schedule just adds future runs on top.
           </p>
         </div>
       )}
