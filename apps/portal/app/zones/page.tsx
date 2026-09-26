@@ -1,4 +1,5 @@
 import { getPortalPool } from "../db";
+import { MergeCategories } from "./MergeCategories";
 import { CategoryWizard } from "./CategoryWizard";
 import { ZoneWizard } from "./ZoneWizard";
 import { ZonesTable, type ZoneRow } from "./ZonesTable";
@@ -92,6 +93,7 @@ export default async function ZonesPage({
           </table>
         </div>
         <CategoryWizard />
+        <MergeCategories categories={categories} />
       </section>
     </main>
   );

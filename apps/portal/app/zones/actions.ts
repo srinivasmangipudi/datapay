@@ -3,14 +3,18 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
-  createCategory,
   CreateCategoryPayload,
-  createZone,
   CreateZonePayload,
-  updateZoneCentroid,
   UpdateZoneCentroidPayload,
-  updateZoneLanguage,
   UpdateZoneLanguagePayload,
+  createCategory,
+  createZone,
+  getCategoryUsage,
+  mergeCategories,
+  type CategoryUsage,
+  type MergeResult,
+  updateZoneCentroid,
+  updateZoneLanguage,
 } from "./core-api";
 
 export async function createZoneAction(payload: CreateZonePayload): Promise<void> {
@@ -55,4 +59,30 @@ export async function createCategoryAction(payload: CreateCategoryPayload): Prom
   }
   revalidatePath("/zones");
   redirect("/zones?created=category");
+}
+
+type ActionResult<T> = { ok: true; data: T } | { ok: false; message: string };
+
+// These two return a result rather than redirecting like the actions above:
+// the merge UI previews, then confirms, in place — a redirect would throw the
+// preview away between the two steps.
+export async function getCategoryUsageAction(id: number): Promise<ActionResult<CategoryUsage>> {
+  try {
+    return { ok: true, data: await getCategoryUsage(id) };
+  } catch (err) {
+    return { ok: false, message: (err as Error).message };
+  }
+}
+
+export async function mergeCategoriesAction(
+  sourceId: number,
+  targetId: number
+): Promise<ActionResult<MergeResult>> {
+  try {
+    const data = await mergeCategories(sourceId, targetId);
+    revalidatePath("/zones");
+    return { ok: true, data };
+  } catch (err) {
+    return { ok: false, message: (err as Error).message };
+  }
 }

@@ -43,3 +43,31 @@ export function updateZoneLanguage(id: string, payload: UpdateZoneLanguagePayloa
 export function createCategory(payload: CreateCategoryPayload) {
   return apiFetch("/v1/admin/categories", { method: "POST", body: JSON.stringify(payload) });
 }
+
+export interface CategoryUsage {
+  id: number;
+  name: string;
+  slug: string;
+  references: Array<{ table: string; column: string; count: number }>;
+  total: number;
+}
+
+export interface MergeResult {
+  movedFrom: { id: number; name: string };
+  into: { id: number; name: string };
+  moved: Array<{ table: string; column: string; count: number }>;
+  consentsCollapsed: number;
+  consentsNarrowedToDenied: number;
+}
+
+/** What a merge would move — previewed before confirming, since it's final. */
+export function getCategoryUsage(id: number): Promise<CategoryUsage> {
+  return apiFetch(`/v1/admin/categories/${id}/usage`);
+}
+
+export function mergeCategories(sourceId: number, targetId: number): Promise<MergeResult> {
+  return apiFetch("/v1/admin/categories/merge", {
+    method: "POST",
+    body: JSON.stringify({ sourceId, targetId }),
+  });
+}

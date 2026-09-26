@@ -143,6 +143,17 @@ export const CreateCategoryDtoSchema = z.object({
 });
 export type CreateCategoryDto = z.infer<typeof CreateCategoryDtoSchema>;
 
+/**
+ * POST /v1/admin/categories/merge — repoint everything referencing `sourceId`
+ * at `targetId`, then delete the source. Ops-only and not reversible; the
+ * portal shows a usage count before confirming.
+ */
+export const MergeCategoriesDtoSchema = z.object({
+  sourceId: z.number().int().positive(),
+  targetId: z.number().int().positive(),
+});
+export type MergeCategoriesDto = z.infer<typeof MergeCategoriesDtoSchema>;
+
 // Ops-provisioned company accounts — a company logs in separately from the
 // ops team's shared portal password and can submit questions of its own,
 // always into the same draft/review queue every generated question goes
