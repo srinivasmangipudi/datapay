@@ -4,7 +4,7 @@
 export function SystemDiagram(): JSX.Element {
   return (
     <svg
-      viewBox="0 0 880 340"
+      viewBox="0 42 950 288"
       className="diagramSvg"
       role="img"
       aria-label="Households answer questions and place orders under a private alias. DataPay aggregates responses from at least 50 households before sharing anything. Organizations see only the aggregated signal, and send back questions, products, and token rewards."
@@ -45,51 +45,51 @@ export function SystemDiagram(): JSX.Element {
 
       {/* Organizations */}
       <g>
-        <rect x="640" y="90" width="220" height="130" rx="16" className="diagramBox diagramBoxOrgs" />
-        <text x="750" y="128" textAnchor="middle" className="diagramTitle">Organizations</text>
-        <rect x="700" y="150" width="20" height="24" className="diagramBar" />
-        <rect x="726" y="140" width="20" height="34" className="diagramBar" />
-        <rect x="752" y="158" width="20" height="16" className="diagramBar" />
-        <rect x="778" y="145" width="20" height="29" className="diagramBar" />
-        <text x="750" y="200" textAnchor="middle" className="diagramCaption">questions · products</text>
+        <rect x="690" y="90" width="220" height="130" rx="16" className="diagramBox diagramBoxOrgs" />
+        <text x="800" y="128" textAnchor="middle" className="diagramTitle">Organizations</text>
+        <rect x="750" y="150" width="20" height="24" className="diagramBar" />
+        <rect x="776" y="140" width="20" height="34" className="diagramBar" />
+        <rect x="802" y="158" width="20" height="16" className="diagramBar" />
+        <rect x="828" y="145" width="20" height="29" className="diagramBar" />
+        <text x="800" y="200" textAnchor="middle" className="diagramCaption">questions · products</text>
       </g>
 
       {/* Data flow, up */}
       <path d="M242 130 L328 130" className="diagramArrow diagramArrowJade" markerEnd="url(#arrowJade)" />
       <text x="285" y="118" textAnchor="middle" className="diagramFlowLabel">alias only</text>
 
-      <path d="M552 100 L638 100" className="diagramArrow diagramArrowJade" markerEnd="url(#arrowJade)" />
-      <text x="595" y="88" textAnchor="middle" className="diagramFlowLabel">aggregated signal</text>
+      <path d="M556 100 L686 100" className="diagramArrow diagramArrowJade" markerEnd="url(#arrowJade)" />
+      <text x="621" y="84" textAnchor="middle" className="diagramFlowLabel">aggregated signal</text>
 
       {/* Value flow, back down — routed below the hub box so it never
           crosses its own labels (was cutting through "Token ledger"). */}
       <path
-        d="M750 220 L750 285 L130 285 L130 220"
+        d="M800 220 L800 285 L130 285 L130 220"
         className="diagramArrow diagramArrowBrass"
         markerEnd="url(#arrowBrass)"
       />
-      <text x="440" y="308" textAnchor="middle" className="diagramFlowLabelBrass">
+      <text x="465" y="308" textAnchor="middle" className="diagramFlowLabelBrass">
         questions, products &amp; token rewards flow back
       </text>
 
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        .diagramSvg { width: 100%; height: auto; max-width: 880px; }
+        .diagramSvg { width: 100%; height: auto; max-width: 950px; display: block; margin: 0 auto; }
         .diagramBox { fill: #fff; stroke: #E7E4DC; stroke-width: 1.5; }
         .diagramBoxHub { fill: #101418; stroke: #101418; }
-        .diagramTitle { font: 700 17px -apple-system, "Segoe UI", sans-serif; fill: #101418; }
+        .diagramTitle { font: 700 17px "Switzer", system-ui, sans-serif; fill: #101418; }
         .diagramTitleOnDark { fill: #F6F5F1; }
-        .diagramCaption { font: 600 12px -apple-system, "Segoe UI", sans-serif; fill: #8A939B; letter-spacing: 0.02em; }
+        .diagramCaption { font: 600 12px "Switzer", system-ui, sans-serif; fill: #8A939B; letter-spacing: 0.02em; }
         .diagramDot { fill: #0E7A5C; opacity: 0.75; }
         .diagramPill { fill: #1A2027; }
-        .diagramPillText { font: 600 12.5px -apple-system, "Segoe UI", sans-serif; fill: #E3EFEA; }
+        .diagramPillText { font: 600 12.5px "Switzer", system-ui, sans-serif; fill: #E3EFEA; }
         .diagramBar { fill: #B98F2F; opacity: 0.85; }
         .diagramArrow { fill: none; stroke-width: 3; }
         .diagramArrowJade { stroke: #0E7A5C; }
         .diagramArrowBrass { stroke: #B98F2F; stroke-dasharray: 2 6; stroke-linecap: round; }
-        .diagramFlowLabel { font: 600 11.5px -apple-system, "Segoe UI", sans-serif; fill: #0E7A5C; }
-        .diagramFlowLabelBrass { font: 600 11.5px -apple-system, "Segoe UI", sans-serif; fill: #B98F2F; }
+        .diagramFlowLabel { font: 600 11.5px "Switzer", system-ui, sans-serif; fill: #0E7A5C; }
+        .diagramFlowLabelBrass { font: 600 11.5px "Switzer", system-ui, sans-serif; fill: #B98F2F; }
         @media (prefers-color-scheme: dark) {
           .diagramBox { fill: #14161b; stroke: #24282e; }
           .diagramBoxHub { fill: #F6F5F1; stroke: #F6F5F1; }

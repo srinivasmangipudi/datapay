@@ -492,20 +492,25 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
           </a>
         </section>
 
+        {/* Full-bleed tint, but the content inside rides the same 1200px column
+            as every other section — an explicit inner wrapper rather than a
+            `> *` rule, which lost a specificity fight with `.mkSection h2`. */}
         <section className="mkSection mkSectionProtection">
-          <p className="mkEyebrow">{t.protectionEyebrow}</p>
-          <h2>{t.protectionTitle}</h2>
-          <div className="mkProtectionGrid">
-            {t.protectionItems.map((p) => (
-              <div className="mkProtectionItem" key={p.title}>
-                <strong>{p.title}</strong>
-                <span>{p.text}</span>
-              </div>
-            ))}
+          <div className="mkProtectionInner">
+            <p className="mkEyebrow">{t.protectionEyebrow}</p>
+            <h2>{t.protectionTitle}</h2>
+            <div className="mkProtectionGrid">
+              {t.protectionItems.map((p) => (
+                <div className="mkProtectionItem" key={p.title}>
+                  <strong>{p.title}</strong>
+                  <span>{p.text}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mkProtectionLink">
+              <a href="/privacy">{t.protectionLink}</a>
+            </p>
           </div>
-          <p className="mkProtectionLink">
-            <a href="/privacy">{t.protectionLink}</a>
-          </p>
         </section>
 
         <section className="mkSection mkSectionAbout">
@@ -690,7 +695,7 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkSection { max-width: 1200px; margin: 0 auto; padding: var(--section-y) var(--gutter); border-top: 1px solid var(--mk-border); }
         .mkEyebrow { font-family: "Spline Sans Mono", monospace; text-transform: uppercase; letter-spacing: 0.16em; font-size: 11px; font-weight: 500; color: var(--mk-jade); margin: 0 0 14px; }
         .mkSection h2 { font-size: clamp(1.75rem, 3vw, 2.5rem); margin: 0 0 18px; letter-spacing: -0.035em; line-height: 1.08; max-width: 18ch; }
-        .mkSectionLede { color: var(--mk-subtle); font-size: 15px; line-height: 1.7; max-width: 640px; margin: 0 0 8px; }
+        .mkSectionLede { color: var(--mk-subtle); font-size: 16px; line-height: 1.7; max-width: 62ch; margin: 0 0 8px; }
         .mkSectionLede a { color: var(--mk-jade); font-weight: 600; }
 
         .mkSteps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 32px; }
@@ -700,7 +705,7 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkStep h3 { font-size: 15px; margin: 0 0 8px; }
         .mkStep p { font-size: 13.5px; line-height: 1.6; color: var(--mk-subtle); margin: 0; }
 
-        .mkDiagramWrap { margin-top: 28px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: 20px; padding: 28px 20px; overflow-x: auto; }
+        .mkDiagramWrap { margin-top: 32px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: 14px; padding: clamp(24px, 4vw, 48px); overflow-x: auto; }
 
         .mkBenefitsGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 32px; }
         .mkBenefitsCol { background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: 18px; padding: 26px 24px; }
@@ -716,18 +721,21 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkCard h3 { font-size: 15.5px; margin: 0 0 10px; }
         .mkCard p { font-size: 13.5px; line-height: 1.65; color: var(--mk-subtle); margin: 0; }
 
-        .mkSectionProtection { background: var(--mk-jade-tint); border-radius: 24px; border-top: none; margin: 24px; padding: 48px 32px; max-width: none; }
-        .mkProtectionGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px 32px; margin-top: 24px; max-width: 720px; }
+        .mkSectionProtection {
+          background: var(--mk-jade-tint); border-top: none; border-bottom: 1px solid var(--mk-border);
+          max-width: none; margin: 0; padding: var(--section-y) 0;
+        }
+        .mkProtectionInner { max-width: 1200px; margin: 0 auto; padding: 0 var(--gutter); }
+        .mkProtectionGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px 56px; margin-top: 32px; max-width: 1200px; }
         .mkProtectionItem { display: flex; flex-direction: column; gap: 4px; }
         .mkProtectionItem strong { font-size: 14.5px; color: var(--mk-ink); }
         .mkProtectionItem span { font-size: 13.5px; color: var(--mk-subtle); line-height: 1.6; }
         .mkProtectionLink { margin-top: 24px; }
         .mkProtectionLink a { color: var(--mk-jade-deep); font-weight: 700; font-size: 14px; text-decoration: none; }
 
-        .mkSectionFinalCta { text-align: center; }
-        .mkSectionFinalCta h2 { margin: 0 auto 22px; }
+        .mkSectionFinalCta h2 { margin: 0 0 26px; max-width: 16ch; }
 
-        .mkFooter { max-width: 980px; margin: 0 auto; padding: 40px 24px 64px; border-top: 1px solid var(--mk-border); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; }
+        .mkFooter { max-width: 1200px; margin: 0 auto; padding: 48px var(--gutter) 72px; border-top: 1px solid var(--mk-border); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; }
         .mkFooterLinks { display: flex; flex-wrap: wrap; gap: 20px; }
         .mkFooterLinks a { color: var(--mk-mist); text-decoration: none; font-size: 13px; font-weight: 600; }
         .mkFooterLinks a:hover { color: var(--mk-ink); }
