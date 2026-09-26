@@ -107,6 +107,16 @@ export class PulseService {
          AND q.active_from <= now()
          AND (q.active_to IS NULL OR q.active_to > now())
          AND (q.zone_id IS NULL OR q.zone_id IN (SELECT id FROM member_zone_chain))
+         -- A choice question with no options is a dead end: the app renders
+         -- its option list and there is nothing to tap, so the member can
+         -- neither answer nor dismiss it. Eight seeded yesno questions
+         -- shipped in exactly that state, because the seed only created
+         -- question_options for intent_window and for rows that declared
+         -- their own. Never serve one, whatever put it there.
+         AND (
+           q.type NOT IN ('single', 'multi', 'yesno', 'intent_window')
+           OR EXISTS (SELECT 1 FROM question_options qo WHERE qo.question_id = q.id)
+         )
          -- Once a member has answered a question, it's retired for them for
          -- good — every question is a real ask of someone's time, and
          -- re-serving the same one after it's already answered wastes that

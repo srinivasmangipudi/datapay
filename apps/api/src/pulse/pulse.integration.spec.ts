@@ -77,6 +77,41 @@ describe("Pulse — selection + atomic/idempotent answering (SPEC.md §15A/§15C
     return { Authorization: `Bearer ${member.token}` };
   }
 
+  // Regression: eight seeded yesno questions were approved with no
+  // question_options rows. The app renders a question's option list, so those
+  // arrived as a dead end — nothing to tap, no way to answer or dismiss.
+  //
+  // Only the exclusion is asserted: /pulse/today is `ORDER BY q.id LIMIT n`,
+  // so a freshly-inserted (high-id) question wouldn't make the cut even once
+  // it's valid, and asserting the inverse here would just be testing the cap.
+  it("never serves a choice question that has no options to choose from", async () => {
+    const { rows } = await pool.query<{ id: number }>(
+      `INSERT INTO questions (category_id, type, text_en, reward_tokens)
+       VALUES ($1, 'yesno', $2, 1) RETURNING id`,
+      [riceCategoryId, `Optionless yesno ${randomUUID()}`]
+    );
+    const optionlessId = rows[0].id;
+
+    try {
+      const today = await request(app.getHttpServer()).get("/v1/pulse/today").set(auth()).expect(200);
+      expect(today.body.map((q: { id: number }) => q.id)).not.toContain(optionlessId);
+    } finally {
+      await pool.query(`DELETE FROM questions WHERE id = $1`, [optionlessId]);
+    }
+  });
+
+  // The backfill migration's invariant, asserted against the live table: no
+  // approved question of an option-requiring type may have zero options.
+  it("has no approved choice question left without options", async () => {
+    const { rows } = await pool.query<{ id: number; text_en: string; type: string }>(
+      `SELECT id, text_en, type FROM questions q
+        WHERE q.review_state = 'approved'
+          AND q.type IN ('single', 'multi', 'yesno', 'intent_window')
+          AND NOT EXISTS (SELECT 1 FROM question_options o WHERE o.question_id = q.id)`
+    );
+    expect(rows).toEqual([]);
+  });
+
   it("includes the seeded rice question before it's been answered today", async () => {
     const res = await request(app.getHttpServer()).get("/v1/pulse/today").set(auth());
     expect(res.status).toBe(200);
