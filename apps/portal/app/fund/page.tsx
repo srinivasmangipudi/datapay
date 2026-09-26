@@ -26,13 +26,15 @@ export default async function FundPage({
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Fund &amp; governance</h1>
-      <p className="lede">
-        Zone-level community funds accrue from a share of token redemptions. Propose a project for a
-        zone here; members in that zone vote yes/no in the app — this page never approves a project
-        for them.
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Fund &amp; governance</h1>
+        <p className="lede">
+          Zone-level community funds accrue from a share of token redemptions. Propose a project for a
+          zone here; members in that zone vote yes/no in the app — this page never approves a project
+          for them.
+        </p>
+      </header>
 
       {searchParams.error && (
         <div className="errorBanner">

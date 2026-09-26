@@ -41,12 +41,12 @@
   --shadow-md: 0 2px 4px rgba(16, 20, 24, 0.04), 0 8px 24px rgba(16, 20, 24, 0.06);
 }
 
-/* Every figure in this portal is a number someone has to read at a glance and
-   compare down a column — tabular figures keep the digits on a fixed grid so
-   they actually line up instead of shimmering row to row. */
+/* Tabular figures for numbers read DOWN A COLUMN, where digits have to line
+   up row to row. Deliberately not applied to the big standalone stat values:
+   tabular gives every digit a zero's width, which reads loose and gappy at
+   display sizes. Those keep the font's proportional figures. */
 .value,
-.num,
-.tileValue {
+.num {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
@@ -309,6 +309,164 @@ td input {
 /* Every "create a ___" form in the portal. Carded and width-capped: these
    used to run the full width of the page, so a zone-name input stretched
    over a thousand pixels and the form blurred into the table above it. */
+/* ---- Page header band -------------------------------------------------
+   A tinted, rounded masthead so a page opens with something designed rather
+   than a bare run of text. The rings on the right echo the brand mark; they
+   are decorative and sit behind the content at low opacity. */
+.pageHead {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--edge);
+  background: linear-gradient(135deg, var(--jade-soft) 0%, var(--surface) 62%);
+  padding: 34px 36px;
+  margin-bottom: 36px;
+}
+.pageHead > * {
+  position: relative;
+  z-index: 1;
+}
+.pageHead h1 {
+  margin: 0 0 12px;
+}
+.pageHead .lede {
+  margin-bottom: 0;
+}
+.pageHeadArt {
+  position: absolute;
+  top: -70px;
+  right: -60px;
+  width: 300px;
+  height: 300px;
+  z-index: 0;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ---- Stat cards -------------------------------------------------------
+   label · value · a line of context. The accent is carried by the icon chip,
+   never by the number itself — brass on porcelain sits under 3:1, so it can
+   tint a labelled chip but must never be the only thing distinguishing one
+   figure from another. */
+.statRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+  margin: 28px 0;
+}
+.statCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-lg);
+  padding: 22px 24px 20px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+/* A hairline of accent along the top edge — enough to differentiate the
+   cards at a glance without coloring the figure. */
+.statCard::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--jade);
+}
+.statCardBrass::before {
+  background: var(--brass);
+}
+.statCardIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--jade-soft);
+  color: var(--jade);
+}
+.statCardBrass .statCardIcon {
+  background: #faf1dd;
+  color: var(--brass);
+}
+.statCardLabel {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-3);
+}
+.statCardValue {
+  display: block;
+  font-size: 2.6rem;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  margin-top: 6px;
+}
+.statCardFoot {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-3);
+  margin-top: auto;
+}
+
+/* ---- Illustrated empty state ------------------------------------------ */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 52px 28px;
+  border: 1px dashed var(--edge-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
+.emptyStateIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  background: var(--jade-soft);
+  color: var(--jade);
+  margin-bottom: 4px;
+}
+.emptyStateTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.emptyStateBody {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-3);
+  max-width: 46ch;
+  margin: 0;
+}
+
+/* ---- Section heading with an icon ------------------------------------- */
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+.sectionHead h2 {
+  margin: 0;
+}
+.sectionHeadIcon {
+  display: inline-flex;
+  color: var(--jade);
+}
+
 .wizard {
   display: flex;
   flex-direction: column;
@@ -713,6 +871,21 @@ td.actions > * + * {
   }
   .brandMarkDark {
     display: inline-flex;
+  }
+  .pageHead {
+    background: linear-gradient(135deg, var(--jade-soft-dark) 0%, var(--surface) 62%);
+  }
+  .statCardBrass .statCardIcon {
+    background: #2a2010;
+    color: var(--brass-bright);
+  }
+  .statCardBrass::before {
+    background: var(--brass-bright);
+  }
+  .statCardIcon,
+  .emptyStateIcon {
+    background: var(--jade-soft-dark);
+    color: var(--jade-bright);
   }
   h1,
   .adminNavBrand,

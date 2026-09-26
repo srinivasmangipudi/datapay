@@ -39,15 +39,17 @@ export default async function ZonesPage({
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Zones &amp; categories</h1>
-      <p className="lede">
-        Zones are the region hierarchy that questions and funds are scoped to — a village sits
-        inside a panchayat, inside a hobli, inside a constituency. Categories are how demand and
-        Pulse questions are grouped. A zone's centroid is just a representative point (say, the
-        town center) used to match a member's phone location to the nearest zone — not a real
-        boundary.
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Zones &amp; categories</h1>
+        <p className="lede">
+          Zones are the region hierarchy that questions and funds are scoped to — a village sits
+          inside a panchayat, inside a hobli, inside a constituency. Categories are how demand and
+          Pulse questions are grouped. A zone's centroid is just a representative point (say, the
+          town center) used to match a member's phone location to the nearest zone — not a real
+          boundary.
+        </p>
+      </header>
 
       {searchParams.error && (
         <div className="errorBanner">

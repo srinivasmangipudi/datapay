@@ -12,14 +12,16 @@ export default async function ReviewQueuePage({
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Review queue</h1>
-      <p className="lede">
-        Every generated question — template or document-grounded, from any zone or global — lands
-        here as a draft before it can ever reach a member. Nothing is auto-approved.
-        This is the cross-zone view; the same queue is also filterable per-zone on the Area
-        Intelligence page.
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Review queue</h1>
+        <p className="lede">
+          Every generated question — template or document-grounded, from any zone or global — lands
+          here as a draft before it can ever reach a member. Nothing is auto-approved.
+          This is the cross-zone view; the same queue is also filterable per-zone on the Area
+          Intelligence page.
+        </p>
+      </header>
 
       {searchParams.error && (
         <div className="errorBanner">

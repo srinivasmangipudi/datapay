@@ -13,15 +13,17 @@ export default async function TokenEconomyPage({
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Token economy</h1>
-      <p className="lede">
-        Every token is equal: answering a question and buying through the platform earn the same
-        kind. A 2% supplier fee on each confirmed delivery accumulates in the corpus fund, which is
-        never spent down — only its future investment returns are meant to be paid out as dividends,
-        and that payout isn't built yet. Demand aggregates refresh hourly on their own; the button
-        below triggers an extra run.
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Token economy</h1>
+        <p className="lede">
+          Every token is equal: answering a question and buying through the platform earn the same
+          kind. A 2% supplier fee on each confirmed delivery accumulates in the corpus fund, which is
+          never spent down — only its future investment returns are meant to be paid out as dividends,
+          and that payout isn't built yet. Demand aggregates refresh hourly on their own; the button
+          below triggers an extra run.
+        </p>
+      </header>
 
       {searchParams.error && (
         <div className="errorBanner">

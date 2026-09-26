@@ -16,14 +16,16 @@ export default async function OrganizationsPage({
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Organizations</h1>
-      <p className="lede">
-        Company accounts that can log in separately, at <code>/org/login</code>, and submit their
-        own questions and products — every one lands in a review queue, never auto-approved.
-        Organizations created below are active immediately; ones that signed themselves up at{" "}
-        <code>/org/signup</code> land inactive and need the "Activate" action below first.
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Organizations</h1>
+        <p className="lede">
+          Company accounts that can log in separately, at <code>/org/login</code>, and submit their
+          own questions and products — every one lands in a review queue, never auto-approved.
+          Organizations created below are active immediately; ones that signed themselves up at{" "}
+          <code>/org/signup</code> land inactive and need the "Activate" action below first.
+        </p>
+      </header>
 
       {searchParams.error && (
         <div className="errorBanner">

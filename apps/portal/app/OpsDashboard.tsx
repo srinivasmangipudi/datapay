@@ -4,50 +4,116 @@
 // exception is the token-economy overview tiles below, which go through
 // Core API's admin endpoint (TOKEN_ECONOMY_REDESIGN.md), same as every other
 // member-adjacent read elsewhere in this app (questions, zones, fund-projects).
+import { IconChart, IconInbox, IconToken, IconUsers, IconVault } from "./components/icons";
 import { getDemandAggregates } from "./data";
 import { getTokenEconomyOverview } from "./token-economy/core-api";
+
+/** Concentric rings echoing the brand mark — masthead decoration only. */
+function HeadArt(): JSX.Element {
+  return (
+    <svg className="pageHeadArt" viewBox="0 0 300 300" aria-hidden="true">
+      <g fill="none" stroke="var(--jade)" strokeWidth="1.5" opacity="0.5">
+        <circle cx="150" cy="150" r="52" />
+        <circle cx="150" cy="150" r="82" />
+        <circle cx="150" cy="150" r="112" strokeDasharray="4 8" />
+      </g>
+      <circle cx="150" cy="150" r="24" fill="var(--jade)" opacity="0.14" />
+    </svg>
+  );
+}
 
 export async function OpsDashboard(): Promise<JSX.Element> {
   const [aggregates, overview] = await Promise.all([getDemandAggregates(), getTokenEconomyOverview()]);
 
+  const rupees = overview.corpusFundPaise / 100;
+  const perMember =
+    overview.totalMembers > 0 ? Math.round((overview.totalTokens / overview.totalMembers) * 10) / 10 : 0;
+
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Demand &amp; token economy</h1>
-      <p className="lede">
-        Aggregated numbers only. Every row here is backed by at least 50 households — nothing
-        smaller is ever published, and this portal has no access to individual member data at all.
-      </p>
+      <header className="pageHead">
+        <HeadArt />
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Demand &amp; token economy</h1>
+        <p className="lede">
+          Aggregated numbers only. Every row here is backed by at least 50 households — nothing
+          smaller is ever published, and this portal has no access to individual member data at all.
+        </p>
+      </header>
 
       <section className="section">
-        <h2>Token economy</h2>
+        <div className="sectionHead">
+          <span className="sectionHeadIcon">
+            <IconToken size={20} />
+          </span>
+          <h2>Token economy</h2>
+        </div>
         <p className="lede">
           Every token is equal: answering a question and buying through the platform earn the same
           kind. A 2% supplier fee on each confirmed delivery accumulates in the corpus fund, which
           is never spent down — only its future investment returns are meant to be paid out as
-          dividends. That payout isn't built yet, so the fund is currently accumulating, not
+          dividends. That payout isn&apos;t built yet, so the fund is currently accumulating, not
           distributing.
         </p>
-        <div className="tiles">
-          <div className="tile">
-            <span className="tileLabel">Members</span>
-            <span className="tileValue">{overview.totalMembers}</span>
+
+        <div className="statRow">
+          <div className="statCard">
+            <span className="statCardIcon">
+              <IconUsers size={22} />
+            </span>
+            <span>
+              <span className="statCardLabel">Members</span>
+              <span className="statCardValue">{overview.totalMembers.toLocaleString("en-IN")}</span>
+            </span>
+            <span className="statCardFoot">Households with an active alias</span>
           </div>
-          <div className="tile">
-            <span className="tileLabel">Total tokens</span>
-            <span className="tileValue">{overview.totalTokens}</span>
+
+          <div className="statCard">
+            <span className="statCardIcon">
+              <IconToken size={22} />
+            </span>
+            <span>
+              <span className="statCardLabel">Total tokens</span>
+              <span className="statCardValue">{overview.totalTokens.toLocaleString("en-IN")}</span>
+            </span>
+            <span className="statCardFoot">
+              {perMember} per member on average
+            </span>
           </div>
-          <div className="tile">
-            <span className="tileLabel">Corpus fund (accumulated)</span>
-            <span className="tileValue value">₹{(overview.corpusFundPaise / 100).toFixed(2)}</span>
+
+          <div className="statCard statCardBrass">
+            <span className="statCardIcon">
+              <IconVault size={22} />
+            </span>
+            <span>
+              <span className="statCardLabel">Corpus fund</span>
+              <span className="statCardValue value">
+                ₹{rupees.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </span>
+            <span className="statCardFoot">Accumulating from supplier fees — not yet distributing</span>
           </div>
         </div>
       </section>
 
       <section className="section">
-        <h2>Demand aggregates</h2>
+        <div className="sectionHead">
+          <span className="sectionHeadIcon">
+            <IconChart size={20} />
+          </span>
+          <h2>Demand aggregates</h2>
+        </div>
         {aggregates.length === 0 ? (
-          <p className="empty">No aggregates published yet — run the aggregation job.</p>
+          <div className="emptyState">
+            <span className="emptyStateIcon">
+              <IconInbox size={26} />
+            </span>
+            <span className="emptyStateTitle">Nothing published yet</span>
+            <p className="emptyStateBody">
+              Aggregates appear here once a category has at least 50 households behind it in one
+              zone. Run the aggregation job from Token economy to compute a fresh pass.
+            </p>
+          </div>
         ) : (
           <div className="tableWrap">
             <table>

@@ -12,13 +12,15 @@ export default async function ProducePage({
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Produce &amp; payouts</h1>
-      <p className="lede">
-        Matching prefers the internal collective first before any external buyer.
-        Payout batching pays every agreed/completed linkage not yet paid — low-trust producers are
-        held for review, never auto-paid and never silently skipped.
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Produce &amp; payouts</h1>
+        <p className="lede">
+          Matching prefers the internal collective first before any external buyer.
+          Payout batching pays every agreed/completed linkage not yet paid — low-trust producers are
+          held for review, never auto-paid and never silently skipped.
+        </p>
+      </header>
 
       {searchParams.error && (
         <div className="errorBanner">

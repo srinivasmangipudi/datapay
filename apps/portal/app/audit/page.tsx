@@ -8,13 +8,15 @@ export default async function AuditPage(): Promise<JSX.Element> {
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Audit &amp; fraud</h1>
-      <p className="lede">
-        Every real-money movement (tokens, fund ledger, producer payouts) is exportable as one CSV.
-        Quality flags and trust scores are tied to an alias only — never to a member's identity,
-        same as everywhere else in the portal.
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Audit &amp; fraud</h1>
+        <p className="lede">
+          Every real-money movement (tokens, fund ledger, producer payouts) is exportable as one CSV.
+          Quality flags and trust scores are tied to an alias only — never to a member's identity,
+          same as everywhere else in the portal.
+        </p>
+      </header>
 
       <div className="actions">
         <a href="/audit/export" className="submitBtn" style={{ textDecoration: "none", display: "inline-block" }}>

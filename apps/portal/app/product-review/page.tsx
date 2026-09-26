@@ -17,13 +17,15 @@ export default async function ProductReviewPage({
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Product review</h1>
-      <p className="lede">
-        Every organization-listed product — sheet-extracted or manually typed — lands here as a
-        draft before it can ever reach a member's Products tab. Routine price/quantity syncs on an
-        already-approved product don't come back through here; only genuinely new listings do.
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Product review</h1>
+        <p className="lede">
+          Every organization-listed product — sheet-extracted or manually typed — lands here as a
+          draft before it can ever reach a member's Products tab. Routine price/quantity syncs on an
+          already-approved product don't come back through here; only genuinely new listings do.
+        </p>
+      </header>
 
       {searchParams.error && (
         <div className="errorBanner">

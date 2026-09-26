@@ -15,16 +15,18 @@ export default async function SnapsPage({
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Snap verification</h1>
-      <p className="lede">
-        A member snaps what they use as photo evidence for a category. Verifying a snap moves it to{" "}
-        <span className="mono small">ops_verified</span> and gives the member a small trust-score
-        bump; rejecting closes it out with no penalty. Real image storage isn't wired up
-        yet — <span className="mono small">storageKey</span> below is a dev-stub reference, not a
-        real photo URL. "AI tags" is Gemini's own guess at what the photo shows — ops-
-        assist only, never a substitute for actually looking at the evidence.
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Snap verification</h1>
+        <p className="lede">
+          A member snaps what they use as photo evidence for a category. Verifying a snap moves it to{" "}
+          <span className="mono small">ops_verified</span> and gives the member a small trust-score
+          bump; rejecting closes it out with no penalty. Real image storage isn't wired up
+          yet — <span className="mono small">storageKey</span> below is a dev-stub reference, not a
+          real photo URL. "AI tags" is Gemini's own guess at what the photo shows — ops-
+          assist only, never a substitute for actually looking at the evidence.
+        </p>
+      </header>
 
       {searchParams.error && (
         <div className="errorBanner">

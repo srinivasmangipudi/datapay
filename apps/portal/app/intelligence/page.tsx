@@ -44,13 +44,15 @@ export default async function IntelligencePage({
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Area intelligence</h1>
-      <p className="lede">
-        Ingest documents about an area, build a per-zone understanding from them, and generate
-        candidate Pulse questions grounded in it — every draft still lands in the same review
-        queue below before any member ever sees it.
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Area intelligence</h1>
+        <p className="lede">
+          Ingest documents about an area, build a per-zone understanding from them, and generate
+          candidate Pulse questions grounded in it — every draft still lands in the same review
+          queue below before any member ever sees it.
+        </p>
+      </header>
       {searchParams.error && (
         <div className="errorBanner">
           <strong>Action failed:</strong> {searchParams.error}

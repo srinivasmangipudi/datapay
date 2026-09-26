@@ -47,13 +47,15 @@ export default async function QuestionsPage({
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>New question</h1>
-      <p className="lede">
-        Pick a category, write the question, choose how members answer it. No draft queue here —
-        an admin authoring a question directly is itself the review; it's
-        selectable in Pulse the moment you submit.
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>New question</h1>
+        <p className="lede">
+          Pick a category, write the question, choose how members answer it. No draft queue here —
+          an admin authoring a question directly is itself the review; it's
+          selectable in Pulse the moment you submit.
+        </p>
+      </header>
       {searchParams.error && (
         <div className="errorBanner">
           <strong>Couldn't create question:</strong> {searchParams.error}

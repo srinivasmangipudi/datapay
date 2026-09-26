@@ -37,13 +37,15 @@ export default async function TopicsPage({
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Question topics</h1>
-      <p className="lede">
-        A topic is a standing question-generator: template (you write the variant) or
-        document-grounded (an LLM drafts from a zone's ingested intelligence). Give it a schedule and
-        it runs unattended — leave it blank and trigger it yourself with "Generate now."
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Question topics</h1>
+        <p className="lede">
+          A topic is a standing question-generator: template (you write the variant) or
+          document-grounded (an LLM drafts from a zone's ingested intelligence). Give it a schedule and
+          it runs unattended — leave it blank and trigger it yourself with "Generate now."
+        </p>
+      </header>
 
       {searchParams.error && (
         <div className="errorBanner">

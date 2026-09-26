@@ -27,13 +27,15 @@ export default async function OnboardPage(): Promise<JSX.Element> {
 
   return (
     <main className="page">
-      <p className="eyebrow">DataPay Portal · Ops</p>
-      <h1>Onboard a question</h1>
-      <p className="lede">
-        Place → area intelligence → how it gets written → the question itself → review — one flow,
-        in order. Every existing page (Zones, Intelligence, Topics, Questions, Review queue) is
-        still there if you want to work outside this flow.
-      </p>
+      <header className="pageHead">
+        <p className="eyebrow">DataPay Portal · Ops</p>
+        <h1>Onboard a question</h1>
+        <p className="lede">
+          Place → area intelligence → how it gets written → the question itself → review — one flow,
+          in order. Every existing page (Zones, Intelligence, Topics, Questions, Review queue) is
+          still there if you want to work outside this flow.
+        </p>
+      </header>
 
       <OnboardWizard zones={zones} categories={categories} />
 
