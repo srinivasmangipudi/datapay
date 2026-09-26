@@ -65,8 +65,14 @@ export function HomeScreen({ session, onNavigate }: Props) {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal} />}
     >
       <View style={styles.header}>
-        <DataPayMark size={22} />
-        <Text style={styles.betaBadge}>BETA</Text>
+        <DataPayMark size={24} />
+        <Text style={styles.wordmark}>
+          Data
+          <Text style={styles.wordmarkPay}>Pay</Text>
+          <Text style={styles.wordmarkSep}>-</Text>
+          <Text style={styles.wordmarkBeta}>Beta</Text>
+        </Text>
+        <View style={styles.headerSpacer} />
         <Text style={styles.greeting}>{session.displayAlias}</Text>
       </View>
 
@@ -124,18 +130,23 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.paper },
   header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.base },
   greeting: { fontSize: 13, color: colors.faint, fontWeight: "500" },
-  // Open testing: testers should never be unsure whether this is the real thing.
-  betaBadge: {
-    fontSize: 9.5,
+  headerSpacer: { flex: 1 },
+  // The wordmark, not just the mark: during open testing a tester should be
+  // able to name the app from any screenshot they send us.
+  // CabinetGrotesk-Extrabold isn't loaded at runtime (nothing calls useFonts),
+  // so this falls back to the system face at weight 800 — same as DataPayLogo.
+  wordmark: {
+    fontFamily: "CabinetGrotesk-Extrabold",
     fontWeight: "800",
-    letterSpacing: 0.9,
-    color: colors.teal,
-    backgroundColor: colors.tealTint,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    overflow: "hidden",
+    fontSize: 17,
+    letterSpacing: -0.5,
+    color: colors.ink,
   },
+  // Brand lockup: "Data" in ink, "Pay" in brass.
+  wordmarkPay: { color: colors.brass },
+  // Muted hyphen so it reads as a separator rather than part of either word.
+  wordmarkSep: { color: colors.faint, fontWeight: "700" },
+  wordmarkBeta: { color: colors.teal },
   balanceCard: { marginBottom: spacing.md },
   balance: { color: colors.brassOnDark, fontSize: 34, fontWeight: "700", marginTop: spacing.sm },
   pulseCard: {
