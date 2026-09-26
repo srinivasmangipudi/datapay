@@ -7,11 +7,12 @@ import "./globals.css";
 // Next's App Router file convention — no icons block needed here. Source:
 // apps/assets (the DataPay brand package) — see apps/assets/README.md.
 //
-// No metadataBase set: this portal has no real public domain yet (pilot,
-// internal, behind the §25 login gate) — Next falls back to localhost for
-// resolving the OG image's absolute URL, which only matters for social-card
-// previews this internal tool doesn't need yet. Set it once a real domain exists.
+// metadataBase is what Next resolves the OG image's relative path against.
+// This app serves the public marketing site as well as the internal portal,
+// so a shared link does get previewed — without this, Next falls back to
+// localhost and the card renders with a broken image.
 export const metadata = {
+  metadataBase: new URL("https://datapay.in"),
   title: {
     default: "DataPay Portal",
     template: "%s · DataPay Portal",
