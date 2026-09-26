@@ -1,7 +1,45 @@
 import { DataPayLogo } from "./components/DataPayLogo";
 import { PublicNav } from "./components/PublicNav";
+import { getCatalogPreview } from "./lib/catalog-preview";
 import type { Lang } from "./lib/language";
 import { SystemDiagram } from "./SystemDiagram";
+
+function formatRupees(paise: number): string {
+  return `₹${Math.round(paise / 100).toLocaleString("en-IN")}`;
+}
+
+/** A phone showing the Pulse question card — an illustration of the real
+    flow (question, three intent answers, token reward), not a screenshot. */
+function PhoneMock({ lang }: { lang: Lang }): JSX.Element {
+  const t = CONTENT[lang].phone;
+  return (
+    <div className="mkPhoneWrap" aria-hidden="true">
+      <div className="mkPhoneGlow" />
+      <div className="mkPhone">
+        <div className="mkPhoneScreen">
+          <div className="mkPhoneTop">
+            <span className="mkPhoneBrand">DataPay</span>
+            <span className="mkPhoneTokens">◈ 128</span>
+          </div>
+          <p className="mkPhoneEyebrow">{t.eyebrow}</p>
+          <div className="mkPhoneCard">
+            <p className="mkPhoneQ">{t.question}</p>
+            <div className="mkPhoneChips">
+              <span className="mkPhoneChip mkPhoneChipOn">{t.yes}</span>
+              <span className="mkPhoneChip">{t.maybe}</span>
+              <span className="mkPhoneChip">{t.no}</span>
+            </div>
+          </div>
+          <div className="mkPhoneReward">
+            <span className="mkPhoneRewardIcon">◈</span>
+            <span>{t.reward}</span>
+          </div>
+          <div className="mkPhoneNote">{t.note}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AppleIcon(): JSX.Element {
   return (
@@ -102,6 +140,27 @@ const CONTENT = {
     ctaHowItWorks: "See how it works",
     getApp: "Get the DataPay app",
     comingSoon: "Coming soon",
+    heroKicker: "Household demand, collectivised",
+    phone: {
+      eyebrow: "Today's question",
+      question: "Are you planning to buy a solar light in the next 3 months?",
+      yes: "Yes",
+      maybe: "Maybe",
+      no: "No",
+      reward: "+2 tokens for answering",
+      note: "Answers leave as an alias — never your name or number.",
+    },
+    trust: [
+      { stat: "50", label: "households minimum before any number is published" },
+      { stat: "0", label: "names, numbers or addresses ever shared with a brand" },
+      { stat: "100%", label: "of demand data published as aggregates only" },
+    ],
+    catalogEyebrow: "Live on DataPay",
+    catalogTitle: "Real products, listed by real organizations",
+    catalogLede:
+      "Not a mockup — this is the live catalog from an organization on DataPay right now, at the prices households actually see.",
+    catalogCta: "Browse the full catalog →",
+    catalogBy: "Listed by",
     howEyebrow: "How it works",
     howTitle: "From a household's answer to a real business decision",
     steps: [
@@ -175,6 +234,27 @@ const CONTENT = {
     ctaHowItWorks: "ಇದು ಹೇಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ ಎಂದು ನೋಡಿ",
     getApp: "DataPay ಆ್ಯಪ್ ಪಡೆಯಿರಿ",
     comingSoon: "ಶೀಘ್ರದಲ್ಲಿ ಬರಲಿದೆ",
+    heroKicker: "ಮನೆಗಳ ಬೇಡಿಕೆ, ಒಟ್ಟಾಗಿ",
+    phone: {
+      eyebrow: "ಇಂದಿನ ಪ್ರಶ್ನೆ",
+      question: "ಮುಂದಿನ 3 ತಿಂಗಳಲ್ಲಿ ಸೋಲಾರ್ ಲೈಟ್ ಖರೀದಿಸುವ ಯೋಜನೆ ಇದೆಯೇ?",
+      yes: "ಹೌದು",
+      maybe: "ಬಹುಶಃ",
+      no: "ಇಲ್ಲ",
+      reward: "ಉತ್ತರಿಸಿದ್ದಕ್ಕೆ +2 ಟೋಕನ್",
+      note: "ಉತ್ತರಗಳು ಅಲಿಯಾಸ್ ಆಗಿ ಹೋಗುತ್ತವೆ — ನಿಮ್ಮ ಹೆಸರು ಅಥವಾ ಸಂಖ್ಯೆ ಎಂದಿಗೂ ಅಲ್ಲ.",
+    },
+    trust: [
+      { stat: "50", label: "ಯಾವುದೇ ಸಂಖ್ಯೆ ಪ್ರಕಟವಾಗುವ ಮೊದಲು ಕನಿಷ್ಠ ಇಷ್ಟು ಮನೆಗಳು" },
+      { stat: "0", label: "ಬ್ರ್ಯಾಂಡ್‌ಗೆ ಹಂಚಿಕೊಂಡ ಹೆಸರು, ಸಂಖ್ಯೆ ಅಥವಾ ವಿಳಾಸ" },
+      { stat: "100%", label: "ಬೇಡಿಕೆ ಡೇಟಾ ಒಟ್ಟುಗೂಡಿಸಿದ ರೂಪದಲ್ಲಿ ಮಾತ್ರ ಪ್ರಕಟ" },
+    ],
+    catalogEyebrow: "DataPay ನಲ್ಲಿ ಲೈವ್",
+    catalogTitle: "ನಿಜವಾದ ಸಂಸ್ಥೆಗಳು ಪಟ್ಟಿ ಮಾಡಿದ ನಿಜವಾದ ಉತ್ಪನ್ನಗಳು",
+    catalogLede:
+      "ಇದು ಮಾದರಿಯಲ್ಲ — ಇದು ಈಗ DataPay ನಲ್ಲಿರುವ ಒಂದು ಸಂಸ್ಥೆಯ ನಿಜವಾದ ಪಟ್ಟಿ, ಮನೆಗಳು ನೋಡುವ ಅದೇ ಬೆಲೆಗಳಲ್ಲಿ.",
+    catalogCta: "ಸಂಪೂರ್ಣ ಪಟ್ಟಿಯನ್ನು ನೋಡಿ →",
+    catalogBy: "ಪಟ್ಟಿ ಮಾಡಿದವರು",
     howEyebrow: "ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ",
     howTitle: "ಒಂದು ಮನೆಯ ಉತ್ತರದಿಂದ ನಿಜವಾದ ವ್ಯಾಪಾರ ನಿರ್ಧಾರದವರೆಗೆ",
     steps: [
@@ -241,51 +321,101 @@ const CONTENT = {
   },
 } as const;
 
-export function MarketingHome({ lang }: { lang: Lang }): JSX.Element {
+export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Element> {
   const t = CONTENT[lang];
+  const catalog = await getCatalogPreview("prakruti-plus");
 
   return (
     <>
       <PublicNav lang={lang} />
       <main className="mkPage">
-        <section className="mkHero">
-          <span className="mkLogoLight">
-            <DataPayLogo size={52} tagline={t.tagline} />
-          </span>
-          <span className="mkLogoDark">
-            <DataPayLogo size={52} dark tagline={t.tagline} />
-          </span>
-          <h1>{t.heroTitle}</h1>
-          <p className="mkLede">{t.heroLede}</p>
-          <div className="mkCtaRow">
-            <a href="/org/signup" className="mkCtaPrimary">
-              {t.ctaSignup}
-            </a>
-            <a href="#how-it-works" className="mkCtaSecondary">
-              {t.ctaHowItWorks}
-            </a>
-          </div>
-
-          <div className="mkAppBadges">
-            <span className="mkAppBadgesLabel">{t.getApp}</span>
-            <div className="mkBadgeRow">
-              <div className="mkBadge" aria-label={`App Store — ${t.comingSoon}`}>
-                <AppleIcon />
-                <span className="mkBadgeText">
-                  <small>{t.comingSoon}</small>
-                  <strong>App Store</strong>
-                </span>
+        <section className="mkHeroBand">
+          <div className="mkHero">
+            <div className="mkHeroCopy">
+              <span className="mkLogoLight">
+                <DataPayLogo size={40} tagline={t.tagline} />
+              </span>
+              <span className="mkLogoDark">
+                <DataPayLogo size={40} dark tagline={t.tagline} />
+              </span>
+              <span className="mkHeroKicker">{t.heroKicker}</span>
+              <h1>{t.heroTitle}</h1>
+              <p className="mkLede">{t.heroLede}</p>
+              <div className="mkCtaRow">
+                <a href="/org/signup" className="mkCtaPrimary">
+                  {t.ctaSignup}
+                </a>
+                <a href="#how-it-works" className="mkCtaSecondary">
+                  {t.ctaHowItWorks}
+                </a>
               </div>
-              <div className="mkBadge" aria-label={`Google Play — ${t.comingSoon}`}>
-                <AndroidIcon />
-                <span className="mkBadgeText">
-                  <small>{t.comingSoon}</small>
-                  <strong>Google Play</strong>
-                </span>
+
+              <div className="mkAppBadges">
+                <span className="mkAppBadgesLabel">{t.getApp}</span>
+                <div className="mkBadgeRow">
+                  <div className="mkBadge" aria-label={`App Store — ${t.comingSoon}`}>
+                    <AppleIcon />
+                    <span className="mkBadgeText">
+                      <small>{t.comingSoon}</small>
+                      <strong>App Store</strong>
+                    </span>
+                  </div>
+                  <div className="mkBadge" aria-label={`Google Play — ${t.comingSoon}`}>
+                    <AndroidIcon />
+                    <span className="mkBadgeText">
+                      <small>{t.comingSoon}</small>
+                      <strong>Google Play</strong>
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
+
+            <PhoneMock lang={lang} />
+          </div>
+
+          <div className="mkTrustStrip">
+            {t.trust.map((item) => (
+              <div className="mkTrustItem" key={item.label}>
+                <span className="mkTrustStat">{item.stat}</span>
+                <span className="mkTrustLabel">{item.label}</span>
+              </div>
+            ))}
           </div>
         </section>
+
+        {catalog && (
+          <section className="mkSection mkSectionCatalog">
+            <p className="mkEyebrow">{t.catalogEyebrow}</p>
+            <h2>{t.catalogTitle}</h2>
+            <p className="mkSectionLede">{t.catalogLede}</p>
+            <div className="mkShelf">
+              {catalog.products.map((p) => (
+                <a className="mkShelfCard" key={p.id} href={`/store/${catalog.orgSlug}`}>
+                  <span className="mkShelfPhoto">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.photoUrl ?? ""} alt={p.nameEn} loading="lazy" />
+                  </span>
+                  <span className="mkShelfBody">
+                    <span className="mkShelfName">{p.nameEn}</span>
+                    <span className="mkShelfPrices">
+                      <span className="mkShelfPrice">{formatRupees(p.salePricePaise)}</span>
+                      {p.marketPricePaise > p.salePricePaise && (
+                        <span className="mkShelfWas">{formatRupees(p.marketPricePaise)}</span>
+                      )}
+                    </span>
+                  </span>
+                </a>
+              ))}
+            </div>
+            <p className="mkShelfFoot">
+              <span className="mkShelfBy">
+                {t.catalogBy} <strong>{catalog.orgName}</strong>
+              </span>
+              <a href={`/store/${catalog.orgSlug}`}>{t.catalogCta}</a>
+            </p>
+          </section>
+        )}
 
         <section id="how-it-works" className="mkSection">
           <p className="mkEyebrow">{t.howEyebrow}</p>
@@ -425,10 +555,118 @@ export function MarketingHome({ lang }: { lang: Lang }): JSX.Element {
         .mkPage { --mk-bg: #F6F5F1; --mk-surface: #fff; --mk-border: #E7E4DC; --mk-ink: #101418; --mk-subtle: #5B6672; --mk-mist: #8A939B; --mk-jade: #0E7A5C; --mk-jade-deep: #0B6249; --mk-jade-tint: #E3EFEA; --mk-brass: #B98F2F;
           background: var(--mk-bg); color: var(--mk-ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
         }
-        .mkHero { max-width: 720px; margin: 0 auto; padding: 72px 24px 56px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-        .mkHero h1 { font-size: 2.4rem; line-height: 1.2; margin: 0; letter-spacing: -0.02em; }
-        .mkLede { font-size: 16.5px; line-height: 1.7; color: var(--mk-subtle); max-width: 580px; margin: 0; }
-        .mkCtaRow { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+        /* ---- Hero band ---------------------------------------------------
+           Two columns, left-aligned: the old hero was a centered column of
+           text that gave the page nothing to look at above the fold. */
+        .mkHeroBand {
+          position: relative;
+          overflow: hidden;
+          background:
+            radial-gradient(1100px 520px at 12% -8%, var(--mk-jade-tint) 0%, transparent 62%),
+            radial-gradient(760px 420px at 88% 8%, #f6eeda 0%, transparent 60%);
+          border-bottom: 1px solid var(--mk-border);
+        }
+        .mkHero {
+          position: relative;
+          z-index: 1;
+          max-width: 1120px;
+          margin: 0 auto;
+          padding: 64px 32px 56px;
+          display: grid;
+          grid-template-columns: 1.05fr 0.95fr;
+          gap: 56px;
+          align-items: center;
+        }
+        .mkHeroCopy { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; }
+        .mkHeroKicker {
+          display: inline-block; font-size: 12.5px; font-weight: 700; letter-spacing: 0.1em;
+          text-transform: uppercase; color: var(--mk-jade);
+          background: var(--mk-surface); border: 1px solid var(--mk-border);
+          border-radius: 999px; padding: 7px 14px;
+        }
+        .mkHero h1 { font-size: 3.1rem; line-height: 1.06; margin: 0; letter-spacing: -0.035em; }
+        .mkLede { font-size: 17px; line-height: 1.65; color: var(--mk-subtle); max-width: 520px; margin: 0; }
+        .mkCtaRow { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+
+        /* ---- Phone illustration ------------------------------------------ */
+        .mkPhoneWrap { position: relative; display: flex; justify-content: center; }
+        .mkPhoneGlow {
+          position: absolute; width: 320px; height: 320px; border-radius: 999px;
+          background: var(--mk-jade); opacity: 0.1; filter: blur(60px);
+        }
+        .mkPhone {
+          position: relative; width: 278px; aspect-ratio: 9 / 15.2;
+          background: #0c0f12; border-radius: 40px; padding: 9px;
+          box-shadow: 0 30px 70px rgba(16, 20, 24, 0.28), 0 2px 0 rgba(255,255,255,0.12) inset;
+        }
+        .mkPhoneScreen {
+          height: 100%; border-radius: 32px; background: #F6F5F1; padding: 20px 16px;
+          display: flex; flex-direction: column; gap: 14px; overflow: hidden;
+        }
+        .mkPhoneTop { display: flex; align-items: center; justify-content: space-between; }
+        .mkPhoneBrand { font-size: 13.5px; font-weight: 800; color: #101418; letter-spacing: -0.01em; }
+        .mkPhoneTokens {
+          font-size: 12px; font-weight: 700; color: #B98F2F;
+          background: #faf1dd; border-radius: 999px; padding: 4px 10px;
+        }
+        .mkPhoneEyebrow {
+          font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+          color: #8A939B; margin: 4px 0 0;
+        }
+        .mkPhoneCard {
+          background: #fff; border: 1px solid #E7E4DC; border-radius: 18px; padding: 16px 15px;
+          box-shadow: 0 2px 8px rgba(16,20,24,0.05);
+        }
+        .mkPhoneQ { font-size: 14.5px; line-height: 1.4; font-weight: 700; color: #101418; margin: 0 0 14px; }
+        .mkPhoneChips { display: flex; flex-direction: column; gap: 7px; }
+        .mkPhoneChip {
+          font-size: 12.5px; font-weight: 600; color: #5B6672;
+          border: 1px solid #E7E4DC; border-radius: 10px; padding: 9px 12px; background: #fff;
+        }
+        .mkPhoneChipOn { background: var(--mk-jade); border-color: var(--mk-jade); color: #fff; }
+        .mkPhoneReward {
+          display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700;
+          color: #0B6249; background: #E3EFEA; border-radius: 12px; padding: 10px 13px;
+        }
+        .mkPhoneRewardIcon { font-size: 13px; }
+        .mkPhoneNote { font-size: 10.5px; line-height: 1.45; color: #8A939B; margin-top: 2px; }
+
+        /* ---- Trust strip -------------------------------------------------- */
+        .mkTrustStrip {
+          position: relative; z-index: 1;
+          max-width: 1120px; margin: 0 auto; padding: 0 32px 56px;
+          display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+        }
+        .mkTrustItem {
+          display: flex; align-items: baseline; gap: 12px;
+          border-left: 2px solid var(--mk-jade); padding-left: 16px;
+        }
+        .mkTrustStat { font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; color: var(--mk-ink); line-height: 1; }
+        .mkTrustLabel { font-size: 13px; line-height: 1.45; color: var(--mk-subtle); }
+
+        /* ---- Live catalog shelf ------------------------------------------- */
+        .mkShelf { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 28px; }
+        .mkShelfCard {
+          display: flex; flex-direction: column; text-decoration: none; color: inherit;
+          background: var(--mk-surface); border: 1px solid var(--mk-border);
+          border-radius: 16px; overflow: hidden; transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .mkShelfCard:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(16,20,24,0.10); }
+        /* The ratio has to live on the <img>, not the wrapper: height:100%
+           against an auto-height parent resolves to auto, so each photo sized
+           itself from its own intrinsic height and the shelf came out ragged. */
+        .mkShelfPhoto { display: block; flex: none; width: 100%; overflow: hidden; background: #0c0f12; }
+        .mkShelfPhoto img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+        .mkShelfBody { display: flex; flex-direction: column; gap: 7px; padding: 14px 15px 16px; }
+        .mkShelfName { font-size: 13.5px; font-weight: 700; line-height: 1.35; }
+        .mkShelfPrices { display: flex; align-items: baseline; gap: 8px; }
+        .mkShelfPrice { font-size: 16px; font-weight: 700; color: var(--mk-jade); }
+        .mkShelfWas { font-size: 12px; color: var(--mk-mist); text-decoration: line-through; }
+        .mkShelfFoot {
+          display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+          gap: 12px; margin-top: 20px; font-size: 14px; color: var(--mk-subtle);
+        }
+        .mkShelfFoot a { color: var(--mk-jade); font-weight: 700; text-decoration: none; }
         .mkCtaPrimary { background: var(--mk-jade); color: #fff; padding: 13px 24px; border-radius: 999px; font-weight: 700; font-size: 14.5px; text-decoration: none; }
         .mkCtaPrimary:hover { background: var(--mk-jade-deep); }
         .mkCtaSecondary { border: 1px solid var(--mk-border); color: var(--mk-ink); padding: 13px 24px; border-radius: 999px; font-weight: 600; font-size: 14.5px; text-decoration: none; }
@@ -487,6 +725,15 @@ export function MarketingHome({ lang }: { lang: Lang }): JSX.Element {
         .mkFooterLinks a { color: var(--mk-mist); text-decoration: none; font-size: 13px; font-weight: 600; }
         .mkFooterLinks a:hover { color: var(--mk-ink); }
 
+        @media (max-width: 980px) {
+          .mkHero { grid-template-columns: 1fr; gap: 40px; padding: 48px 24px 40px; }
+          .mkHeroCopy { align-items: center; text-align: center; }
+          .mkLede { max-width: none; }
+          .mkCtaRow, .mkAppBadges { justify-content: center; align-self: center; }
+          .mkHero h1 { font-size: 2.5rem; }
+          .mkShelf { grid-template-columns: repeat(2, 1fr); }
+          .mkTrustStrip { grid-template-columns: 1fr; gap: 16px; padding: 0 24px 44px; }
+        }
         @media (max-width: 820px) {
           .mkSteps { grid-template-columns: repeat(2, 1fr); }
           .mkCards { grid-template-columns: 1fr; }
@@ -495,7 +742,8 @@ export function MarketingHome({ lang }: { lang: Lang }): JSX.Element {
         }
         @media (max-width: 520px) {
           .mkSteps { grid-template-columns: 1fr; }
-          .mkHero h1 { font-size: 1.9rem; }
+          .mkShelf { grid-template-columns: 1fr; }
+          .mkHero h1 { font-size: 2rem; }
         }
 
         /* DataPayLogo's text colors are set via inline style (ink/brass
@@ -509,6 +757,14 @@ export function MarketingHome({ lang }: { lang: Lang }): JSX.Element {
           .mkPage { --mk-bg: #101418; --mk-surface: #14161b; --mk-border: #24282e; --mk-ink: #F6F5F1; --mk-subtle: #c3c2b7; --mk-mist: #9b9a94; --mk-jade: #12946F; --mk-jade-deep: #0E7A5C; --mk-jade-tint: #14211c; --mk-brass: #D4AA45; }
           .mkLogoLight { display: none; }
           .mkLogoDark { display: inline-flex; }
+          .mkHeroBand {
+            background:
+              radial-gradient(1100px 520px at 12% -8%, #14211c 0%, transparent 62%),
+              radial-gradient(760px 420px at 88% 8%, #221c0f 0%, transparent 60%);
+          }
+          /* The phone screen keeps its light UI in both themes — it depicts the
+             app, which has its own paper background, not this page's surface. */
+          .mkPhone { box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55); }
         }
       `,
         }}

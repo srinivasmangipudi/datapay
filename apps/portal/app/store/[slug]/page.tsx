@@ -84,9 +84,12 @@ export default async function StorePage({ params }: { params: { slug: string } }
           .storeEmpty { max-width: 1080px; margin: 0 auto; padding: 0 24px 64px; color: var(--sp-mist); }
           .storeGrid { max-width: 1080px; margin: 0 auto; padding: 8px 24px 64px; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
           .storeCard { background: var(--sp-surface); border: 1px solid var(--sp-border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
-          .storePhoto { width: 100%; aspect-ratio: 4 / 3; background: var(--sp-bg); }
-          .storePhoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
-          .storePhotoPlaceholder { display: block; width: 100%; height: 100%; }
+          /* Ratio on the <img>, not the wrapper — height:100% against an
+             auto-height parent resolves to auto, which let each photo size
+             itself from its own intrinsic height and made the grid ragged. */
+          .storePhoto { width: 100%; overflow: hidden; background: var(--sp-bg); }
+          .storePhoto img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+          .storePhotoPlaceholder { display: block; width: 100%; aspect-ratio: 4 / 3; }
           .storeCardBody { padding: 16px; display: flex; flex-direction: column; gap: 4px; }
           .storeCategory { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--sp-jade); }
           .storeCardBody h3 { font-size: 15.5px; margin: 2px 0 0; }
