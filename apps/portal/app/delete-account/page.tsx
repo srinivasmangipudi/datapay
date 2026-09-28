@@ -1,4 +1,5 @@
 import { DataPayLogo } from "../components/DataPayLogo";
+import { getPrivacyFloor } from "../lib/privacy-floor";
 import { PublicNav } from "../components/PublicNav";
 import { getLang } from "../lib/language";
 
@@ -9,7 +10,8 @@ const NOTICE = {
   kn: "ಈ ಕಾನೂನು ಪಠ್ಯದ ಕನ್ನಡ ಅನುವಾದವನ್ನು ನಾವು ಇನ್ನೂ ಪರಿಶೀಲಿಸಿಲ್ಲ, ಆದ್ದರಿಂದ ತಪ್ಪುಗಳನ್ನು ತಪ್ಪಿಸಲು ಕೆಳಗಿನ ಪಠ್ಯವನ್ನು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ತೋರಿಸಲಾಗಿದೆ.",
 } as const;
 
-export default function DeleteAccountPage(): JSX.Element {
+export default async function DeleteAccountPage(): Promise<JSX.Element> {
+  const { floor } = await getPrivacyFloor();
   const lang = getLang();
 
   return (
@@ -50,7 +52,7 @@ export default function DeleteAccountPage(): JSX.Element {
           <h2>What can't be deleted</h2>
           <p>
             Your answers may have already contributed to an aggregated, anonymized statistic (never
-            published until at least 50 households stand behind it). Once published, that number
+            published until at least {floor} households stand behind it). Once published, that number
             doesn't identify you or trace back to your account — there's nothing in it to delete
             individually, the same way there's no way to "un-average" one data point out of an
             average.

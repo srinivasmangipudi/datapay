@@ -640,7 +640,7 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
           <h2>{t.systemTitle}</h2>
           <p className="mkSectionLede">{t.systemLede}</p>
           <div className="mkDiagramWrap">
-            <SystemDiagram />
+            <SystemDiagram floor={privacy.floor} />
           </div>
         </section>
 

@@ -1,13 +1,15 @@
 // A real diagram, not a bullet list pretending to be one — the two flows
 // that define the product: data up (alias-protected, aggregated before it's
 // ever shared) and value back down (questions, products, token rewards).
-export function SystemDiagram(): JSX.Element {
+/** `floor` is the live k-anonymity minimum — the aria-label is a privacy
+    claim read aloud to screen-reader users, so it states the real number. */
+export function SystemDiagram({ floor }: { floor: number }): JSX.Element {
   return (
     <svg
       viewBox="0 42 950 288"
       className="diagramSvg"
       role="img"
-      aria-label="Households answer questions and place orders under a private alias. DataPay aggregates responses from at least 50 households before sharing anything. Organizations see only the aggregated signal, and send back questions, products, and token rewards."
+      aria-label={`Households answer questions and place orders under a private alias. DataPay aggregates responses from at least ${floor} households before sharing anything. Organizations see only the aggregated signal, and send back questions, products, and token rewards.`}
     >
       <defs>
         <marker id="arrowJade" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -38,7 +40,7 @@ export function SystemDiagram(): JSX.Element {
         <rect x="350" y="108" width="180" height="30" rx="8" className="diagramPill" />
         <text x="440" y="128" textAnchor="middle" className="diagramPillText">Alias vault</text>
         <rect x="350" y="146" width="180" height="30" rx="8" className="diagramPill" />
-        <text x="440" y="166" textAnchor="middle" className="diagramPillText">Aggregation (50+ floor)</text>
+        <text x="440" y="166" textAnchor="middle" className="diagramPillText">{`Aggregation (${floor}+ floor)`}</text>
         <rect x="350" y="184" width="180" height="30" rx="8" className="diagramPill" />
         <text x="440" y="204" textAnchor="middle" className="diagramPillText">Token ledger</text>
       </g>

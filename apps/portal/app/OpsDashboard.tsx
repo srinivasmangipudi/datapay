@@ -6,6 +6,7 @@
 // member-adjacent read elsewhere in this app (questions, zones, fund-projects).
 import { IconChart, IconInbox, IconToken, IconUsers, IconVault } from "./components/icons";
 import { getDemandAggregates } from "./data";
+import { getPrivacyFloor } from "./lib/privacy-floor";
 import { getTokenEconomyOverview } from "./token-economy/core-api";
 
 /** Concentric rings echoing the brand mark — masthead decoration only. */
@@ -23,7 +24,12 @@ function HeadArt(): JSX.Element {
 }
 
 export async function OpsDashboard(): Promise<JSX.Element> {
-  const [aggregates, overview] = await Promise.all([getDemandAggregates(), getTokenEconomyOverview()]);
+  const [aggregates, overview, privacy] = await Promise.all([
+    getDemandAggregates(),
+    getTokenEconomyOverview(),
+    getPrivacyFloor(),
+  ]);
+  const floor = privacy.floor;
 
   const rupees = overview.corpusFundPaise / 100;
   const perMember =
@@ -36,7 +42,7 @@ export async function OpsDashboard(): Promise<JSX.Element> {
         <p className="eyebrow">DataPay Portal · Ops</p>
         <h1>Demand &amp; token economy</h1>
         <p className="lede">
-          Aggregated numbers only. Every row here is backed by at least 50 households — nothing
+          Aggregated numbers only. Every row here is backed by at least {floor} households — nothing
           smaller is ever published, and this portal has no access to individual member data at all.
         </p>
       </header>
@@ -111,7 +117,7 @@ export async function OpsDashboard(): Promise<JSX.Element> {
             </span>
             <span className="emptyStateTitle">Nothing published yet</span>
             <p className="emptyStateBody">
-              Aggregates appear here once a category has at least 50 households behind it in one
+              Aggregates appear here once a category has at least {floor} households behind it in one
               zone. Run the aggregation job from Token economy to compute a fresh pass.
             </p>
           </div>

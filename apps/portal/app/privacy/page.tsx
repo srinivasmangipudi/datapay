@@ -1,4 +1,5 @@
 import { DataPayLogo } from "../components/DataPayLogo";
+import { getPrivacyFloor } from "../lib/privacy-floor";
 import { PublicNav } from "../components/PublicNav";
 import { getLang } from "../lib/language";
 
@@ -11,7 +12,11 @@ const NOTICE = {
   kn: "ಈ ಕಾನೂನು ಪಠ್ಯದ ಕನ್ನಡ ಅನುವಾದವನ್ನು ನಾವು ಇನ್ನೂ ಪರಿಶೀಲಿಸಿಲ್ಲ, ಆದ್ದರಿಂದ ತಪ್ಪುಗಳನ್ನು ತಪ್ಪಿಸಲು ಕೆಳಗಿನ ನೀತಿಯನ್ನು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ತೋರಿಸಲಾಗಿದೆ.",
 } as const;
 
-export default function PrivacyPolicyPage(): JSX.Element {
+export default async function PrivacyPolicyPage(): Promise<JSX.Element> {
+  // The cohort minimum is whatever this deployment enforces, read live — a
+  // privacy policy stating a number the code doesn't honour is the worst
+  // possible place for that claim to drift (SPEC.md §11).
+  const { floor } = await getPrivacyFloor();
   const lang = getLang();
 
   return (
@@ -71,7 +76,7 @@ export default function PrivacyPolicyPage(): JSX.Element {
           <p>
             We only ever share <strong>aggregated, anonymized</strong> demand data — never an
             individual member's answers, location, or identity. A number is only ever published once
-            at least 50 households stand behind it.
+            at least {floor} households stand behind it.
           </p>
         </section>
 

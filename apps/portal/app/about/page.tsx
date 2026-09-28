@@ -1,6 +1,7 @@
 import { DataPayLogo } from "../components/DataPayLogo";
 import { PublicNav } from "../components/PublicNav";
 import { getLang } from "../lib/language";
+import { getPrivacyFloor } from "../lib/privacy-floor";
 
 const CONTENT = {
   en: {
@@ -14,7 +15,7 @@ const CONTENT = {
     wontH2: "What we won't do",
     wont: [
       "Sell or share an individual household's answers, identity, or location.",
-      "Publish a number before at least 50 households stand behind it.",
+      "Publish a number before at least {floor} households stand behind it.",
       "Let an organization see a member directly — fulfillment stays identity-blind.",
     ],
     wontLast: "Pretend a feature is finished when it isn't — see our",
@@ -39,7 +40,7 @@ const CONTENT = {
     wontH2: "ನಾವು ಮಾಡದಿರುವುದು",
     wont: [
       "ಒಂದು ಮನೆಯ ಉತ್ತರಗಳು, ಗುರುತು, ಅಥವಾ ಸ್ಥಳವನ್ನು ಮಾರಾಟ ಮಾಡುವುದು ಅಥವಾ ಹಂಚಿಕೊಳ್ಳುವುದು.",
-      "ಕನಿಷ್ಠ 50 ಮನೆಗಳು ಬೆಂಬಲಿಸುವ ಮೊದಲು ಒಂದು ಸಂಖ್ಯೆಯನ್ನು ಪ್ರಕಟಿಸುವುದು.",
+      "ಕನಿಷ್ಠ {floor} ಮನೆಗಳು ಬೆಂಬಲಿಸುವ ಮೊದಲು ಒಂದು ಸಂಖ್ಯೆಯನ್ನು ಪ್ರಕಟಿಸುವುದು.",
       "ಒಂದು ಸಂಸ್ಥೆಗೆ ಸದಸ್ಯನನ್ನು ನೇರವಾಗಿ ನೋಡಲು ಬಿಡುವುದು — ಪೂರೈಕೆ ಯಾವಾಗಲೂ ಗುರುತು-ಕುರುಡಾಗಿರುತ್ತದೆ.",
     ],
     wontLast: "ಒಂದು ವೈಶಿಷ್ಟ್ಯ ಮುಗಿದಿಲ್ಲದಿದ್ದಾಗ ಮುಗಿದಿದೆ ಎಂದು ನಟಿಸುವುದು — ಇಂದು ಏನು ನಿರ್ಮಿಸಲಾಗಿದೆ ಮತ್ತು ಇನ್ನೂ ಪ್ರಾಮಾಣಿಕವಾಗಿ ಪ್ರಗತಿಯಲ್ಲಿದೆ ಎಂಬುದನ್ನು ನಮ್ಮ",
@@ -57,8 +58,9 @@ const CONTENT = {
 
 export const dynamic = "force-dynamic";
 
-export default function AboutPage(): JSX.Element {
+export default async function AboutPage(): Promise<JSX.Element> {
   const lang = getLang();
+  const { floor } = await getPrivacyFloor();
   const t = CONTENT[lang];
 
   return (
@@ -84,9 +86,10 @@ export default function AboutPage(): JSX.Element {
         <section className="section">
           <h2>{t.wontH2}</h2>
           <ul>
-            {t.wont.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
+            {t.wont.map((raw) => {
+              const line = raw.replaceAll("{floor}", String(floor));
+              return <li key={line}>{line}</li>;
+            })}
             <li>
               {t.wontLast} <a href="/privacy">{t.wontLastLink}</a> {t.wontLastEnd}
             </li>
