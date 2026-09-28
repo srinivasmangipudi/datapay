@@ -1,12 +1,33 @@
 import { DataPayLogo } from "./components/DataPayLogo";
 import { PublicNav } from "./components/PublicNav";
 import { getCatalogPreview } from "./lib/catalog-preview";
+import { getPrivacyFloor } from "./lib/privacy-floor";
 import type { Lang } from "./lib/language";
 import { SystemDiagram } from "./SystemDiagram";
 
 /** The open-testing listing. Same package name as apps/mobile's applicationId —
     if that ever changes, this link dies silently, so they change together. */
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=org.datapay.mobile";
+
+/**
+ * Deep-substitutes "{floor}" through a content tree, preserving its shape.
+ * The generic keeps every caller's exact type, so `t.buySteps[0].title` still
+ * typechecks as a string after passing through.
+ */
+function fillFloor<T>(value: T, floor: number): T {
+  if (typeof value === "string") {
+    return value.replaceAll("{floor}", String(floor)) as unknown as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((v) => fillFloor(v, floor)) as unknown as T;
+  }
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[k] = fillFloor(v, floor);
+    return out as T;
+  }
+  return value;
+}
 
 function formatRupees(paise: number): string {
   return `₹${Math.round(paise / 100).toLocaleString("en-IN")}`;
@@ -145,7 +166,7 @@ const CONTENT = {
     getApp: "Get the DataPay app",
     doorHousehold: "For households",
     doorHouseholdBody:
-      "Answer a few short questions a day and earn tokens. Free, and always anonymous.",
+      "When your village wants the same thing, you buy it together — better quality at a better price than any one household gets alone. Answer a few short questions a day to make that happen, and earn tokens while you do.",
     doorHouseholdNote: "Everything happens in the app — there is nothing to sign up for here.",
     doorOrg: "For organizations",
     doorOrgBody:
@@ -165,9 +186,27 @@ const CONTENT = {
       note: "Answers leave as an alias — never your name or number.",
     },
     trust: [
-      { stat: "50", label: "households minimum before any number is published" },
+      { stat: null, label: "households minimum before any number is published" },
       { stat: "0", label: "names, numbers or addresses ever shared with a brand" },
       { stat: "100%", label: "of demand data published as aggregates only" },
+    ],
+    buyEyebrow: "The part that pays off immediately",
+    buyTitle: "Buy together, pay less, get better quality",
+    buyLede:
+      "A single household has no bargaining power. A hundred households wanting the same 5kg of rice do. DataPay finds where that demand overlaps and takes it to suppliers as one order — so the price drops and the quality goes up, for everyone in it.",
+    buySteps: [
+      {
+        title: "You answer, honestly",
+        body: "A few seconds a day. What your household actually buys and needs — no names attached, ever.",
+      },
+      {
+        title: "Your village's demand adds up",
+        body: "Answers combine into one real, verified order that a supplier genuinely wants to serve well.",
+      },
+      {
+        title: "Everyone gets the better price",
+        body: "The collective price, not the corner-shop price — and you keep the tokens you earned getting there.",
+      },
     ],
     catalogEyebrow: "Live on DataPay",
     catalogTitle: "Real products, listed by real organizations",
@@ -180,7 +219,7 @@ const CONTENT = {
     steps: [
       { title: "Answer & browse", text: "A few daily questions, a token reward for each — plus a real product catalog to browse and reserve." },
       { title: "Aggregated privately", text: "Every answer is tied to a private alias only — never a name or phone number an organization could see." },
-      { title: "Real signals surface", text: "A number only ever publishes once at least 50 households stand behind it — never one household alone." },
+      { title: "Real signals surface", text: "A number only ever publishes once at least {floor} households stand behind it — never one household alone." },
       { title: "Organizations respond", text: "Ask priced questions, or list products directly — households browse and reserve, no middleman." },
     ],
     benefitsEyebrow: "Why DataPay",
@@ -199,9 +238,18 @@ const CONTENT = {
       { title: "Real demand, not guesses", text: "Every number is a genuine aggregated signal from real households — never a survey panel or estimate." },
       { title: "Ask your own questions", text: "Set a token reward and get direct answers from the community that matters to you." },
       { title: "Sell directly", text: "List your catalog and let households browse and reserve — no distributor markup." },
-      { title: "Privacy-safe by design", text: "You never see a household's identity — only anonymized cohorts of at least 50." },
+      { title: "Privacy-safe by design", text: "You never see a household's identity — only anonymized cohorts above the published minimum." },
       { title: "Fast to start", text: "No SDK, no integration work — sign up, get approved, and you're live." },
       { title: "Full control over spend", text: "You set your own reward per question — you only pay for what you ask." },
+    ],
+    benefitsEcosystem: "For the market",
+    ecosystemBenefits: [
+      { title: "Make what people actually want", text: "Producers see real demand before they commit a season or a production run — not after." },
+      { title: "Less waste", text: "Stock matched to real local demand means less spoilage, fewer unsold runs, fewer dead products." },
+      { title: "Shorter chains", text: "Producers reach households directly, so fewer intermediaries take a cut of the same rupee." },
+      { title: "Advertising that isn't guesswork", text: "Reaching people who already declared the need beats broadcasting to everyone who didn't." },
+      { title: "Innovation aimed at real gaps", text: "Unmet demand shows up as a visible signal, not a hunch someone has to fund on faith." },
+      { title: "A market that self-corrects", text: "When demand is visible and honest, supply moves toward it — instead of pushing what's already made." },
     ],
     systemEyebrow: "The system",
     systemTitle: "Two flows, always — data up, value back down",
@@ -211,13 +259,13 @@ const CONTENT = {
     cards: [
       { title: "Ask real households real questions", text: "Set your own token reward per question. Every submission is reviewed before it reaches anyone — never auto-published." },
       { title: "List your own products", text: "Point at a spreadsheet or add items by hand; households browse and reserve directly. Fulfillment happens outside the app — no in-app payment to set up." },
-      { title: "See real demand, not guesses", text: "Aggregated signals only ever publish once at least 50 households stand behind a number — never one household's data alone." },
+      { title: "See real demand, not guesses", text: "Aggregated signals only ever publish once at least {floor} households stand behind a number — never one household's data alone." },
     ],
     protectionEyebrow: "Data protection",
     protectionTitle: "Privacy isn't a policy here — it's the architecture",
     protectionItems: [
       { title: "Private alias, always.", text: "Organizations only ever see an alias — never a name, phone number, or address." },
-      { title: "Cohort floor of 50.", text: "No number publishes until at least 50 households stand behind it." },
+      { title: "Cohort floor of {floor}.", text: "No number publishes until at least {floor} households stand behind it." },
       { title: "No raw location stored.", text: "Approximate area only, used to match the nearest zone — never exact coordinates." },
       { title: "You control sharing.", text: "Every category of data sharing can be turned off, any time, in the app." },
     ],
@@ -251,7 +299,7 @@ const CONTENT = {
     getApp: "DataPay ಆ್ಯಪ್ ಪಡೆಯಿರಿ",
     doorHousehold: "ಮನೆಗಳಿಗಾಗಿ",
     doorHouseholdBody:
-      "ದಿನಕ್ಕೆ ಕೆಲವು ಸಣ್ಣ ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರಿಸಿ, ಟೋಕನ್‌ಗಳನ್ನು ಗಳಿಸಿ. ಉಚಿತ, ಮತ್ತು ಯಾವಾಗಲೂ ಅನಾಮಧೇಯ.",
+      "ನಿಮ್ಮ ಊರಿನವರೆಲ್ಲ ಒಂದೇ ವಸ್ತು ಬಯಸಿದಾಗ, ಒಟ್ಟಿಗೆ ಖರೀದಿಸಿ — ಒಬ್ಬರೇ ಖರೀದಿಸುವುದಕ್ಕಿಂತ ಉತ್ತಮ ಗುಣಮಟ್ಟ, ಕಡಿಮೆ ಬೆಲೆ. ದಿನಕ್ಕೆ ಕೆಲವು ಸಣ್ಣ ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರಿಸಿ ಮತ್ತು ಟೋಕನ್‌ಗಳನ್ನು ಗಳಿಸಿ.",
     doorHouseholdNote: "ಎಲ್ಲವೂ ಆ್ಯಪ್‌ನಲ್ಲಿ ನಡೆಯುತ್ತದೆ — ಇಲ್ಲಿ ಸೈನ್ ಅಪ್ ಮಾಡುವ ಅಗತ್ಯವಿಲ್ಲ.",
     doorOrg: "ಸಂಸ್ಥೆಗಳಿಗಾಗಿ",
     doorOrgBody:
@@ -271,9 +319,27 @@ const CONTENT = {
       note: "ಉತ್ತರಗಳು ಅಲಿಯಾಸ್ ಆಗಿ ಹೋಗುತ್ತವೆ — ನಿಮ್ಮ ಹೆಸರು ಅಥವಾ ಸಂಖ್ಯೆ ಎಂದಿಗೂ ಅಲ್ಲ.",
     },
     trust: [
-      { stat: "50", label: "ಯಾವುದೇ ಸಂಖ್ಯೆ ಪ್ರಕಟವಾಗುವ ಮೊದಲು ಕನಿಷ್ಠ ಇಷ್ಟು ಮನೆಗಳು" },
+      { stat: null, label: "ಯಾವುದೇ ಸಂಖ್ಯೆ ಪ್ರಕಟವಾಗುವ ಮೊದಲು ಕನಿಷ್ಠ ಇಷ್ಟು ಮನೆಗಳು" },
       { stat: "0", label: "ಬ್ರ್ಯಾಂಡ್‌ಗೆ ಹಂಚಿಕೊಂಡ ಹೆಸರು, ಸಂಖ್ಯೆ ಅಥವಾ ವಿಳಾಸ" },
       { stat: "100%", label: "ಬೇಡಿಕೆ ಡೇಟಾ ಒಟ್ಟುಗೂಡಿಸಿದ ರೂಪದಲ್ಲಿ ಮಾತ್ರ ಪ್ರಕಟ" },
+    ],
+    buyEyebrow: "ತಕ್ಷಣವೇ ಪ್ರಯೋಜನ ಸಿಗುವ ಭಾಗ",
+    buyTitle: "ಒಟ್ಟಿಗೆ ಖರೀದಿಸಿ, ಕಡಿಮೆ ಪಾವತಿಸಿ, ಉತ್ತಮ ಗುಣಮಟ್ಟ ಪಡೆಯಿರಿ",
+    buyLede:
+      "ಒಂದೇ ಮನೆಗೆ ಚೌಕಾಸಿ ಶಕ್ತಿ ಇಲ್ಲ. ಆದರೆ ಒಂದೇ 5 ಕೆಜಿ ಅಕ್ಕಿ ಬಯಸುವ ನೂರು ಮನೆಗಳಿಗೆ ಇದೆ. DataPay ಆ ಬೇಡಿಕೆಯನ್ನು ಒಟ್ಟುಗೂಡಿಸಿ ಒಂದೇ ಆರ್ಡರ್ ಆಗಿ ಪೂರೈಕೆದಾರರಿಗೆ ಕೊಂಡೊಯ್ಯುತ್ತದೆ — ಬೆಲೆ ಕಡಿಮೆಯಾಗುತ್ತದೆ, ಗುಣಮಟ್ಟ ಹೆಚ್ಚಾಗುತ್ತದೆ.",
+    buySteps: [
+      {
+        title: "ನೀವು ಪ್ರಾಮಾಣಿಕವಾಗಿ ಉತ್ತರಿಸಿ",
+        body: "ದಿನಕ್ಕೆ ಕೆಲವು ಸೆಕೆಂಡುಗಳು. ನಿಮ್ಮ ಮನೆ ನಿಜವಾಗಿ ಏನು ಖರೀದಿಸುತ್ತದೆ — ಹೆಸರು ಎಂದಿಗೂ ಸೇರಿಸುವುದಿಲ್ಲ.",
+      },
+      {
+        title: "ನಿಮ್ಮ ಊರಿನ ಬೇಡಿಕೆ ಸೇರುತ್ತದೆ",
+        body: "ಉತ್ತರಗಳು ಒಂದೇ ನಿಜವಾದ ಆರ್ಡರ್ ಆಗಿ ಸೇರುತ್ತವೆ, ಪೂರೈಕೆದಾರರು ಚೆನ್ನಾಗಿ ಸೇವೆ ಸಲ್ಲಿಸಲು ಬಯಸುತ್ತಾರೆ.",
+      },
+      {
+        title: "ಎಲ್ಲರಿಗೂ ಉತ್ತಮ ಬೆಲೆ",
+        body: "ಅಂಗಡಿ ಬೆಲೆ ಅಲ್ಲ, ಸಾಮೂಹಿಕ ಬೆಲೆ — ಮತ್ತು ಗಳಿಸಿದ ಟೋಕನ್‌ಗಳು ನಿಮ್ಮಲ್ಲೇ ಉಳಿಯುತ್ತವೆ.",
+      },
     ],
     catalogEyebrow: "DataPay ನಲ್ಲಿ ಲೈವ್",
     catalogTitle: "ನಿಜವಾದ ಸಂಸ್ಥೆಗಳು ಪಟ್ಟಿ ಮಾಡಿದ ನಿಜವಾದ ಉತ್ಪನ್ನಗಳು",
@@ -286,7 +352,7 @@ const CONTENT = {
     steps: [
       { title: "ಉತ್ತರಿಸಿ ಮತ್ತು ಬ್ರೌಸ್ ಮಾಡಿ", text: "ಕೆಲವು ದೈನಂದಿನ ಪ್ರಶ್ನೆಗಳು, ಪ್ರತಿಯೊಂದಕ್ಕೂ ಟೋಕನ್ ಬಹುಮಾನ — ಜೊತೆಗೆ ಬ್ರೌಸ್ ಮಾಡಲು ಮತ್ತು ಕಾಯ್ದಿರಿಸಲು ನಿಜವಾದ ಉತ್ಪನ್ನ ಪಟ್ಟಿ." },
       { title: "ಖಾಸಗಿಯಾಗಿ ಒಟ್ಟುಗೂಡಿಸಲಾಗಿದೆ", text: "ಪ್ರತಿ ಉತ್ತರವು ಖಾಸಗಿ ಅಲಿಯಾಸ್‌ಗೆ ಮಾತ್ರ ಸಂಬಂಧಿಸಿದೆ — ಸಂಸ್ಥೆಯು ನೋಡಬಹುದಾದ ಹೆಸರು ಅಥವಾ ಫೋನ್ ಸಂಖ್ಯೆ ಎಂದಿಗೂ ಅಲ್ಲ." },
-      { title: "ನಿಜವಾದ ಸಂಕೇತಗಳು ಹೊರಹೊಮ್ಮುತ್ತವೆ", text: "ಕನಿಷ್ಠ 50 ಮನೆಗಳು ಬೆಂಬಲಿಸಿದ ನಂತರವೇ ಒಂದು ಸಂಖ್ಯೆ ಪ್ರಕಟವಾಗುತ್ತದೆ — ಎಂದಿಗೂ ಒಂದೇ ಮನೆ ಅಲ್ಲ." },
+      { title: "ನಿಜವಾದ ಸಂಕೇತಗಳು ಹೊರಹೊಮ್ಮುತ್ತವೆ", text: "ಕನಿಷ್ಠ {floor} ಮನೆಗಳು ಬೆಂಬಲಿಸಿದ ನಂತರವೇ ಒಂದು ಸಂಖ್ಯೆ ಪ್ರಕಟವಾಗುತ್ತದೆ — ಎಂದಿಗೂ ಒಂದೇ ಮನೆ ಅಲ್ಲ." },
       { title: "ಸಂಸ್ಥೆಗಳು ಪ್ರತಿಕ್ರಿಯಿಸುತ್ತವೆ", text: "ಬೆಲೆ ನಿಗದಿತ ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ, ಅಥವಾ ಉತ್ಪನ್ನಗಳನ್ನು ನೇರವಾಗಿ ಪಟ್ಟಿ ಮಾಡಿ — ಮನೆಗಳು ಬ್ರೌಸ್ ಮಾಡಿ ಕಾಯ್ದಿರಿಸುತ್ತವೆ, ಯಾವುದೇ ಮಧ್ಯವರ್ತಿ ಇಲ್ಲ." },
     ],
     benefitsEyebrow: "DataPay ಏಕೆ",
@@ -305,9 +371,18 @@ const CONTENT = {
       { title: "ಊಹೆಗಳಲ್ಲ, ನಿಜವಾದ ಬೇಡಿಕೆ", text: "ಪ್ರತಿ ಸಂಖ್ಯೆಯೂ ನಿಜವಾದ ಮನೆಗಳಿಂದ ನಿಜವಾದ ಒಟ್ಟುಗೂಡಿಸಿದ ಸಂಕೇತ — ಎಂದಿಗೂ ಸಮೀಕ್ಷಾ ಪ್ಯಾನಲ್ ಅಥವಾ ಅಂದಾಜು ಅಲ್ಲ." },
       { title: "ನಿಮ್ಮ ಸ್ವಂತ ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ", text: "ಟೋಕನ್ ಬಹುಮಾನವನ್ನು ನಿಗದಿಪಡಿಸಿ ಮತ್ತು ನಿಮಗೆ ಮುಖ್ಯವಾದ ಸಮುದಾಯದಿಂದ ನೇರ ಉತ್ತರಗಳನ್ನು ಪಡೆಯಿರಿ." },
       { title: "ನೇರವಾಗಿ ಮಾರಾಟ ಮಾಡಿ", text: "ನಿಮ್ಮ ಪಟ್ಟಿಯನ್ನು ಪಟ್ಟಿ ಮಾಡಿ ಮತ್ತು ಮನೆಗಳು ಬ್ರೌಸ್ ಮಾಡಿ ಕಾಯ್ದಿರಿಸಲಿ — ವಿತರಕರ ಮಾರ್ಕ್‌ಅಪ್ ಇಲ್ಲ." },
-      { title: "ವಿನ್ಯಾಸದಿಂದಲೇ ಗೌಪ್ಯತೆ-ಸುರಕ್ಷಿತ", text: "ನೀವು ಎಂದಿಗೂ ಮನೆಯ ಗುರುತನ್ನು ನೋಡುವುದಿಲ್ಲ — ಕನಿಷ್ಠ 50ರ ಅನಾಮಧೇಯ ಗುಂಪುಗಳು ಮಾತ್ರ." },
+      { title: "ವಿನ್ಯಾಸದಿಂದಲೇ ಗೌಪ್ಯತೆ-ಸುರಕ್ಷಿತ", text: "ನೀವು ಎಂದಿಗೂ ಮನೆಯ ಗುರುತನ್ನು ನೋಡುವುದಿಲ್ಲ — ಪ್ರಕಟಿತ ಕನಿಷ್ಠ ಮಿತಿಗಿಂತ ಹೆಚ್ಚಿನ ಅನಾಮಧೇಯ ಗುಂಪುಗಳು ಮಾತ್ರ." },
       { title: "ಪ್ರಾರಂಭಿಸಲು ವೇಗವಾಗಿದೆ", text: "ಯಾವುದೇ SDK ಇಲ್ಲ, ಯಾವುದೇ ಸಂಯೋಜನೆ ಕೆಲಸವಿಲ್ಲ — ಸೈನ್ ಅಪ್ ಮಾಡಿ, ಅನುಮೋದನೆ ಪಡೆಯಿರಿ, ಮತ್ತು ನೀವು ಲೈವ್ ಆಗಿರುತ್ತೀರಿ." },
       { title: "ಖರ್ಚಿನ ಮೇಲೆ ಸಂಪೂರ್ಣ ನಿಯಂತ್ರಣ", text: "ಪ್ರತಿ ಪ್ರಶ್ನೆಗೆ ನಿಮ್ಮ ಸ್ವಂತ ಬಹುಮಾನವನ್ನು ನೀವೇ ನಿಗದಿಪಡಿಸುತ್ತೀರಿ — ನೀವು ಕೇಳಿದ್ದಕ್ಕೆ ಮಾತ್ರ ಪಾವತಿಸುತ್ತೀರಿ." },
+    ],
+    benefitsEcosystem: "ಮಾರುಕಟ್ಟೆಗಾಗಿ",
+    ecosystemBenefits: [
+      { title: "ಜನರಿಗೆ ನಿಜವಾಗಿ ಬೇಕಾದದ್ದನ್ನು ತಯಾರಿಸಿ", text: "ಉತ್ಪಾದಕರು ಒಂದು ಋತು ಅಥವಾ ಉತ್ಪಾದನೆಗೆ ಬದ್ಧರಾಗುವ ಮೊದಲೇ ನಿಜವಾದ ಬೇಡಿಕೆಯನ್ನು ನೋಡುತ್ತಾರೆ." },
+      { title: "ಕಡಿಮೆ ವ್ಯರ್ಥ", text: "ನಿಜವಾದ ಸ್ಥಳೀಯ ಬೇಡಿಕೆಗೆ ಹೊಂದಿಕೆಯಾದ ದಾಸ್ತಾನು ಎಂದರೆ ಕಡಿಮೆ ಹಾಳಾಗುವಿಕೆ, ಕಡಿಮೆ ಮಾರಾಟವಾಗದ ಸರಕು." },
+      { title: "ಚಿಕ್ಕ ಸರಪಳಿಗಳು", text: "ಉತ್ಪಾದಕರು ಮನೆಗಳನ್ನು ನೇರವಾಗಿ ತಲುಪುತ್ತಾರೆ — ಮಧ್ಯವರ್ತಿಗಳ ಪಾಲು ಕಡಿಮೆ." },
+      { title: "ಊಹೆಯಲ್ಲದ ಜಾಹೀರಾತು", text: "ಈಗಾಗಲೇ ಅಗತ್ಯವನ್ನು ತಿಳಿಸಿದವರನ್ನು ತಲುಪುವುದು ಎಲ್ಲರಿಗೂ ಪ್ರಸಾರ ಮಾಡುವುದಕ್ಕಿಂತ ಉತ್ತಮ." },
+      { title: "ನಿಜವಾದ ಕೊರತೆಗಳಿಗೆ ಆವಿಷ್ಕಾರ", text: "ಪೂರೈಸದ ಬೇಡಿಕೆ ಗೋಚರ ಸಂಕೇತವಾಗಿ ಕಾಣಿಸುತ್ತದೆ, ಕೇವಲ ಊಹೆಯಾಗಿ ಅಲ್ಲ." },
+      { title: "ತನ್ನನ್ನು ತಾನೇ ಸರಿಪಡಿಸುವ ಮಾರುಕಟ್ಟೆ", text: "ಬೇಡಿಕೆ ಗೋಚರ ಮತ್ತು ಪ್ರಾಮಾಣಿಕವಾದಾಗ, ಪೂರೈಕೆ ಅದರತ್ತ ಚಲಿಸುತ್ತದೆ." },
     ],
     systemEyebrow: "ವ್ಯವಸ್ಥೆ",
     systemTitle: "ಎರಡು ಹರಿವುಗಳು, ಯಾವಾಗಲೂ — ಡೇಟಾ ಮೇಲಕ್ಕೆ, ಮೌಲ್ಯ ಕೆಳಗೆ",
@@ -317,13 +392,13 @@ const CONTENT = {
     cards: [
       { title: "ನಿಜವಾದ ಮನೆಗಳಿಗೆ ನಿಜವಾದ ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ", text: "ಪ್ರತಿ ಪ್ರಶ್ನೆಗೆ ನಿಮ್ಮ ಸ್ವಂತ ಟೋಕನ್ ಬಹುಮಾನವನ್ನು ನಿಗದಿಪಡಿಸಿ. ಪ್ರತಿ ಸಲ್ಲಿಕೆಯನ್ನು ಯಾರಿಗಾದರೂ ತಲುಪುವ ಮೊದಲು ಪರಿಶೀಲಿಸಲಾಗುತ್ತದೆ — ಎಂದಿಗೂ ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಪ್ರಕಟವಾಗುವುದಿಲ್ಲ." },
       { title: "ನಿಮ್ಮ ಸ್ವಂತ ಉತ್ಪನ್ನಗಳನ್ನು ಪಟ್ಟಿ ಮಾಡಿ", text: "ಸ್ಪ್ರೆಡ್‌ಶೀಟ್ ಲಿಂಕ್ ನೀಡಿ ಅಥವಾ ಕೈಯಿಂದ ಐಟಂಗಳನ್ನು ಸೇರಿಸಿ; ಮನೆಗಳು ನೇರವಾಗಿ ಬ್ರೌಸ್ ಮಾಡಿ ಕಾಯ್ದಿರಿಸುತ್ತವೆ. ಪೂರೈಕೆ ಅಪ್ಲಿಕೇಶನ್‌ನ ಹೊರಗೆ ನಡೆಯುತ್ತದೆ — ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ಪಾವತಿ ಸೆಟಪ್ ಮಾಡುವ ಅಗತ್ಯವಿಲ್ಲ." },
-      { title: "ಊಹೆಗಳಲ್ಲ, ನಿಜವಾದ ಬೇಡಿಕೆಯನ್ನು ನೋಡಿ", text: "ಒಟ್ಟುಗೂಡಿಸಿದ ಸಂಕೇತಗಳು ಕನಿಷ್ಠ 50 ಮನೆಗಳು ಒಂದು ಸಂಖ್ಯೆಯನ್ನು ಬೆಂಬಲಿಸಿದಾಗ ಮಾತ್ರ ಪ್ರಕಟವಾಗುತ್ತವೆ — ಎಂದಿಗೂ ಒಂದೇ ಮನೆಯ ಡೇಟಾ ಅಲ್ಲ." },
+      { title: "ಊಹೆಗಳಲ್ಲ, ನಿಜವಾದ ಬೇಡಿಕೆಯನ್ನು ನೋಡಿ", text: "ಒಟ್ಟುಗೂಡಿಸಿದ ಸಂಕೇತಗಳು ಕನಿಷ್ಠ {floor} ಮನೆಗಳು ಒಂದು ಸಂಖ್ಯೆಯನ್ನು ಬೆಂಬಲಿಸಿದಾಗ ಮಾತ್ರ ಪ್ರಕಟವಾಗುತ್ತವೆ — ಎಂದಿಗೂ ಒಂದೇ ಮನೆಯ ಡೇಟಾ ಅಲ್ಲ." },
     ],
     protectionEyebrow: "ಡೇಟಾ ಸಂರಕ್ಷಣೆ",
     protectionTitle: "ಗೌಪ್ಯತೆ ಇಲ್ಲಿ ಕೇವಲ ನೀತಿಯಲ್ಲ — ಅದು ವಿನ್ಯಾಸವೇ ಆಗಿದೆ",
     protectionItems: [
       { title: "ಯಾವಾಗಲೂ ಖಾಸಗಿ ಅಲಿಯಾಸ್.", text: "ಸಂಸ್ಥೆಗಳು ಅಲಿಯಾಸ್ ಅನ್ನು ಮಾತ್ರ ನೋಡುತ್ತವೆ — ಹೆಸರು, ಫೋನ್ ಸಂಖ್ಯೆ ಅಥವಾ ವಿಳಾಸ ಎಂದಿಗೂ ಅಲ್ಲ." },
-      { title: "50ರ ಕನಿಷ್ಠ ಗುಂಪು ಮಿತಿ.", text: "ಕನಿಷ್ಠ 50 ಮನೆಗಳು ಬೆಂಬಲಿಸುವವರೆಗೆ ಯಾವುದೇ ಸಂಖ್ಯೆ ಪ್ರಕಟವಾಗುವುದಿಲ್ಲ." },
+      { title: "{floor}ರ ಕನಿಷ್ಠ ಗುಂಪು ಮಿತಿ.", text: "ಕನಿಷ್ಠ {floor} ಮನೆಗಳು ಬೆಂಬಲಿಸುವವರೆಗೆ ಯಾವುದೇ ಸಂಖ್ಯೆ ಪ್ರಕಟವಾಗುವುದಿಲ್ಲ." },
       { title: "ನಿಖರ ಸ್ಥಳವನ್ನು ಸಂಗ್ರಹಿಸುವುದಿಲ್ಲ.", text: "ಅಂದಾಜು ಪ್ರದೇಶ ಮಾತ್ರ, ಹತ್ತಿರದ ವಲಯವನ್ನು ಹೊಂದಿಸಲು ಬಳಸಲಾಗುತ್ತದೆ — ನಿಖರ ನಿರ್ದೇಶಾಂಕಗಳು ಎಂದಿಗೂ ಅಲ್ಲ." },
       { title: "ಹಂಚಿಕೆಯನ್ನು ನೀವೇ ನಿಯಂತ್ರಿಸುತ್ತೀರಿ.", text: "ಡೇಟಾ ಹಂಚಿಕೆಯ ಪ್ರತಿಯೊಂದು ವರ್ಗವನ್ನು ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ಯಾವುದೇ ಸಮಯದಲ್ಲಿ ಆಫ್ ಮಾಡಬಹುದು." },
     ],
@@ -350,8 +425,16 @@ const CONTENT = {
 } as const;
 
 export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Element> {
-  const t = CONTENT[lang];
-  const catalog = await getCatalogPreview("prakruti-plus");
+  const [catalog, privacy] = await Promise.all([
+    getCatalogPreview("prakruti-plus"),
+    getPrivacyFloor(),
+  ]);
+  // Every "{floor}" in the copy becomes the floor the running deployment
+  // actually enforces. Done once over the whole tree rather than at each
+  // render site, because there are six of these across two languages and the
+  // failure mode of missing one is a privacy claim on the homepage that the
+  // code does not honour (SPEC.md §11).
+  const t = fillFloor(CONTENT[lang], privacy.floor);
 
   return (
     <>
@@ -422,10 +505,32 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
           </div>
 
           <div className="mkTrustStrip">
+            {/* stat: null means "fill from live config" — the cohort minimum is
+                whatever the running deployment actually enforces, so the claim
+                can't drift from the code the way a literal "50" did. */}
             {t.trust.map((item) => (
               <div className="mkTrustItem" key={item.label}>
-                <span className="mkTrustStat">{item.stat}</span>
+                <span className="mkTrustStat">{item.stat ?? String(privacy.floor)}</span>
                 <span className="mkTrustLabel">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* The collective buy is the concrete, immediate thing a household
+            gets — no waiting, no token redemption, no trust required. It was
+            buried under the token story, which is the part that pays off
+            later. This says it plainly and up front. */}
+        <section className="mkSection mkSectionBuy">
+          <p className="mkEyebrow">{t.buyEyebrow}</p>
+          <h2>{t.buyTitle}</h2>
+          <p className="mkSectionLede">{t.buyLede}</p>
+          <div className="mkBuySteps">
+            {t.buySteps.map((step, i) => (
+              <div className="mkBuyStep" key={step.title}>
+                <span className="mkBuyStepNum">{i + 1}</span>
+                <strong>{step.title}</strong>
+                <p>{step.body}</p>
               </div>
             ))}
           </div>
@@ -502,6 +607,22 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
               <h3 className="mkBenefitsColHeading">{t.benefitsOrganizations}</h3>
               <ul className="mkBenefitsList">
                 {t.orgBenefits.map((b) => (
+                  <li key={b.title}>
+                    <CheckIcon />
+                    <span>
+                      <strong>{b.title}.</strong> {b.text}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {/* The third beneficiary is the market itself — the argument that
+                honest demand signal makes supply, waste and even advertising
+                less wasteful for everyone, including people who never join. */}
+            <div className="mkBenefitsCol">
+              <h3 className="mkBenefitsColHeading">{t.benefitsEcosystem}</h3>
+              <ul className="mkBenefitsList">
+                {t.ecosystemBenefits.map((b) => (
                   <li key={b.title}>
                     <CheckIcon />
                     <span>
@@ -739,6 +860,13 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
 
         /* Two audience doors, side by side and visibly separate so neither
            reads as a step in the other's flow. They stack on a phone. */
+        .mkBuySteps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 8px; }
+        .mkBuyStep { display: flex; flex-direction: column; gap: 8px; padding: 22px; border: 1px solid var(--mk-border); border-radius: 16px; background: var(--mk-surface); }
+        .mkBuyStepNum { font-family: "Spline Sans Mono", monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.16em; color: var(--mk-jade); }
+        .mkBuyStep strong { font-size: 16px; line-height: 1.3; color: var(--mk-ink); }
+        .mkBuyStep p { font-size: 14px; line-height: 1.55; color: var(--mk-subtle); margin: 0; }
+        @media (max-width: 860px) { .mkBuySteps { grid-template-columns: 1fr; } }
+
         .mkDoors { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 26px; align-items: start; }
         .mkDoor { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; border: 1px solid var(--mk-border); border-radius: 16px; background: var(--mk-surface); height: 100%; }
         .mkDoorOrg { border-color: var(--mk-jade); }
@@ -778,7 +906,8 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
 
         .mkDiagramWrap { margin-top: 32px; background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: 14px; padding: clamp(24px, 4vw, 48px); overflow-x: auto; }
 
-        .mkBenefitsGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 32px; }
+        .mkBenefitsGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 32px; align-items: start; }
+        @media (max-width: 1080px) { .mkBenefitsGrid { grid-template-columns: 1fr 1fr; } }
         .mkBenefitsCol { background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: 18px; padding: 26px 24px; }
         .mkBenefitsColHeading { font-size: 15px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mk-jade); margin: 0 0 18px; }
         .mkBenefitsList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }

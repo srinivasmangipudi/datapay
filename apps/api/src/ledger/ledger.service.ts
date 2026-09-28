@@ -13,6 +13,14 @@ export type TokenLedgerEntry =
   // ones, same as every other earn_* entry.
   | "earn_purchase"
   | "redeem_offer"
+  // TOKENS NEVER EXPIRE. This is a product commitment, not an oversight: a
+  // member accumulates perpetually, and the eventual reward share is computed
+  // over what they hold. Nothing in this codebase has ever written 'expire',
+  // and nothing should start — an expiry job would silently reduce someone's
+  // share of a distribution they were told was theirs to keep. The value is
+  // kept in the enum only because the database CHECK constraint still lists
+  // it and historic rows could exist; it is deliberately unreachable from
+  // application code.
   | "expire"
   | "adjustment";
 
