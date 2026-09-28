@@ -5,6 +5,7 @@ import { completeOnboarding, ConsentCategory, getConsents, getMe, getZones, Memb
 import { ZonePickerScreen } from "../onboarding/ZonePickerScreen";
 import { saveSession } from "../session";
 import type { Session } from "../session";
+import { colors } from "../theme";
 
 interface Props {
   session: Session;

@@ -122,6 +122,9 @@ export interface Product {
   quantityAvailable: number;
   photoUrl: string | null;
   organizationName: string;
+  categoryName: string | null;
+  /** Tokens this purchase earns — a flat count, never a share of what's spent. */
+  tokensOnPurchase: number;
 }
 
 export interface MyOrder {

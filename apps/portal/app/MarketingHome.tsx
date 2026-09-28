@@ -285,6 +285,7 @@ const CONTENT = {
       registry: "Demand registry",
       orgLogin: "Organization login",
       contact: "Contact",
+      brand: "Brand & assets",
       android: "Android app",
       ios: "iOS — coming soon",
     },
@@ -418,6 +419,7 @@ const CONTENT = {
       registry: "ಬೇಡಿಕೆ ನೋಂದಣಿ",
       orgLogin: "ಸಂಸ್ಥೆ ಲಾಗಿನ್",
       contact: "ಸಂಪರ್ಕಿಸಿ",
+      brand: "ಬ್ರಾಂಡ್ ಮತ್ತು ಸ್ವತ್ತುಗಳು",
       android: "ಆ್ಯಂಡ್ರಾಯ್ಡ್ ಆ್ಯಪ್",
       ios: "iOS — ಶೀಘ್ರದಲ್ಲಿ ಬರಲಿದೆ",
     },
@@ -726,6 +728,7 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
             <a href="/delete-account">{t.footerLinks.delete}</a>
             <a href="/child-safety">{t.footerLinks.childSafety}</a>
             <a href="/registry">{t.footerLinks.registry}</a>
+            <a href="/brand">{t.footerLinks.brand}</a>
             <a href="/org/login">{t.footerLinks.orgLogin}</a>
             <a href="mailto:srinivas@socratus.org">{t.footerLinks.contact}</a>
           </div>

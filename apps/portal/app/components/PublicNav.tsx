@@ -30,7 +30,7 @@ export function PublicNav({ lang }: { lang: Lang }): JSX.Element {
     <>
       <nav className={`publicNav ${scrolled ? "publicNavScrolled" : ""}`}>
         <a href="/" className="publicNavBrand">
-          <DataPayMark size={26} />
+          <DataPayMark size={28} />
           <DataPayWordmark />
         </a>
         <div className="publicNavLinks">
@@ -63,7 +63,14 @@ export function PublicNav({ lang }: { lang: Lang }): JSX.Element {
           transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
         .publicNavScrolled { border-bottom-color: var(--pn-border, #E7E4DC); box-shadow: 0 1px 0 rgba(0,0,0,0.02); }
-        .publicNavBrand { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--pn-ink, #101418); font-family: -apple-system, "Segoe UI", sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.01em; }
+        /* Cabinet Grotesk, not the system face — the nav wordmark was rendering in
+           -apple-system while the hero lockup directly below used the display
+           face, so the two were literally different typefaces.
+           20px, not 17: brass at #a67c21 on this ground is 3.54:1, which clears
+           the 3:1 bar for large bold text (>=18.66px) but FAILS the 4.5:1 one
+           below it. The extra size also makes the -9 degree lean legible — at
+           17px it was under 3px of shift and read as upright. */
+        .publicNavBrand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--pn-ink, #101418); font-family: "Cabinet Grotesk", system-ui, sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.02em; }
         .publicNavLinks { display: flex; align-items: center; gap: 26px; flex: 1; }
         .publicNavLinks a { color: var(--pn-subtle, #5B6672); text-decoration: none; font-size: 14px; font-weight: 600; }
         .publicNavLinks a:hover { color: var(--pn-ink, #101418); }

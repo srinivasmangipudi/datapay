@@ -25,6 +25,7 @@ import {
 } from "../api";
 import { Bilingual } from "../components/Bilingual";
 import { Card } from "../components/Card";
+import { ProductDetail } from "./ProductDetail";
 import { strings } from "../i18n/strings";
 import type { Session } from "../session";
 import { colors, radii, spacing, type } from "../theme";
@@ -38,6 +39,7 @@ export function ProductsScreen({ session }: { session: Session }) {
   const [products, setProducts] = useState<Product[] | null>(null);
   const [myOrders, setMyOrders] = useState<MyOrder[] | null>(null);
   const [ordering, setOrdering] = useState<Product | null>(null);
+  const [viewing, setViewing] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   // Only whether one EXISTS — the address text itself never needs to come to
   // this screen, so it doesn't.
@@ -143,6 +145,12 @@ export function ProductsScreen({ session }: { session: Session }) {
         ) : (
           products.map((p) => (
             <Card key={p.id} style={styles.productCard}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setViewing(p)}
+                accessibilityRole="button"
+                accessibilityLabel={`View details for ${p.nameEn}`}
+              >
               <View style={styles.productRow}>
                 {p.photoUrl ? (
                   <Image source={{ uri: p.photoUrl }} style={styles.photo} />
@@ -166,7 +174,9 @@ export function ProductsScreen({ session }: { session: Session }) {
                   </View>
                   <Text style={styles.qtyLabel}>{p.quantityAvailable} left</Text>
                 </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.faint} />
               </View>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.orderBtn, p.quantityAvailable === 0 && styles.orderBtnDisabled]}
                 disabled={p.quantityAvailable === 0}
@@ -200,6 +210,15 @@ export function ProductsScreen({ session }: { session: Session }) {
           ))
         )}
       </ScrollView>
+
+      <ProductDetail
+        product={viewing}
+        onClose={() => setViewing(null)}
+        onOrder={(p) => {
+          setViewing(null);
+          openOrder(p);
+        }}
+      />
 
       <Modal visible={!!ordering} animationType="slide" transparent onRequestClose={() => setOrdering(null)}>
         {/* The sheet is pinned to the bottom, so an open keyboard sits right on

@@ -22,6 +22,8 @@ interface BrowseProductRow {
   quantity_available: number;
   photo_url: string | null;
   organization_name: string;
+  category_name: string | null;
+  purchase_reward_tokens: number | null;
 }
 
 // Member-facing browse + reserve — mirrors PulseService's zone ancestor-chain
@@ -47,9 +49,11 @@ export class ProductsService {
        )
        SELECT p.id, p.name_en, p.name_kn, p.description_en, p.unit_spec,
               p.market_price_paise, p.sale_price_paise, p.quantity_available,
-              p.photo_url, o.name AS organization_name
+              p.photo_url, p.purchase_reward_tokens, o.name AS organization_name,
+              c.name AS category_name
        FROM org_products p
        JOIN organizations o ON o.id = p.organization_id
+       LEFT JOIN categories c ON c.id = p.category_id
        WHERE p.review_state = 'approved'
          AND p.delisted_at IS NULL
          AND p.quantity_available > 0
@@ -68,6 +72,10 @@ export class ProductsService {
       quantityAvailable: r.quantity_available,
       photoUrl: r.photo_url,
       organizationName: r.organization_name,
+      categoryName: r.category_name,
+      // Shown on the detail card so the reward is visible BEFORE ordering,
+      // not discovered afterwards.
+      tokensOnPurchase: purchaseTokenReward(r.purchase_reward_tokens),
     }));
   }
 
