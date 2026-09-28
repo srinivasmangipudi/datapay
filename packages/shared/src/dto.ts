@@ -394,6 +394,22 @@ export const VaultSetPayoutInstrumentDtoSchema = SetPayoutInstrumentDtoSchema.ex
 });
 export type VaultSetPayoutInstrumentDto = z.infer<typeof VaultSetPayoutInstrumentDtoSchema>;
 
+/** Vault-internal POST /payout-ref — the provider's result for one executed
+    payout. Keyed by Core's producer_payouts.id, deliberately carrying no alias:
+    Vault stores the reference, Core stores only the status. */
+export const VaultRecordPayoutRefDtoSchema = z.object({
+  payoutId: z.number().int().positive(),
+  status: z.enum(["paid", "failed"]),
+  upiRef: z.string().max(200).nullable(),
+});
+export type VaultRecordPayoutRefDto = z.infer<typeof VaultRecordPayoutRefDtoSchema>;
+
+/** Vault-internal POST /resolve-payout-refs — batch read for reconciliation. */
+export const VaultResolvePayoutRefsDtoSchema = z.object({
+  payoutIds: z.array(z.number().int().positive()).min(1).max(500),
+});
+export type VaultResolvePayoutRefsDto = z.infer<typeof VaultResolvePayoutRefsDtoSchema>;
+
 /** Vault-internal POST /resolve-payout — batch, producers only (SPEC.md §5A). */
 export const VaultResolvePayoutDtoSchema = z.object({
   aliasIds: z.array(z.string().length(64)).min(1).max(500),
@@ -483,5 +499,9 @@ export type UploadOrgProductPhotoDto = z.infer<typeof UploadOrgProductPhotoDtoSc
  */
 export const OrderProductDtoSchema = z.object({
   quantity: z.number().int().positive().default(1),
+  // Idempotency key, same discipline as pulse answers and snaps (§15C). The
+  // client generates one per order ATTEMPT and reuses it across retries, so a
+  // timed-out response can be retried without ordering twice.
+  clientMsgId: z.string().uuid(),
 });
 export type OrderProductDto = z.infer<typeof OrderProductDtoSchema>;

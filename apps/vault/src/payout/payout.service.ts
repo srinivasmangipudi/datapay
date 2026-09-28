@@ -60,4 +60,38 @@ export class PayoutService {
 
     return results;
   }
+
+  /**
+   * Records what the payment provider said about one executed payout. Lives
+   * here rather than in core.producer_payouts because the reference is a join
+   * key into records that know the beneficiary's bank account — see the
+   * migration comment on payout_refs.
+   *
+   * Idempotent on payout_id: a retried payout run re-reports the same result
+   * rather than erroring, matching the ON CONFLICT (linkage_id) discipline the
+   * Core side of the same run already uses.
+   */
+  async recordPayoutRef(payoutId: number, status: string, upiRef: string | null): Promise<{ ok: true }> {
+    await this.pool.query(
+      `INSERT INTO payout_refs (payout_id, upi_ref, status) VALUES ($1, $2, $3)
+       ON CONFLICT (payout_id) DO UPDATE SET upi_ref = EXCLUDED.upi_ref, status = EXCLUDED.status`,
+      [payoutId, upiRef, status]
+    );
+    return { ok: true };
+  }
+
+  /** Batch read for reconciliation — the only way back out, same shape as
+      resolvePayoutBatch so neither becomes a live per-record lookup. */
+  async resolvePayoutRefs(payoutIds: number[]): Promise<{ payoutId: number; status: string; upiRef: string | null }[]> {
+    if (payoutIds.length === 0) return [];
+    const { rows } = await this.pool.query<{ payout_id: number; status: string; upi_ref: string | null }>(
+      `SELECT payout_id, status, upi_ref FROM payout_refs WHERE payout_id = ANY($1)`,
+      [payoutIds]
+    );
+    await this.pool.query(
+      `INSERT INTO vault_access_log (service, purpose, alias_or_token) VALUES ($1, $2, $3)`,
+      ["vault", "resolve-payout-refs", `batch:${rows.length}`]
+    );
+    return rows.map((r) => ({ payoutId: r.payout_id, status: r.status, upiRef: r.upi_ref }));
+  }
 }

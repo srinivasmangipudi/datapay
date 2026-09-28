@@ -4,6 +4,11 @@ import { randomUUID } from "crypto";
 import { PG_POOL } from "../db/db.module";
 import { withTransaction } from "../db/tx.util";
 
+/** Internal signal, never surfaced: a concurrent request won the
+    client_msg_id race, so this transaction must roll back its stock decrement
+    and the caller should return the winner's order instead of an error. */
+class ConcurrentOrderReplay extends Error {}
+
 interface BrowseProductRow {
   id: number;
   name_en: string;
@@ -71,8 +76,18 @@ export class ProductsService {
    * it. The relay_token is generated up front and carries no dependency on
    * the order row that's created after — `offer_ref` is a purely
    * descriptive label to Vault, never used to resolve anything.
+   *
+   * Idempotent on clientMsgId (§15C). The replay check runs BEFORE
+   * registerRelay, not just as an ON CONFLICT inside the transaction: a retry
+   * that got as far as Vault would otherwise leave an orphaned relay_map row
+   * pointing at a real delivery address for an order that was never created
+   * twice. The ON CONFLICT below still matters — it's what makes two genuinely
+   * concurrent requests carrying the same key safe, where both pass the check.
    */
-  async order(aliasId: string, productId: number, quantity: number) {
+  async order(aliasId: string, productId: number, quantity: number, clientMsgId: string) {
+    const existing = await this.findOrderByClientMsgId(aliasId, clientMsgId);
+    if (existing) return existing;
+
     const relayToken = randomUUID();
     await this.registerRelay(aliasId, relayToken, `product-order:${relayToken}`);
 
@@ -102,13 +117,39 @@ export class ProductsService {
       );
 
       const { rows: orderRows } = await client.query<{ id: number }>(
-        `INSERT INTO product_orders (org_product_id, alias_id, relay_token, quantity, unit_price_paise)
-         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-        [productId, aliasId, relayToken, quantity, product.sale_price_paise]
+        `INSERT INTO product_orders (org_product_id, alias_id, relay_token, quantity, unit_price_paise, client_msg_id)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (client_msg_id) DO NOTHING
+         RETURNING id`,
+        [productId, aliasId, relayToken, quantity, product.sale_price_paise, clientMsgId]
       );
 
+      // Lost a race with a concurrent request carrying the same key. The
+      // decrement above is rolled back with this transaction, so the winner's
+      // order stands alone and stock was only ever taken once.
+      if (!orderRows[0]) {
+        throw new ConcurrentOrderReplay();
+      }
+
       return { orderId: orderRows[0].id, relayToken };
+    }).catch(async (err) => {
+      if (err instanceof ConcurrentOrderReplay) {
+        const winner = await this.findOrderByClientMsgId(aliasId, clientMsgId);
+        if (winner) return winner;
+      }
+      throw err;
     });
+  }
+
+  private async findOrderByClientMsgId(
+    aliasId: string,
+    clientMsgId: string
+  ): Promise<{ orderId: number; relayToken: string } | null> {
+    const { rows } = await this.pool.query<{ id: number; relay_token: string }>(
+      `SELECT id, relay_token FROM product_orders WHERE client_msg_id = $1 AND alias_id = $2`,
+      [clientMsgId, aliasId]
+    );
+    return rows[0] ? { orderId: rows[0].id, relayToken: rows[0].relay_token } : null;
   }
 
   private async registerRelay(aliasId: string, relayToken: string, offerRef: string) {

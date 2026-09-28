@@ -100,7 +100,7 @@ export default async function ProducePage({
                   <th>Linkage</th>
                   <th className="num">Amount</th>
                   <th>Status</th>
-                  <th>UPI ref</th>
+                  <th>Batch</th>
                   <th>Initiated</th>
                 </tr>
               </thead>
@@ -111,7 +111,7 @@ export default async function ProducePage({
                     <td className="mono small">{p.linkage_id}</td>
                     <td className="num value">₹{(p.amount_paise / 100).toLocaleString()}</td>
                     <td className="small">{p.status}</td>
-                    <td className="mono small">{p.upi_ref ?? <span className="muted">—</span>}</td>
+                    <td className="mono small">{p.batch_id ?? <span className="muted">—</span>}</td>
                     <td className="muted small">{new Date(p.initiated_at).toLocaleString()}</td>
                   </tr>
                 ))}

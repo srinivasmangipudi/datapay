@@ -117,7 +117,7 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
     const res = await request(app.getHttpServer())
       .post(`/v1/products/${productId}/order`)
       .set({ Authorization: `Bearer ${member.token}` })
-      .send({ quantity: 1 });
+      .send({ quantity: 1, clientMsgId: randomUUID() });
 
     expect(res.status).toBe(400);
     expect(JSON.stringify(res.body)).toMatch(/delivery address/i);
@@ -139,7 +139,7 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
     const res = await request(app.getHttpServer())
       .post(`/v1/products/${productId}/order`)
       .set({ Authorization: `Bearer ${member.token}` })
-      .send({ quantity: 2 });
+      .send({ quantity: 2, clientMsgId: randomUUID() });
 
     expect(res.status).toBe(201);
     expect(res.body.relayToken).toMatch(/^[0-9a-f-]{36}$/);
@@ -168,7 +168,7 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
       request(app.getHttpServer())
         .post(`/v1/products/${productId}/order`)
         .set({ Authorization: `Bearer ${member.token}` })
-        .send({ quantity: 1 });
+        .send({ quantity: 1, clientMsgId: randomUUID() });
 
     const [resA, resB] = await Promise.all([attempt(memberA), attempt(memberB)]);
     const statuses = [resA.status, resB.status].sort();
@@ -182,5 +182,98 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
 
     await cleanupMember(memberA);
     await cleanupMember(memberB);
+  });
+
+  /**
+   * The failure this exists for: rural connectivity drops the RESPONSE, not the
+   * request. The server commits, the reply never lands, the member taps again.
+   * Without an idempotency key that is a second order and a second decrement of
+   * genuinely scarce stock.
+   */
+  it("retrying an order with the same clientMsgId returns the first order and never decrements twice", async () => {
+    const productId = await seedProduct(5);
+    const member = await memberWithAddress();
+    const clientMsgId = randomUUID();
+
+    const send = () =>
+      request(app.getHttpServer())
+        .post(`/v1/products/${productId}/order`)
+        .set({ Authorization: `Bearer ${member.token}` })
+        .send({ quantity: 2, clientMsgId });
+
+    const first = await send();
+    expect(first.status).toBe(201);
+
+    const retry = await send();
+    expect(retry.status).toBe(201);
+    expect(retry.body.orderId).toBe(first.body.orderId);
+    expect(retry.body.relayToken).toBe(first.body.relayToken);
+
+    const { rows } = await pool.query<{ quantity_available: number }>(
+      `SELECT quantity_available FROM org_products WHERE id = $1`,
+      [productId]
+    );
+    expect(rows[0].quantity_available).toBe(3); // 5 - 2, once
+
+    const { rows: orderRows } = await pool.query(
+      `SELECT id FROM product_orders WHERE client_msg_id = $1`,
+      [clientMsgId]
+    );
+    expect(orderRows).toHaveLength(1);
+
+    // The retry must not have left an orphaned relay in Vault either — it
+    // returns before registerRelay, so only the first attempt ever registered.
+    const { rows: relayRows } = await vaultPool.query(
+      `SELECT relay_token FROM relay_map WHERE offer_ref = $1`,
+      [`product-order:${first.body.relayToken}`]
+    );
+    expect(relayRows).toHaveLength(1);
+
+    await cleanupMember(member);
+  });
+
+  it("two orders with different clientMsgIds are two real orders", async () => {
+    const productId = await seedProduct(5);
+    const member = await memberWithAddress();
+
+    const send = () =>
+      request(app.getHttpServer())
+        .post(`/v1/products/${productId}/order`)
+        .set({ Authorization: `Bearer ${member.token}` })
+        .send({ quantity: 1, clientMsgId: randomUUID() });
+
+    const first = await send();
+    const second = await send();
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(201);
+    expect(second.body.orderId).not.toBe(first.body.orderId);
+
+    const { rows } = await pool.query<{ quantity_available: number }>(
+      `SELECT quantity_available FROM org_products WHERE id = $1`,
+      [productId]
+    );
+    expect(rows[0].quantity_available).toBe(3); // decremented twice, correctly
+
+    await cleanupMember(member);
+  });
+
+  it("rejects an order with no clientMsgId at all", async () => {
+    const productId = await seedProduct(5);
+    const member = await memberWithAddress();
+
+    const res = await request(app.getHttpServer())
+      .post(`/v1/products/${productId}/order`)
+      .set({ Authorization: `Bearer ${member.token}` })
+      .send({ quantity: 1 });
+
+    expect(res.status).toBe(400);
+
+    const { rows } = await pool.query<{ quantity_available: number }>(
+      `SELECT quantity_available FROM org_products WHERE id = $1`,
+      [productId]
+    );
+    expect(rows[0].quantity_available).toBe(5); // nothing touched
+
+    await cleanupMember(member);
   });
 });

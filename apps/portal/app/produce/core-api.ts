@@ -21,7 +21,9 @@ export interface ProducerPayout {
   linkage_id: number;
   amount_paise: number;
   status: string;
-  upi_ref: string | null;
+  // No upi_ref: the provider's reference lives in Vault (payout_refs), which
+  // this portal has no path to by design. Status is what ops reads here;
+  // reconciling against the provider is a Vault-side batch read.
   batch_id: string | null;
   initiated_at: string;
 }

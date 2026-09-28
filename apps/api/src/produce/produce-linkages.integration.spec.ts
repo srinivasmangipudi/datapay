@@ -235,13 +235,22 @@ describe("Produce & Linkages (SPEC.md §12 Phase 6)", () => {
     expect(firstRun.status).toBe(201);
     expect(firstRun.body.paid).toBeGreaterThanOrEqual(1);
 
-    const { rows: payoutRows } = await pool.query<{ status: string; upi_ref: string | null }>(
-      `SELECT status, upi_ref FROM producer_payouts WHERE linkage_id = $1`,
+    const { rows: payoutRows } = await pool.query<{ id: number; status: string }>(
+      `SELECT id, status FROM producer_payouts WHERE linkage_id = $1`,
       [linkageId]
     );
     expect(payoutRows).toHaveLength(1);
     expect(payoutRows[0].status).toBe("paid");
-    expect(payoutRows[0].upi_ref).toMatch(/^sandbox-/);
+
+    // The provider's reference is NOT in Core — it went to Vault. Core holding
+    // a payment reference next to an alias_id was a join key into records that
+    // know the beneficiary's bank account, which weakened LAW 1. Asserting its
+    // absence here is what stops it drifting back.
+    const coreCols = await pool.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+        WHERE table_name = 'producer_payouts' AND column_name = 'upi_ref'`
+    );
+    expect(coreCols.rows).toHaveLength(0);
 
     const secondRun = await request(app.getHttpServer())
       .post("/v1/admin/producer-payouts/run")
@@ -290,12 +299,10 @@ describe("Produce & Linkages (SPEC.md §12 Phase 6)", () => {
 
     const { rows: payoutRows } = await pool.query<{
       status: string;
-      upi_ref: string | null;
       batch_id: string;
-    }>(`SELECT status, upi_ref, batch_id FROM producer_payouts WHERE linkage_id = $1`, [linkageId]);
+    }>(`SELECT status, batch_id FROM producer_payouts WHERE linkage_id = $1`, [linkageId]);
     expect(payoutRows).toHaveLength(1);
-    expect(payoutRows[0].status).toBe("review");
-    expect(payoutRows[0].upi_ref).toBeNull(); // never attempted — no fabricated payment claim
+    expect(payoutRows[0].status).toBe("review"); // held — no fabricated payment claim
     expect(payoutRows[0].batch_id).toBe(runRes.body.batchId);
 
     await cleanupMember(member);

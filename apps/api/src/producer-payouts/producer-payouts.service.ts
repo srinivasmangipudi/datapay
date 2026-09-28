@@ -42,6 +42,7 @@ export class ProducerPayoutsService {
     let failed = 0;
     let skipped = 0;
     let review = 0;
+    let halted = false;
 
     for (const candidate of candidates) {
       // §6/§19C: trust-weighted eligibility — a low-trust producer's payout
@@ -84,10 +85,37 @@ export class ProducerPayoutsService {
       }
 
       const result = await UPI_PROVIDER.payout(upi, candidate.amount_paise);
-      await this.pool.query(
-        `UPDATE producer_payouts SET status = $1, upi_ref = $2 WHERE id = $3`,
-        [result.ok ? "paid" : "failed", result.reference, payoutId]
-      );
+      const status = result.ok ? "paid" : "failed";
+
+      // The provider's reference goes to Vault, not here — Core keeps only the
+      // status. Recorded BEFORE the Core status update so the ordering matches
+      // the rest of the system (registerRelay does the same): if Vault is
+      // unreachable the row stays 'processing', which reads as "needs a human"
+      // rather than silently becoming a paid row whose reference was lost.
+      // Never the other way round — a status of 'paid' with no recoverable
+      // reference is the one state reconciliation can't repair.
+      //
+      // If Vault won't take it, stop the whole run rather than continuing to
+      // move money we can't record. This payout keeps status 'processing',
+      // which is the flag for a human: the money left, and only the provider's
+      // own statement can now tell us what happened to it.
+      try {
+        await this.recordPayoutRef(payoutId, status, result.reference ?? null);
+      } catch (err) {
+        await this.audit.record(
+          "system",
+          null,
+          "run_producer_payouts_halted",
+          `batch:${batchId} payout:${payoutId} left in 'processing' — ${(err as Error).message}`
+        );
+        halted = true;
+        break;
+      }
+
+      await this.pool.query(`UPDATE producer_payouts SET status = $1 WHERE id = $2`, [
+        status,
+        payoutId,
+      ]);
       if (result.ok) paid += 1;
       else failed += 1;
     }
@@ -96,18 +124,33 @@ export class ProducerPayoutsService {
       "system",
       null,
       "run_producer_payouts",
-      `batch:${batchId} candidates:${candidates.length} paid:${paid} review:${review}`
+      `batch:${batchId} candidates:${candidates.length} paid:${paid} review:${review}${halted ? " HALTED" : ""}`
     );
 
-    return { batchId, candidates: candidates.length, paid, failed, skipped, review };
+    return { batchId, candidates: candidates.length, paid, failed, skipped, review, halted };
   }
 
   async list() {
     const { rows } = await this.pool.query(
-      `SELECT id, alias_id, linkage_id, amount_paise, status, upi_ref, batch_id, initiated_at
+      `SELECT id, alias_id, linkage_id, amount_paise, status, batch_id, initiated_at
        FROM producer_payouts ORDER BY initiated_at DESC LIMIT 200`
     );
     return rows;
+  }
+
+  /** Hands Vault the provider's result. Throws on failure by design — the
+      caller must not mark a payout 'paid' when the reference didn't land. */
+  private async recordPayoutRef(payoutId: number, status: string, upiRef: string | null): Promise<void> {
+    const vaultUrl = process.env.VAULT_INTERNAL_URL;
+    if (!vaultUrl) throw new Error("Missing VAULT_INTERNAL_URL");
+    const res = await fetch(`${vaultUrl}/payout-ref`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payoutId, status, upiRef }),
+    });
+    if (!res.ok) {
+      throw new Error(`Vault rejected payout ref for payout ${payoutId} (HTTP ${res.status})`);
+    }
   }
 
   private async resolveUpi(aliasId: string): Promise<string | null> {

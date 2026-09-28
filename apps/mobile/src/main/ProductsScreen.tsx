@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as Crypto from "expo-crypto";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -40,6 +41,10 @@ export function ProductsScreen({ session }: { session: Session }) {
   const [address, setAddress] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
+  // Minted once per order attempt when the sheet opens, NOT per submit — a
+  // retry after a timeout has to carry the same key or the server can't tell
+  // it apart from a second order. Reopening the sheet starts a new attempt.
+  const [orderKey, setOrderKey] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [productList, orderList] = await Promise.all([
@@ -62,10 +67,11 @@ export function ProductsScreen({ session }: { session: Session }) {
     setQuantity(1);
     setAddress("");
     setOrderError(null);
+    setOrderKey(Crypto.randomUUID());
   }
 
   async function confirmOrder() {
-    if (!ordering) return;
+    if (!ordering || !orderKey) return;
     if (!address.trim()) {
       setOrderError("Enter a delivery address.");
       return;
@@ -74,7 +80,7 @@ export function ProductsScreen({ session }: { session: Session }) {
     setOrderError(null);
     try {
       await setDeliveryAddress(session.token, address.trim());
-      await orderProduct(session.token, ordering.id, quantity);
+      await orderProduct(session.token, ordering.id, quantity, orderKey);
       setOrdering(null);
       Alert.alert(strings.products.orderPlaced.en, strings.products.orderPlaced.kn);
       await load();

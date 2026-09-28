@@ -22,6 +22,6 @@ export class ProductsController {
   @Post(":id/order")
   order(@Req() req: AliasRequest, @Param("id", ParseIntPipe) id: number, @Body() body: unknown) {
     const dto = parseOrThrow(OrderProductDtoSchema, body);
-    return this.products.order(req.aliasId, id, dto.quantity);
+    return this.products.order(req.aliasId, id, dto.quantity, dto.clientMsgId);
   }
 }
