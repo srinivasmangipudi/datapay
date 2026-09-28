@@ -143,6 +143,14 @@ const CONTENT = {
     ctaSignup: "Sign up your organization",
     ctaHowItWorks: "See how it works",
     getApp: "Get the DataPay app",
+    doorHousehold: "For households",
+    doorHouseholdBody:
+      "Answer a few short questions a day and earn tokens. Free, and always anonymous.",
+    doorHouseholdNote: "Everything happens in the app — there is nothing to sign up for here.",
+    doorOrg: "For organizations",
+    doorOrgBody:
+      "Reach real, verified local demand. List products, ask your own questions, see aggregated answers.",
+    doorOrgNote: "Business accounts only. Households don't need one.",
     comingSoon: "Coming soon",
     openBeta: "Open beta",
     betaNote: "DataPay is in open beta. Everything here is real — real questions, real catalogs, real tokens — but expect rough edges, and tell us when you find one.",
@@ -241,6 +249,14 @@ const CONTENT = {
     ctaSignup: "ನಿಮ್ಮ ಸಂಸ್ಥೆಯನ್ನು ಸೈನ್ ಅಪ್ ಮಾಡಿ",
     ctaHowItWorks: "ಇದು ಹೇಗೆ ಕಾರ್ಯನಿರ್ವಹಿಸುತ್ತದೆ ಎಂದು ನೋಡಿ",
     getApp: "DataPay ಆ್ಯಪ್ ಪಡೆಯಿರಿ",
+    doorHousehold: "ಮನೆಗಳಿಗಾಗಿ",
+    doorHouseholdBody:
+      "ದಿನಕ್ಕೆ ಕೆಲವು ಸಣ್ಣ ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರಿಸಿ, ಟೋಕನ್‌ಗಳನ್ನು ಗಳಿಸಿ. ಉಚಿತ, ಮತ್ತು ಯಾವಾಗಲೂ ಅನಾಮಧೇಯ.",
+    doorHouseholdNote: "ಎಲ್ಲವೂ ಆ್ಯಪ್‌ನಲ್ಲಿ ನಡೆಯುತ್ತದೆ — ಇಲ್ಲಿ ಸೈನ್ ಅಪ್ ಮಾಡುವ ಅಗತ್ಯವಿಲ್ಲ.",
+    doorOrg: "ಸಂಸ್ಥೆಗಳಿಗಾಗಿ",
+    doorOrgBody:
+      "ನಿಜವಾದ ಸ್ಥಳೀಯ ಬೇಡಿಕೆಯನ್ನು ತಲುಪಿ. ಉತ್ಪನ್ನಗಳನ್ನು ಪಟ್ಟಿ ಮಾಡಿ, ನಿಮ್ಮದೇ ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ.",
+    doorOrgNote: "ವ್ಯಾಪಾರ ಖಾತೆಗಳಿಗೆ ಮಾತ್ರ. ಮನೆಗಳಿಗೆ ಇದರ ಅಗತ್ಯವಿಲ್ಲ.",
     comingSoon: "ಶೀಘ್ರದಲ್ಲಿ ಬರಲಿದೆ",
     openBeta: "ಓಪನ್ ಬೀಟಾ",
     betaNote: "DataPay ಓಪನ್ ಬೀಟಾದಲ್ಲಿದೆ. ಇಲ್ಲಿರುವುದೆಲ್ಲವೂ ನಿಜ — ನಿಜವಾದ ಪ್ರಶ್ನೆಗಳು, ನಿಜವಾದ ಪಟ್ಟಿಗಳು, ನಿಜವಾದ ಟೋಕನ್‌ಗಳು — ಆದರೆ ಕೆಲವು ಸಣ್ಣ ದೋಷಗಳಿರಬಹುದು; ಕಂಡರೆ ನಮಗೆ ತಿಳಿಸಿ.",
@@ -353,40 +369,53 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
               <span className="mkHeroKicker">{t.heroKicker}</span>
               <h1>{t.heroTitle}</h1>
               <p className="mkLede">{t.heroLede}</p>
-              <div className="mkCtaRow">
-                <a href="/org/signup" className="mkCtaPrimary">
-                  {t.ctaSignup}
-                </a>
-                <a href="#how-it-works" className="mkCtaSecondary">
-                  {t.ctaHowItWorks}
-                </a>
-              </div>
-
-              <div className="mkAppBadges">
-                <span className="mkAppBadgesLabel">{t.getApp}</span>
-                <div className="mkBadgeRow">
-                  <div className="mkBadge" aria-label={`App Store — ${t.comingSoon}`}>
-                    <AppleIcon />
-                    <span className="mkBadgeText">
-                      <small>{t.comingSoon}</small>
-                      <strong>App Store</strong>
-                    </span>
+              {/* Two labelled doors, not one CTA with badges underneath. The
+                  old layout put "Sign up your organization" first and the app
+                  badges below it, which read as one funnel — households were
+                  clicking a signup meant for businesses. Naming the audience
+                  above each path is the whole point of this block. */}
+              <div className="mkDoors">
+                <div className="mkDoor">
+                  <span className="mkDoorTag">{t.doorHousehold}</span>
+                  <p className="mkDoorBody">{t.doorHouseholdBody}</p>
+                  <div className="mkBadgeRow">
+                    <a
+                      className="mkBadge mkBadgeLive"
+                      href={PLAY_STORE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Google Play — ${t.openBeta}`}
+                    >
+                      <AndroidIcon />
+                      <span className="mkBadgeText">
+                        <small>{t.openBeta}</small>
+                        <strong>Google Play</strong>
+                      </span>
+                    </a>
+                    <div className="mkBadge" aria-label={`App Store — ${t.comingSoon}`}>
+                      <AppleIcon />
+                      <span className="mkBadgeText">
+                        <small>{t.comingSoon}</small>
+                        <strong>App Store</strong>
+                      </span>
+                    </div>
                   </div>
-                  <a
-                    className="mkBadge mkBadgeLive"
-                    href={PLAY_STORE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Google Play — ${t.openBeta}`}
-                  >
-                    <AndroidIcon />
-                    <span className="mkBadgeText">
-                      <small>{t.openBeta}</small>
-                      <strong>Google Play</strong>
-                    </span>
+                  <p className="mkDoorNote">{t.doorHouseholdNote}</p>
+                </div>
+
+                <div className="mkDoor mkDoorOrg">
+                  <span className="mkDoorTag">{t.doorOrg}</span>
+                  <p className="mkDoorBody">{t.doorOrgBody}</p>
+                  <a href="/org/signup" className="mkCtaPrimary">
+                    {t.ctaSignup}
                   </a>
+                  <p className="mkDoorNote">{t.doorOrgNote}</p>
                 </div>
               </div>
+
+              <a href="#how-it-works" className="mkCtaSecondary mkCtaHow">
+                {t.ctaHowItWorks}
+              </a>
             </div>
 
             <PhoneMock lang={lang} />
@@ -707,6 +736,17 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkCtaPrimary:hover { background: var(--mk-jade-deep); }
         .mkCtaSecondary { border: 1px solid var(--mk-border); color: var(--mk-ink); padding: 13px 24px; border-radius: 999px; font-weight: 600; font-size: 14.5px; text-decoration: none; }
         .mkCtaInline { display: inline-block; margin-top: 8px; }
+
+        /* Two audience doors, side by side and visibly separate so neither
+           reads as a step in the other's flow. They stack on a phone. */
+        .mkDoors { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 26px; align-items: start; }
+        .mkDoor { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; border: 1px solid var(--mk-border); border-radius: 16px; background: var(--mk-surface); height: 100%; }
+        .mkDoorOrg { border-color: var(--mk-jade); }
+        .mkDoorTag { font-family: "Spline Sans Mono", monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mk-jade); }
+        .mkDoorBody { font-size: 14.5px; line-height: 1.55; color: var(--mk-ink); margin: 0; }
+        .mkDoorNote { font-size: 12.5px; line-height: 1.5; color: var(--mk-mist); margin: 0; }
+        .mkCtaHow { display: inline-block; margin-top: 18px; }
+        @media (max-width: 720px) { .mkDoors { grid-template-columns: 1fr; } }
 
         .mkAppBadges { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
         .mkAppBadgesLabel { font-family: "Spline Sans Mono", monospace; font-size: 10.5px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mk-mist); }

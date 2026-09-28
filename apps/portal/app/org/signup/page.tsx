@@ -14,7 +14,18 @@ export default function OrgSignupPage({
         <div className="loginLogo">
           <DataPayLogo size={36} tagline="Organization sign-up" />
         </div>
-        <h1>Create your account</h1>
+        <h1>Create your organization account</h1>
+        {/* A household landing here has taken a wrong turn — say so before they
+            fill in a form that will sit unapproved forever, and point at the
+            thing they actually wanted. */}
+        <p className="notForMembers">
+          <strong>This is for businesses and organizations.</strong> If you want to answer questions
+          and earn tokens, you don&apos;t need an account here —{" "}
+          <a href="https://play.google.com/store/apps/details?id=org.datapay.mobile" target="_blank" rel="noopener noreferrer">
+            get the DataPay app
+          </a>{" "}
+          instead.
+        </p>
         <p className="lede">
           An ops reviewer activates every new organization before it can submit questions or list
           products — check back and log in once approved. Already have an account?{" "}
@@ -52,6 +63,9 @@ export default function OrgSignupPage({
         h1 { font-size: 1.4rem; margin: 4px 0; }
         .lede { color: #898781; font-size: 13px; margin: 0 0 8px; line-height: 1.5; }
         .lede a { color: #0E7A5C; font-weight: 600; }
+        .notForMembers { font-size: 13px; line-height: 1.55; margin: 0 0 14px; padding: 12px 14px; border: 1px solid #0E7A5C33; border-left: 3px solid #0E7A5C; border-radius: 8px; background: #0E7A5C0A; color: #4a4843; }
+        .notForMembers strong { color: #23221f; }
+        .notForMembers a { color: #0E7A5C; font-weight: 600; }
         input { padding: 10px 12px; border-radius: 6px; border: 1px solid #d8d7cf; background: #fcfcfb; font-size: 14px; font-family: inherit; }
         .submitBtn { padding: 10px 20px; border-radius: 999px; border: 1px solid #0E7A5C; background: #0E7A5C; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
         .errorBanner { background: #f3e4e2; border: 1px solid #8c3a34; color: #8c3a34; border-radius: 6px; padding: 10px 14px; font-size: 13px; }
@@ -61,6 +75,9 @@ export default function OrgSignupPage({
           .loginCard { background: #14161b; border-color: #2c2c2a; }
           .lede { color: #9b9a94; }
           .lede a { color: #12946F; }
+          .notForMembers { border-color: #12946F44; border-left-color: #12946F; background: #12946F14; color: #b8b7b0; }
+          .notForMembers strong { color: #f2f1ec; }
+          .notForMembers a { color: #12946F; }
           input { background: #1a1a19; border-color: #2c2c2a; color: #fff; }
           .submitBtn { border-color: #12946F; background: #12946F; }
           .errorBanner { background: #2e1f1e; border-color: #d98a83; color: #d98a83; }

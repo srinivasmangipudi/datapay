@@ -1,6 +1,7 @@
 import { reviewProductAction } from "./actions";
-import { listOrdersForOps, listPendingProducts } from "./core-api";
+import { listAllProductsForOps, listOrdersForOps, listPendingProducts } from "./core-api";
 import { OrdersPanel } from "./OrdersPanel";
+import { RatesPanel } from "./RatesPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +12,13 @@ function formatPaise(paise: number): string {
 export default async function ProductReviewPage({
   searchParams,
 }: {
-  searchParams: { error?: string };
+  searchParams: { error?: string; rates?: string };
 }): Promise<JSX.Element> {
-  const [pending, orders] = await Promise.all([listPendingProducts(), listOrdersForOps()]);
+  const [pending, orders, allProducts] = await Promise.all([
+    listPendingProducts(),
+    listOrdersForOps(),
+    listAllProductsForOps(),
+  ]);
 
   return (
     <main className="page">
@@ -101,9 +106,13 @@ export default async function ProductReviewPage({
         <OrdersPanel orders={orders} />
       </section>
 
+      <RatesPanel products={allProducts} />
+
       <style
         dangerouslySetInnerHTML={{
-          __html: `.productThumb { width: 32px; height: 32px; object-fit: cover; border-radius: 6px; margin-right: 8px; vertical-align: middle; }`,
+          __html: `.productThumb { width: 32px; height: 32px; object-fit: cover; border-radius: 6px; margin-right: 8px; vertical-align: middle; }
+          .ratesForm { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+          .ratesForm input { width: 82px; text-align: right; padding: 6px 8px; font-size: 13px; }`,
         }}
       />
     </main>

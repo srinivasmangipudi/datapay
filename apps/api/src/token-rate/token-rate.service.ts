@@ -54,6 +54,16 @@ export class TokenRateService {
    * competing bids. 0 here is still the honest current value, unlike
    * realisedSalesVelocity above, which now has real data to compute from.
    */
+  /** The inputs as they stand right now, without publishing a new rate — so
+      ops can see what the next run would use. */
+  async liveInputs(): Promise<TokenRateInputs> {
+    return {
+      demandPressure: await this.computeDemandPressure(),
+      realisedSalesVelocity: await this.computeRealisedSalesVelocity(),
+      supplierCompetition: 0,
+    };
+  }
+
   async computeAndPublish(): Promise<{ ratePaise: number; inputs: TokenRateInputs }> {
     const inputs: TokenRateInputs = {
       demandPressure: await this.computeDemandPressure(),

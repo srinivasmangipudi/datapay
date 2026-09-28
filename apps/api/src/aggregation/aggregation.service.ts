@@ -382,13 +382,13 @@ export class AggregationService {
         if (!distribution) continue;
 
         await this.pool.query(
+          // Append, don't upsert — same as demand_aggregates above. Each run
+          // adds a dated row so the shift in a zone's answers over time is
+          // recoverable; readers that want "now" take the newest per
+          // (question, zone, window), as the public registry does.
           `INSERT INTO question_stat_aggregates
              (question_id, zone_id, "window", distribution, cohort_size, computed_at)
-           VALUES ($1, $2, $3, $4, $5, now())
-           ON CONFLICT (question_id, zone_id, "window")
-           DO UPDATE SET distribution = EXCLUDED.distribution,
-                         cohort_size = EXCLUDED.cohort_size,
-                         computed_at = EXCLUDED.computed_at`,
+           VALUES ($1, $2, $3, $4, $5, now())`,
           [question.id, coarsened.zoneId, windowLabel, distribution, cohortSize]
         );
         published++;

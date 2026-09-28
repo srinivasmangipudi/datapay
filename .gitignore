@@ -11,3 +11,6 @@ coverage/
 !.env.example
 .DS_Store
 infra/*.json
+
+# Claude Code local permissions — personal, not shared
+.claude/settings.local.json

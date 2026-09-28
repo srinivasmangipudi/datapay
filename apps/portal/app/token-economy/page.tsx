@@ -1,6 +1,7 @@
 import { getDemandAggregates } from "../data";
-import { getTokenEconomyOverview } from "./core-api";
+import { getTokenEconomyOverview, getTokenRateDetail } from "./core-api";
 import { runAggregationAction } from "./actions";
+import { TokenRatePanel } from "./TokenRatePanel";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +10,11 @@ export default async function TokenEconomyPage({
 }: {
   searchParams: { error?: string; ran?: string };
 }): Promise<JSX.Element> {
-  const [aggregates, overview] = await Promise.all([getDemandAggregates(), getTokenEconomyOverview()]);
+  const [aggregates, overview, rateDetail] = await Promise.all([
+    getDemandAggregates(),
+    getTokenEconomyOverview(),
+    getTokenRateDetail(),
+  ]);
 
   return (
     <main className="page">
@@ -60,6 +65,8 @@ export default async function TokenEconomyPage({
           </button>
         </form>
       </div>
+
+      <TokenRatePanel detail={rateDetail} />
 
       <section className="section">
         <h2>Demand aggregates</h2>

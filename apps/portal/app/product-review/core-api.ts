@@ -40,6 +40,32 @@ export function listOrdersForOps(): Promise<OpsOrder[]> {
   return apiFetch("/v1/admin/org-products/orders");
 }
 
+export interface ProductRates {
+  id: number;
+  name_en: string;
+  organization_name: string;
+  sale_price_paise: number;
+  review_state: string;
+  token_reward_bps: number | null;
+  platform_fee_bps: number | null;
+}
+
+export function listAllProductsForOps(): Promise<ProductRates[]> {
+  return apiFetch("/v1/admin/org-products");
+}
+
+/** null clears an override back to the platform default; 0 means "explicitly
+    none on this product". Omitting a field leaves it untouched. */
+export function setProductRates(
+  productId: number,
+  rates: { tokenRewardBps?: number | null; platformFeeBps?: number | null }
+) {
+  return apiFetch(`/v1/admin/org-products/${productId}/rates`, {
+    method: "PATCH",
+    body: JSON.stringify(rates),
+  });
+}
+
 // Ops-mediated fulfillment (SPEC.md §7-style identity-blind relay) — the org
 // never resolves this itself, only ops, to relay delivery info out-of-band.
 export function resolveDeliveryInfo(relayToken: string): Promise<{ address: string; zoneHint: string | null }> {

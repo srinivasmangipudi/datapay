@@ -1,4 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { platformFeePaise, purchaseTokenReward } from "@datapay/shared";
 import { Pool } from "pg";
 import { PG_POOL } from "../db/db.module";
 import { withTransaction } from "../db/tx.util";
@@ -22,8 +23,10 @@ const FUND_ACCRUAL_RATE = 0.2;
 // number — what the buyer actually paid (qty × collective_price_paise) —
 // which is the honest, real "amount spent" already tracked in this system,
 // independent of how payment is actually collected.
-const CORPUS_FUND_RATE = 0.02;
-const PURCHASE_TOKEN_REWARD_RATE = 0.02;
+//
+// The rates themselves now live in @datapay/shared as DEFAULT_PLATFORM_FEE_BPS
+// and DEFAULT_TOKEN_REWARD_BPS, so ops changing a default moves every path at
+// once instead of leaving this file behind.
 
 @Injectable()
 export class FundService {
@@ -100,7 +103,11 @@ export class FundService {
       }
 
       const amountSpentPaise = offer.collective_price_paise * partRows[0].qty;
-      const corpusContributionPaise = Math.round(amountSpentPaise * CORPUS_FUND_RATE);
+      // Collective offers draw on the `products` catalog, which has no
+      // per-product rate columns — only org_products does. They take the
+      // platform default; if per-offer rates are ever wanted, the override
+      // belongs on offers/products and this call is where it would be read.
+      const corpusContributionPaise = platformFeePaise(amountSpentPaise, null);
       if (corpusContributionPaise > 0) {
         await this.corpusFund.creditContribution({
           client,
@@ -110,9 +117,9 @@ export class FundService {
         });
       }
 
-      // 2% of spend, expressed as a whole-rupee token count (paise / 100) —
-      // an ordinary earn, same ledger as answering a question.
-      const purchaseTokens = Math.round((amountSpentPaise * PURCHASE_TOKEN_REWARD_RATE) / 100);
+      // A flat share of spend as tokens — an ordinary earn, same ledger as
+      // answering a question, and no claim about what a token is worth.
+      const purchaseTokens = purchaseTokenReward(amountSpentPaise, null);
       if (purchaseTokens > 0) {
         await this.ledger.creditTokens({
           client,

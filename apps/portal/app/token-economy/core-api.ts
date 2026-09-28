@@ -21,3 +21,21 @@ export interface TokenEconomyOverview {
 export function getTokenEconomyOverview(): Promise<TokenEconomyOverview> {
   return apiFetch("/v1/admin/token-economy/overview");
 }
+
+export interface TokenRateInputs {
+  demandPressure: number;
+  realisedSalesVelocity: number;
+  supplierCompetition: number;
+}
+
+export interface TokenRateDetail {
+  current: { rate_paise: number; inputs: TokenRateInputs; computed_at: string } | null;
+  history: Array<{ rate_paise: number; computed_at: string }>;
+  inputs: TokenRateInputs;
+  floorPaise: number;
+  ceilingPaise: number;
+}
+
+export function getTokenRateDetail(): Promise<TokenRateDetail> {
+  return apiFetch("/v1/admin/token-rate");
+}

@@ -257,6 +257,79 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
     await cleanupMember(member);
   });
 
+  /**
+   * A flat share of spend, never a value-derived rate: the number depends only
+   * on price × quantity and the product's own bps, so it says nothing about
+   * what a token is worth. sale_price_paise is 39900 (₹399).
+   */
+  it("crediting: an order earns tokens at the product's rate, and a retry never credits twice", async () => {
+    const productId = await seedProduct(5);
+    await pool.query(`UPDATE org_products SET token_reward_bps = 500 WHERE id = $1`, [productId]); // 5%
+    const member = await memberWithAddress();
+    const clientMsgId = randomUUID();
+
+    const send = () =>
+      request(app.getHttpServer())
+        .post(`/v1/products/${productId}/order`)
+        .set({ Authorization: `Bearer ${member.token}` })
+        .send({ quantity: 2, clientMsgId });
+
+    // 39900 × 2 = 79800 paise, 5% = 3990 paise = ₹39.90 → 40 tokens.
+    const first = await send();
+    expect(first.status).toBe(201);
+    expect(first.body.tokensEarned).toBe(40);
+
+    const retry = await send();
+    expect(retry.body.tokensEarned).toBe(40); // echoes, doesn't re-credit
+
+    const { rows } = await pool.query<{ n: string; total: string }>(
+      `SELECT COUNT(*) n, COALESCE(SUM(tokens), 0) total FROM token_ledger
+        WHERE alias_id = $1 AND ref_type = 'product_order'`,
+      [member.aliasId]
+    );
+    expect(rows[0].n).toBe("1");
+    expect(Number(rows[0].total)).toBe(40);
+
+    await cleanupMember(member);
+  });
+
+  it("falls back to the platform default when a product sets no rate", async () => {
+    const productId = await seedProduct(5); // token_reward_bps left NULL
+    const member = await memberWithAddress();
+
+    const res = await request(app.getHttpServer())
+      .post(`/v1/products/${productId}/order`)
+      .set({ Authorization: `Bearer ${member.token}` })
+      .send({ quantity: 1, clientMsgId: randomUUID() });
+
+    // 39900 paise at the 200bps default = 798 paise = ₹7.98 → 8 tokens.
+    expect(res.body.tokensEarned).toBe(8);
+
+    await cleanupMember(member);
+  });
+
+  it("a zero rate is honoured as 'no reward', not treated as unset", async () => {
+    const productId = await seedProduct(5);
+    await pool.query(`UPDATE org_products SET token_reward_bps = 0 WHERE id = $1`, [productId]);
+    const member = await memberWithAddress();
+
+    const res = await request(app.getHttpServer())
+      .post(`/v1/products/${productId}/order`)
+      .set({ Authorization: `Bearer ${member.token}` })
+      .send({ quantity: 1, clientMsgId: randomUUID() });
+
+    expect(res.status).toBe(201);
+    expect(res.body.tokensEarned).toBe(0);
+
+    const { rows } = await pool.query<{ n: string }>(
+      `SELECT COUNT(*) n FROM token_ledger WHERE alias_id = $1 AND ref_type = 'product_order'`,
+      [member.aliasId]
+    );
+    expect(rows[0].n).toBe("0"); // no zero-token ledger row written
+
+    await cleanupMember(member);
+  });
+
   it("rejects an order with no clientMsgId at all", async () => {
     const productId = await seedProduct(5);
     const member = await memberWithAddress();

@@ -196,7 +196,19 @@ export class PublicService {
       computed_at: string;
       has_open_offer: boolean;
     }>(
-      `SELECT c.id AS category_id, c.slug AS category_slug, c.name AS category_name, c.kind,
+      // question_stat_aggregates is append-only (see the migration that dropped
+      // its UNIQUE constraint) so history accumulates for trend analysis. The
+      // registry shows CURRENT demand, so it takes only the newest row per
+      // (question, zone, window) — without this it would list the same question
+      // once per aggregation run. DISTINCT ON needs its own ORDER BY, hence the
+      // CTE: presentation ordering belongs to the outer query.
+      `WITH latest AS (
+         SELECT DISTINCT ON (qsa.question_id, qsa.zone_id, qsa."window")
+                qsa.question_id, qsa.zone_id, qsa.cohort_size, qsa.distribution, qsa.computed_at
+         FROM question_stat_aggregates qsa
+         ORDER BY qsa.question_id, qsa.zone_id, qsa."window", qsa.computed_at DESC
+       )
+       SELECT c.id AS category_id, c.slug AS category_slug, c.name AS category_name, c.kind,
               z.id AS zone_id, z.name AS zone_name, z.level AS zone_level,
               q.id AS question_id, q.text_en AS text, q.type,
               qsa.cohort_size, qsa.distribution, qsa.computed_at,
@@ -205,7 +217,7 @@ export class PublicService {
                 JOIN products p ON p.product_code = o.product_code
                 WHERE p.category_id = c.id AND o.zone_id = qsa.zone_id AND o.status = 'open'
               ) AS has_open_offer
-       FROM question_stat_aggregates qsa
+       FROM latest qsa
        JOIN questions q ON q.id = qsa.question_id
        JOIN categories c ON c.id = q.category_id
        JOIN zones z ON z.id = qsa.zone_id

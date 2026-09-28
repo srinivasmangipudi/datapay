@@ -485,6 +485,23 @@ export const UpdateOrgProductDtoSchema = z
   .refine((v) => Object.keys(v).length > 0, { message: "Provide at least one field to update" });
 export type UpdateOrgProductDto = z.infer<typeof UpdateOrgProductDtoSchema>;
 
+/**
+ * PATCH /v1/admin/org-products/:id/rates — OPS ONLY, deliberately not part of
+ * UpdateOrgProductDtoSchema. An organization sets its own prices and stock; it
+ * does not get to set what the platform charges it or what it pays out in
+ * member rewards.
+ *
+ * null clears an override and returns the product to the platform default,
+ * which is distinct from 0 (an explicit "no reward on this product").
+ */
+export const SetProductRatesDtoSchema = z
+  .object({
+    tokenRewardBps: z.number().int().min(0).max(10000).nullable().optional(),
+    platformFeeBps: z.number().int().min(0).max(10000).nullable().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Provide at least one rate to set" });
+export type SetProductRatesDto = z.infer<typeof SetProductRatesDtoSchema>;
+
 /** POST /v1/org/products/:id/photo — base64-in-JSON, same convention as every other upload in this app. */
 export const UploadOrgProductPhotoDtoSchema = z.object({
   imageBase64: z.string().min(1),

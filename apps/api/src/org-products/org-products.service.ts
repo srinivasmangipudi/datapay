@@ -401,6 +401,51 @@ export class OrgProductsService {
     return rows;
   }
 
+  /** Every product regardless of review state — the ops rates screen needs to
+      set a rate on an approved product, not just one awaiting review. */
+  async listAllForOps() {
+    const { rows } = await this.pool.query(
+      `SELECT p.id, p.name_en, p.sale_price_paise, p.review_state,
+              p.token_reward_bps, p.platform_fee_bps, o.name AS organization_name
+       FROM org_products p
+       JOIN organizations o ON o.id = p.organization_id
+       ORDER BY o.name, p.name_en`
+    );
+    return rows;
+  }
+
+  /**
+   * Ops-only. Passing null clears an override so the product falls back to the
+   * platform default — distinct from 0, which is an explicit "no reward here".
+   * Undefined leaves a rate untouched, so one rate can be set without
+   * disturbing the other.
+   */
+  async setRates(
+    productId: number,
+    dto: { tokenRewardBps?: number | null; platformFeeBps?: number | null }
+  ) {
+    const sets: string[] = [];
+    const values: Array<number | null> = [];
+    if (dto.tokenRewardBps !== undefined) {
+      values.push(dto.tokenRewardBps);
+      sets.push(`token_reward_bps = $${values.length}`);
+    }
+    if (dto.platformFeeBps !== undefined) {
+      values.push(dto.platformFeeBps);
+      sets.push(`platform_fee_bps = $${values.length}`);
+    }
+    values.push(productId);
+
+    const { rows } = await this.pool.query(
+      `UPDATE org_products SET ${sets.join(", ")}, updated_at = now()
+       WHERE id = $${values.length}
+       RETURNING id, token_reward_bps, platform_fee_bps`,
+      values
+    );
+    if (!rows[0]) throw new NotFoundException(`Product ${productId} not found`);
+    return rows[0];
+  }
+
   async review(productId: number, decision: "approved" | "rejected") {
     const { rows } = await this.pool.query(
       `UPDATE org_products SET review_state = $1, updated_at = now()

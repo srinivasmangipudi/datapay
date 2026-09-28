@@ -1,8 +1,10 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { Pool } from "pg";
 import { randomUUID } from "crypto";
+import { purchaseTokenReward } from "@datapay/shared";
 import { PG_POOL } from "../db/db.module";
 import { withTransaction } from "../db/tx.util";
+import { LedgerService } from "../ledger/ledger.service";
 
 /** Internal signal, never surfaced: a concurrent request won the
     client_msg_id race, so this transaction must roll back its stock decrement
@@ -28,7 +30,10 @@ interface BrowseProductRow {
 // org never sees the member directly, only a relay_token).
 @Injectable()
 export class ProductsService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly ledger: LedgerService
+  ) {}
 
   async browse(aliasId: string) {
     const { rows } = await this.pool.query<BrowseProductRow>(
@@ -97,8 +102,9 @@ export class ProductsService {
         review_state: string;
         quantity_available: number;
         sale_price_paise: number;
+        token_reward_bps: number | null;
       }>(
-        `SELECT id, review_state, quantity_available, sale_price_paise
+        `SELECT id, review_state, quantity_available, sale_price_paise, token_reward_bps
          FROM org_products WHERE id = $1 FOR UPDATE`,
         [productId]
       );
@@ -131,7 +137,28 @@ export class ProductsService {
         throw new ConcurrentOrderReplay();
       }
 
-      return { orderId: orderRows[0].id, relayToken };
+      // The buyer's token reward, at this product's rate or the platform
+      // default. Credited here at order time rather than on delivery, because
+      // an org product order has no delivery-confirmation step the way a
+      // collective offer does — there is no later event to hang it off.
+      // Idempotent via the ledger's UNIQUE(ref_type, ref_id), so the replay
+      // paths above can never credit twice.
+      const tokens = purchaseTokenReward(
+        product.sale_price_paise * quantity,
+        product.token_reward_bps
+      );
+      if (tokens > 0) {
+        await this.ledger.creditTokens({
+          client,
+          aliasId,
+          entry: "earn_purchase",
+          tokens,
+          refType: "product_order",
+          refId: orderRows[0].id,
+        });
+      }
+
+      return { orderId: orderRows[0].id, relayToken, tokensEarned: tokens };
     }).catch(async (err) => {
       if (err instanceof ConcurrentOrderReplay) {
         const winner = await this.findOrderByClientMsgId(aliasId, clientMsgId);
@@ -141,15 +168,28 @@ export class ProductsService {
     });
   }
 
+  /** Reports tokensEarned from the ledger rather than recomputing it, so a
+      retry echoes what was actually credited even if the product's rate
+      changed between the first attempt and the replay. */
   private async findOrderByClientMsgId(
     aliasId: string,
     clientMsgId: string
-  ): Promise<{ orderId: number; relayToken: string } | null> {
-    const { rows } = await this.pool.query<{ id: number; relay_token: string }>(
-      `SELECT id, relay_token FROM product_orders WHERE client_msg_id = $1 AND alias_id = $2`,
+  ): Promise<{ orderId: number; relayToken: string; tokensEarned: number } | null> {
+    const { rows } = await this.pool.query<{
+      id: number;
+      relay_token: string;
+      tokens: number | null;
+    }>(
+      `SELECT po.id, po.relay_token,
+              (SELECT tl.tokens FROM token_ledger tl
+                WHERE tl.ref_type = 'product_order' AND tl.ref_id = po.id::text) AS tokens
+       FROM product_orders po
+       WHERE po.client_msg_id = $1 AND po.alias_id = $2`,
       [clientMsgId, aliasId]
     );
-    return rows[0] ? { orderId: rows[0].id, relayToken: rows[0].relay_token } : null;
+    return rows[0]
+      ? { orderId: rows[0].id, relayToken: rows[0].relay_token, tokensEarned: rows[0].tokens ?? 0 }
+      : null;
   }
 
   private async registerRelay(aliasId: string, relayToken: string, offerRef: string) {

@@ -281,6 +281,30 @@ h1 {
   margin: 0 0 18px;
 }
 
+/* Sub-section heading inside a .section, below h2 in the hierarchy. */
+.subhead {
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  margin: 32px 0 12px;
+}
+
+/* A formula shown as the reference it is — monospace, quiet, and allowed to
+   scroll rather than wrap mid-expression on a narrow screen. */
+.formula {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ink-2, inherit);
+  background: var(--surface-2, var(--surface));
+  border: 1px solid var(--edge);
+  border-radius: var(--r-md, 8px);
+  padding: 14px 16px;
+  margin: 0 0 20px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
 .tableWrap {
   overflow-x: auto;
   border: 1px solid var(--edge);

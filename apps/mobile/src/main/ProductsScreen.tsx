@@ -5,7 +5,9 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -177,8 +179,24 @@ export function ProductsScreen({ session }: { session: Session }) {
       </ScrollView>
 
       <Modal visible={!!ordering} animationType="slide" transparent onRequestClose={() => setOrdering(null)}>
-        <View style={styles.modalOverlay}>
+        {/* The sheet is pinned to the bottom, so an open keyboard sits right on
+            top of the address field and the confirm button. AndroidManifest
+            already sets adjustResize, but that resizes the ACTIVITY window and
+            doesn't reach inside a Modal — the sheet needs to move itself.
+            'height' on Android and 'padding' on iOS is the combination that
+            actually shifts a flex-end sheet on both. */}
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
           <View style={[styles.modalCard, { paddingBottom: insets.bottom + spacing.lg }]}>
+            {/* Scrollable so the confirm button stays reachable on a short
+                screen once the keyboard has taken half of it. */}
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
             <Text style={styles.modalTitle}>{ordering?.nameEn}</Text>
 
             <Text style={styles.modalLabel}>{strings.products.quantity.en}</Text>
@@ -227,8 +245,9 @@ export function ProductsScreen({ session }: { session: Session }) {
             <TouchableOpacity onPress={() => setOrdering(null)} style={styles.cancelBtn}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -272,6 +291,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: radii.lg,
     borderTopRightRadius: radii.lg,
     padding: spacing.xl,
+    // Caps the sheet so a keyboard-squeezed layout scrolls inside the card
+    // instead of pushing the title off the top of the screen.
+    maxHeight: "88%",
   },
   modalTitle: { ...type.title, color: colors.ink, marginBottom: spacing.md },
   modalLabel: { ...type.small, color: colors.subtle, fontWeight: "600", marginBottom: spacing.xs, marginTop: spacing.md },

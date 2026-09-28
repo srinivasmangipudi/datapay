@@ -1,4 +1,5 @@
 import { Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { TOKEN_RATE_CEILING_PAISE, TOKEN_RATE_FLOOR_PAISE } from "@datapay/shared";
 import { AliasAuthGuard } from "../auth/alias-auth.guard";
 import { TokenRateService } from "./token-rate.service";
 
@@ -27,5 +28,28 @@ export class TokenRateAdminController {
   @Post("run")
   run() {
     return this.tokenRate.computeAndPublish();
+  }
+
+  /**
+   * Ops read of the same numbers the member endpoint serves, plus the bounds
+   * and live input values the rate is derived from — so the portal can show
+   * WHY the rate is what it is, not just what it is. The member endpoint is
+   * alias-guarded and the portal has no alias, hence a separate route rather
+   * than reusing it.
+   */
+  @Get()
+  async detail() {
+    const [current, history, inputs] = await Promise.all([
+      this.tokenRate.current(),
+      this.tokenRate.history(),
+      this.tokenRate.liveInputs(),
+    ]);
+    return {
+      current,
+      history,
+      inputs,
+      floorPaise: TOKEN_RATE_FLOOR_PAISE,
+      ceilingPaise: TOKEN_RATE_CEILING_PAISE,
+    };
   }
 }
