@@ -5,11 +5,36 @@ import {
   onTokenRefresh,
   requestPermission,
 } from "@react-native-firebase/messaging";
-import { Platform } from "react-native";
+import { PermissionsAndroid, Platform } from "react-native";
 import { registerPushToken } from "./api";
 
 // Modular API, same style as firebaseAuth.ts — v26 dropped the namespaced
 // `messaging().foo()` default export entirely.
+
+/**
+ * Asks for permission to post notifications, per platform.
+ *
+ * Firebase's own requestPermission() is an iOS API. On Android it resolves
+ * AUTHORIZED without ever showing a prompt, so relying on it meant the app
+ * silently skipped straight to getToken() and the member was never asked —
+ * POST_NOTIFICATIONS stayed denied and no notification could ever arrive.
+ *
+ * Android 13 (API 33) introduced the runtime prompt; below that, notifications
+ * are granted at install time and there is nothing to ask.
+ */
+async function ensurePermission(): Promise<boolean> {
+  if (Platform.OS === "android") {
+    if (Number(Platform.Version) < 33) return true;
+    const result = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+    );
+    console.log("[push] POST_NOTIFICATIONS ->", result);
+    return result === PermissionsAndroid.RESULTS.GRANTED;
+  }
+
+  const status = await requestPermission(getMessaging());
+  return status === AuthorizationStatus.AUTHORIZED || status === AuthorizationStatus.PROVISIONAL;
+}
 
 /**
  * Registers this device for the morning Pulse nudge.
@@ -23,19 +48,20 @@ import { registerPushToken } from "./api";
  */
 export async function registerForPushNotifications(sessionToken: string): Promise<void> {
   try {
-    // Android 13+ shows a runtime prompt; below that this resolves
-    // immediately. iOS always prompts. Declining is a normal outcome.
-    const status = await requestPermission(getMessaging());
-    const granted =
-      status === AuthorizationStatus.AUTHORIZED || status === AuthorizationStatus.PROVISIONAL;
-    if (!granted) return;
+    // Declining is a normal outcome, not an error.
+    if (!(await ensurePermission())) return;
 
     const token = await getToken(getMessaging());
     if (!token) return;
 
     await registerPushToken(sessionToken, token, Platform.OS === "ios" ? "ios" : "android");
-  } catch {
-    // Silent: a failed registration costs the member a nudge, nothing more.
+    console.log("[push] registered", token.slice(0, 16), "…");
+  } catch (err) {
+    // Still non-fatal — a failed registration costs the member a nudge and
+    // nothing else — but no longer INVISIBLE. Swallowing this silently meant a
+    // device that never registered looked identical to one that had, from both
+    // the app and the server.
+    console.warn("[push] registration failed:", (err as Error)?.message ?? err);
   }
 }
 

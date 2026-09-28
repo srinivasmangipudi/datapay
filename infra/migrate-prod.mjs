@@ -7,6 +7,14 @@
 // only from Railway's injected DATABASE_PUBLIC_URL.
 //
 // Run as: railway run --service core-db -- node infra/migrate-prod.mjs <vault|core>
+//
+// CAUTION: this connects as the SUPERUSER, so any table a migration CREATES is
+// owned by `postgres`, not by the app role (`vault_app` / `core_app`) the
+// running service connects as — which cannot then read or write it. Locally,
+// migrations run as the app role and own everything, so the defect is
+// invisible until production. A migration that creates a table must GRANT it
+// to the app role explicitly. See
+// vault/1759622400000_grant_new_tables_to_vault_app.js for what this cost.
 import runner from "node-pg-migrate";
 
 const target = process.argv[2];

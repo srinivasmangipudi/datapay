@@ -1,0 +1,33 @@
+<!--
+  Notification small icon: the DataPay mark as a flat white silhouette.
+
+  Android renders the small icon as a MASK — it keeps alpha and discards every
+  colour. With no default_notification_icon declared, FCM falls back to the
+  LAUNCHER icon, whose opaque square flattens into an unrecognisable blob.
+
+  The ring is an even-odd path (outer circle minus inner) rather than a stroke,
+  so it cannot hairline away on a low-density screen. Both circles are drawn as
+  TWO arcs each: a single arc returning to its own start point is ambiguous and
+  Android fills it as a solid disc — which is exactly how the first version
+  shipped, and it read as a green tomato.
+
+  Paths verified by rendering them at 96/48/24px before building.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Ring: outer circle with the inner one punched out by evenOdd. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M1.75,12 a10.25,10.25 0 1,0 20.5,0 a10.25,10.25 0 1,0 -20.5,0 M4.9,12 a7.1,7.1 0 1,0 14.2,0 a7.1,7.1 0 1,0 -14.2,0" />
+
+    <!-- Centre block, echoing the mark's rounded square. Kept clear of the
+         ring so the two stay distinguishable in a 24dp status bar. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M9.6,9.7 L14.4,9.7 A1.4,1.4 0 0 1 15.8,11.1 L15.8,12.9 A1.4,1.4 0 0 1 14.4,14.3 L9.6,14.3 A1.4,1.4 0 0 1 8.2,12.9 L8.2,11.1 A1.4,1.4 0 0 1 9.6,9.7 Z" />
+</vector>
