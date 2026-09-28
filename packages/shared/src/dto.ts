@@ -410,6 +410,14 @@ export const VaultResolvePayoutRefsDtoSchema = z.object({
 });
 export type VaultResolvePayoutRefsDto = z.infer<typeof VaultResolvePayoutRefsDtoSchema>;
 
+/** Vault-internal POST /resolve-delivery-address — a member reading back their
+    own address. POST, not GET, so the alias never lands in a URL or an access
+    log line — same posture as resolve-payout and resolve-relay. */
+export const VaultGetDeliveryAddressDtoSchema = z.object({
+  aliasId: z.string().length(64),
+});
+export type VaultGetDeliveryAddressDto = z.infer<typeof VaultGetDeliveryAddressDtoSchema>;
+
 /** Vault-internal POST /resolve-payout — batch, producers only (SPEC.md §5A). */
 export const VaultResolvePayoutDtoSchema = z.object({
   aliasIds: z.array(z.string().length(64)).min(1).max(500),

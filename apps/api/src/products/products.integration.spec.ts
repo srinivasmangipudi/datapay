@@ -110,7 +110,13 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
     await deleteTestMember(pool, member.aliasId);
   });
 
-  it("ordering fails cleanly with no delivery address on file", async () => {
+  /**
+   * Ordering without an address SUCCEEDS. The address lives in the Vault and is
+   * managed there; gating a reservation behind retyping it was the old
+   * behaviour and it made members re-enter their address on every order.
+   * Delivery is sorted out afterwards — a saved address, or PACS collection.
+   */
+  it("ordering succeeds with no address on file, and flags that delivery needs sorting", async () => {
     const productId = await seedProduct(5);
     const member = await createTestMember(pool, jwt, VILLAGE_ZONE_ID);
     await registerTestMemberInVault(vaultPool, member);
@@ -120,15 +126,34 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
       .set({ Authorization: `Bearer ${member.token}` })
       .send({ quantity: 1, clientMsgId: randomUUID() });
 
-    expect(res.status).toBe(400);
-    expect(JSON.stringify(res.body)).toMatch(/delivery address/i);
+    expect(res.status).toBe(201);
+    expect(res.body.needsDeliveryAddress).toBe(true);
 
-    // The failed relay registration must not have left a dangling decrement.
+    // Stock IS taken — the reservation is real, only its delivery is pending.
     const { rows } = await pool.query<{ quantity_available: number }>(
       `SELECT quantity_available FROM org_products WHERE id = $1`,
       [productId]
     );
-    expect(rows[0].quantity_available).toBe(5);
+    expect(rows[0].quantity_available).toBe(4);
+
+    // Nothing to resolve yet: Vault has no mapping for this token.
+    const early = await request(app.getHttpServer())
+      .post("/v1/relay/resolve")
+      .send({ relayToken: res.body.relayToken });
+    expect(early.status).toBeGreaterThanOrEqual(400);
+
+    // Saving an address backfills the pending relay, so the member does not
+    // have to re-order for it to become deliverable.
+    await request(app.getHttpServer())
+      .post("/v1/me/delivery-address")
+      .set({ Authorization: `Bearer ${member.token}` })
+      .send({ address: "House 11, Kikkeri Village, Mandya 571401" });
+
+    const resolved = await request(app.getHttpServer())
+      .post("/v1/relay/resolve")
+      .send({ relayToken: res.body.relayToken });
+    expect(resolved.status).toBe(201);
+    expect(resolved.body.address).toContain("House 11");
 
     await cleanupMember(member);
   });
@@ -346,6 +371,67 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
       [productId]
     );
     expect(rows[0].quantity_available).toBe(5); // nothing touched
+
+    await cleanupMember(member);
+  });
+
+  /**
+   * Members used to retype their address on every single order: the app POSTed
+   * it each time because there was no way to ask whether one was already on
+   * file. That also appended an identical delivery_addresses row per order.
+   */
+  it("a saved address reads back, and re-saving the same text adds no duplicate row", async () => {
+    const member = await memberWithAddress();
+
+    const read = await request(app.getHttpServer())
+      .get("/v1/me/delivery-address")
+      .set({ Authorization: `Bearer ${member.token}` });
+    expect(read.status).toBe(200);
+    expect(read.body.address).toContain("Kikkeri");
+
+    const countRows = async () => {
+      const { rows } = await vaultPool.query<{ n: string }>(
+        `SELECT COUNT(*) n FROM delivery_addresses da
+         JOIN alias_map am ON am.user_id = da.user_id WHERE am.alias_id = $1`,
+        [member.aliasId]
+      );
+      return Number(rows[0].n);
+    };
+    expect(await countRows()).toBe(1);
+
+    // Same text again — what an order used to do every time.
+    await request(app.getHttpServer())
+      .post("/v1/me/delivery-address")
+      .set({ Authorization: `Bearer ${member.token}` })
+      .send({ address: "House 7, Kikkeri Village, Mandya 571401" });
+    expect(await countRows()).toBe(1);
+
+    // A genuine change DOES append: relay_map rows point at a specific address
+    // row, so an old order must still resolve to where it was delivered.
+    await request(app.getHttpServer())
+      .post("/v1/me/delivery-address")
+      .set({ Authorization: `Bearer ${member.token}` })
+      .send({ address: "House 9, Kikkeri Village, Mandya 571401" });
+    expect(await countRows()).toBe(2);
+
+    const after = await request(app.getHttpServer())
+      .get("/v1/me/delivery-address")
+      .set({ Authorization: `Bearer ${member.token}` });
+    expect(after.body.address).toContain("House 9");
+
+    await cleanupMember(member);
+  });
+
+  it("returns null rather than erroring when no address is on file", async () => {
+    const member = await createTestMember(pool, jwt, VILLAGE_ZONE_ID);
+    await registerTestMemberInVault(vaultPool, member);
+
+    const res = await request(app.getHttpServer())
+      .get("/v1/me/delivery-address")
+      .set({ Authorization: `Bearer ${member.token}` });
+
+    expect(res.status).toBe(200);
+    expect(res.body.address).toBeNull();
 
     await cleanupMember(member);
   });

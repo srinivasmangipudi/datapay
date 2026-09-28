@@ -336,6 +336,12 @@ export function proposeFundProject(
 // relay mapping otherwise) — re-submitting just adds a newer address, which
 // registerRelay always uses (most-recent-first), so this doubles as "update
 // my delivery address" with no separate endpoint needed.
+/** The member's saved address, so the order sheet can offer it instead of
+    asking them to retype it every time. null when nothing is on file yet. */
+export function getDeliveryAddress(token: string): Promise<{ address: string | null }> {
+  return request("/v1/me/delivery-address", {}, token);
+}
+
 export function setDeliveryAddress(token: string, address: string): Promise<{ ok: true }> {
   return request("/v1/me/delivery-address", { method: "POST", body: JSON.stringify({ address }) }, token);
 }
@@ -359,7 +365,14 @@ export function orderProduct(
   productId: number,
   quantity: number,
   clientMsgId: string
-): Promise<{ orderId: number; relayToken: string }> {
+): Promise<{
+  orderId: number;
+  relayToken: string;
+  tokensEarned: number;
+  /** True when the order succeeded but Vault has no address to deliver to —
+      the client prompts for one AFTER the fact rather than gating the order. */
+  needsDeliveryAddress: boolean;
+}> {
   return request(
     `/v1/products/${productId}/order`,
     { method: "POST", body: JSON.stringify({ quantity, clientMsgId }) },

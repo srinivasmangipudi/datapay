@@ -16,17 +16,61 @@ export class RelayService {
     return rows[0].user_id;
   }
 
+  /**
+   * Appends a new address row rather than updating in place — deliberate.
+   * relay_map FKs to a specific delivery_addresses row with ON DELETE RESTRICT,
+   * so an order placed last month must still resolve to the address it was
+   * actually delivered to, not wherever the member lives now.
+   *
+   * Unchanged text is a no-op though: the mobile client used to POST the
+   * address on EVERY order, which appended an identical row each time and grew
+   * the table for nothing.
+   */
   async setDeliveryAddress(
     aliasId: string,
     address: string,
     zoneHint?: string
   ): Promise<{ ok: true }> {
     const userId = await this.resolveUserId(aliasId);
+
+    const current = await this.latestAddress(userId);
+    if (current !== null && current === address.trim()) {
+      return { ok: true };
+    }
+
     await this.pool.query(
       `INSERT INTO delivery_addresses (user_id, address_encrypted, zone_hint) VALUES ($1, $2, $3)`,
-      [userId, encryptSecret(address), zoneHint ?? null]
+      [userId, encryptSecret(address.trim()), zoneHint ?? null]
     );
     return { ok: true };
+  }
+
+  private async latestAddress(userId: string): Promise<string | null> {
+    const { rows } = await this.pool.query<{ address_encrypted: string }>(
+      `SELECT address_encrypted FROM delivery_addresses WHERE user_id = $1
+       ORDER BY created_at DESC LIMIT 1`,
+      [userId]
+    );
+    return rows[0] ? decryptSecret(rows[0].address_encrypted) : null;
+  }
+
+  /**
+   * The member reading back their OWN address. Legitimate — they are
+   * authenticated as this alias and it is their data (DPDP gives them the
+   * right to see it) — but still a PII read, so it is logged like every other
+   * one and returns nothing but the address itself.
+   */
+  async getDeliveryAddress(aliasId: string): Promise<{ address: string | null }> {
+    const userId = await this.resolveUserId(aliasId);
+    const address = await this.latestAddress(userId);
+
+    if (address !== null) {
+      await this.pool.query(
+        `INSERT INTO vault_access_log (service, purpose, alias_or_token) VALUES ($1, $2, $3)`,
+        ["vault", "read-own-delivery-address", aliasId]
+      );
+    }
+    return { address };
   }
 
   // Called by Core at offer-join time (SPEC.md §7): registers what a relay

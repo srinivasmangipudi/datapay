@@ -12,6 +12,7 @@ import {
 } from "@nestjs/common";
 import { CompleteOnboardingDtoSchema, SetDeliveryAddressDtoSchema } from "@datapay/shared";
 import { Pool } from "pg";
+import { ProductsService } from "../products/products.service";
 import { PG_POOL } from "../db/db.module";
 import { AliasAuthGuard, AliasRequest } from "../auth/alias-auth.guard";
 import { parseOrThrow } from "../zod.util";
@@ -47,7 +48,10 @@ function toMemberResponse(m: MemberRow) {
 @Controller("v1/me")
 @UseGuards(AliasAuthGuard)
 export class MeController {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly products: ProductsService
+  ) {}
 
   @Get()
   async get(@Req() req: AliasRequest) {
@@ -93,6 +97,24 @@ export class MeController {
   // never touches core_db, it goes straight to Vault. Needed so the relay
   // flow (§7) has somewhere to deliver to — not one of §5A's original four
   // Vault endpoints, documented as an addition in SPEC.md §16.
+  // The member reading back their own saved address, so the app can offer
+  // "deliver to your saved address" instead of demanding it be retyped on
+  // every single order — which is what it did before this existed.
+  @Get("delivery-address")
+  async getDeliveryAddress(@Req() req: AliasRequest) {
+    const vaultUrl = process.env.VAULT_INTERNAL_URL;
+    if (!vaultUrl) throw new Error("Missing VAULT_INTERNAL_URL");
+
+    const res = await fetch(`${vaultUrl}/resolve-delivery-address`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ aliasId: req.aliasId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new HttpException(data, res.status);
+    return data;
+  }
+
   @Post("delivery-address")
   async setDeliveryAddress(@Req() req: AliasRequest, @Body() body: unknown) {
     const dto = parseOrThrow(SetDeliveryAddressDtoSchema, body);
@@ -104,8 +126,13 @@ export class MeController {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ aliasId: req.aliasId, address: dto.address, zoneHint: dto.zoneHint }),
     });
-    const data = await res.json();
+    const data = (await res.json()) as Record<string, unknown>;
     if (!res.ok) throw new HttpException(data, res.status);
-    return data;
+
+    // An order placed before the address existed is sitting there with a relay
+    // token Vault has never seen. Now that there is somewhere to deliver to,
+    // map them — otherwise the member would have to re-order.
+    const { registered } = await this.products.registerPendingRelays(req.aliasId);
+    return { ...data, ordersNowDeliverable: registered };
   }
 }

@@ -95,7 +95,14 @@ export class ProductsService {
     if (existing) return existing;
 
     const relayToken = randomUUID();
-    await this.registerRelay(aliasId, relayToken, `product-order:${relayToken}`);
+    // Attempted before the stock decrement so a REAL Vault failure can't leave
+    // a phantom decrement. A missing address is not a failure — it returns
+    // false and the order proceeds unfulfillable-for-now.
+    const relayRegistered = await this.registerRelay(
+      aliasId,
+      relayToken,
+      `product-order:${relayToken}`
+    );
 
     return withTransaction(this.pool, async (client) => {
       const { rows: productRows } = await client.query<{
@@ -163,7 +170,14 @@ export class ProductsService {
         });
       }
 
-      return { orderId: orderRows[0].id, relayToken, tokensEarned: tokens };
+      return {
+        orderId: orderRows[0].id,
+        relayToken,
+        tokensEarned: tokens,
+        // The client uses this to prompt for an address (or PACS pickup)
+        // AFTER the order is safely placed, rather than demanding one up front.
+        needsDeliveryAddress: !relayRegistered,
+      };
     }).catch(async (err) => {
       if (err instanceof ConcurrentOrderReplay) {
         const winner = await this.findOrderByClientMsgId(aliasId, clientMsgId);
@@ -176,6 +190,37 @@ export class ProductsService {
   /** Reports tokensEarned from the ledger rather than recomputing it, so a
       retry echoes what was actually credited even if the product's rate
       changed between the first attempt and the replay. */
+  /**
+   * Called after a member saves a delivery address: walks their orders whose
+   * relay token Vault doesn't know about yet and registers them, so an order
+   * placed before the address existed becomes deliverable without the member
+   * having to do anything else.
+   *
+   * Vault owns the "is this token known" answer, so registration is simply
+   * retried — re-registering an already-known token is a no-op there.
+   */
+  async registerPendingRelays(aliasId: string): Promise<{ registered: number }> {
+    const { rows } = await this.pool.query<{ relay_token: string }>(
+      `SELECT relay_token FROM product_orders
+        WHERE alias_id = $1 AND status = 'placed'
+        ORDER BY id DESC LIMIT 50`,
+      [aliasId]
+    );
+
+    let registered = 0;
+    for (const r of rows) {
+      try {
+        if (await this.registerRelay(aliasId, r.relay_token, `product-order:${r.relay_token}`)) {
+          registered += 1;
+        }
+      } catch {
+        // Best-effort: saving the address must still succeed even if one
+        // stale order can't be mapped. Ops can resolve it at fulfilment.
+      }
+    }
+    return { registered };
+  }
+
   private async findOrderByClientMsgId(
     aliasId: string,
     clientMsgId: string
@@ -197,7 +242,24 @@ export class ProductsService {
       : null;
   }
 
-  private async registerRelay(aliasId: string, relayToken: string, offerRef: string) {
+  /**
+   * Maps the order's relay token to the member's address inside Vault.
+   *
+   * Returns false rather than throwing when the member has no address on file.
+   * Ordering deliberately does NOT require one: a member should be able to
+   * reserve a product and sort out delivery afterwards — by saving an address
+   * in their Vault, or by collecting from a PACS node. The order carries its
+   * relay token either way, and registration is retried when an address
+   * appears (see registerPendingRelays).
+   *
+   * A genuine failure — Vault unreachable, a malformed request — still throws,
+   * because that is not the same thing as "no address yet".
+   */
+  private async registerRelay(
+    aliasId: string,
+    relayToken: string,
+    offerRef: string
+  ): Promise<boolean> {
     const vaultUrl = process.env.VAULT_INTERNAL_URL;
     if (!vaultUrl) throw new Error("Missing VAULT_INTERNAL_URL");
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days, same as offers/§7
@@ -207,12 +269,13 @@ export class ProductsService {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ aliasId, relayToken, offerRef, expiresAt }),
     });
-    if (!res.ok) {
-      const data: { message?: string } = await res.json().catch(() => ({}));
-      throw new BadRequestException(
-        data.message ?? "Could not place order — set a delivery address first"
-      );
+    if (res.ok) return true;
+
+    const data: { message?: string } = await res.json().catch(() => ({}));
+    if (res.status === 400 && /no delivery address/i.test(data.message ?? "")) {
+      return false;
     }
+    throw new BadRequestException(data.message ?? "Could not place order");
   }
 
   async listMyOrders(aliasId: string) {

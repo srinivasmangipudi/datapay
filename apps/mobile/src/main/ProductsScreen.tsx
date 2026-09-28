@@ -11,18 +11,17 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
+  getDeliveryAddress,
   getMyOrders,
   getProducts,
   MyOrder,
   orderProduct,
   Product,
-  setDeliveryAddress,
 } from "../api";
 import { Bilingual } from "../components/Bilingual";
 import { Card } from "../components/Card";
@@ -40,7 +39,9 @@ export function ProductsScreen({ session }: { session: Session }) {
   const [myOrders, setMyOrders] = useState<MyOrder[] | null>(null);
   const [ordering, setOrdering] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [address, setAddress] = useState("");
+  // Only whether one EXISTS — the address text itself never needs to come to
+  // this screen, so it doesn't.
+  const [hasAddress, setHasAddress] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   // Minted once per order attempt when the sheet opens, NOT per submit — a
@@ -48,13 +49,16 @@ export function ProductsScreen({ session }: { session: Session }) {
   // it apart from a second order. Reopening the sheet starts a new attempt.
   const [orderKey, setOrderKey] = useState<string | null>(null);
 
+
   const load = useCallback(async () => {
-    const [productList, orderList] = await Promise.all([
+    const [productList, orderList, addr] = await Promise.all([
       getProducts(session.token),
       getMyOrders(session.token),
+      getDeliveryAddress(session.token).catch(() => ({ address: null })),
     ]);
     setProducts(productList);
     setMyOrders(orderList);
+    setHasAddress(addr.address !== null);
   }, [session.token]);
 
   useEffect(() => {
@@ -67,24 +71,29 @@ export function ProductsScreen({ session }: { session: Session }) {
   function openOrder(product: Product) {
     setOrdering(product);
     setQuantity(1);
-    setAddress("");
     setOrderError(null);
     setOrderKey(Crypto.randomUUID());
   }
 
+  // The address is NOT asked for here. It lives in the Vault, it is managed in
+  // the Vault, and an order should never be gated behind retyping it. If none
+  // is on file the order still succeeds and the banner below prompts for one.
   async function confirmOrder() {
     if (!ordering || !orderKey) return;
-    if (!address.trim()) {
-      setOrderError("Enter a delivery address.");
-      return;
-    }
     setSubmitting(true);
     setOrderError(null);
     try {
-      await setDeliveryAddress(session.token, address.trim());
-      await orderProduct(session.token, ordering.id, quantity, orderKey);
+      const res = await orderProduct(session.token, ordering.id, quantity, orderKey);
       setOrdering(null);
-      Alert.alert(strings.products.orderPlaced.en, strings.products.orderPlaced.kn);
+      if (res.needsDeliveryAddress) {
+        setHasAddress(false);
+        Alert.alert(
+          strings.products.orderPlaced.en,
+          "Add a delivery address in your Vault, or collect from your local PACS centre, so this can reach you."
+        );
+      } else {
+        Alert.alert(strings.products.orderPlaced.en, strings.products.orderPlaced.kn);
+      }
       await load();
     } catch (err) {
       setOrderError((err as Error).message);
@@ -105,6 +114,19 @@ export function ProductsScreen({ session }: { session: Session }) {
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}>
         <Bilingual {...strings.products.heading} size={22} weight="700" style={styles.heading as any} />
+
+        {/* Only once it actually matters: an order is waiting and there is
+            nowhere to send it. Showing this to someone who has never ordered
+            would be nagging for no reason. */}
+        {hasAddress === false && myOrders.length > 0 && (
+          <View style={styles.addressWarning}>
+            <Ionicons name="location-outline" size={18} color={colors.brass} />
+            <Text style={styles.addressWarningText}>
+              {myOrders.length === 1 ? "Your order needs" : "Your orders need"} a delivery address.
+              Add one in your Vault, or collect from your local PACS centre.
+            </Text>
+          </View>
+        )}
 
         {products.length === 0 ? (
           <Card variant="outline" style={styles.emptyCard}>
@@ -218,16 +240,6 @@ export function ProductsScreen({ session }: { session: Session }) {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalLabel}>{strings.products.deliveryAddress.en}</Text>
-            <TextInput
-              style={styles.addressInput}
-              value={address}
-              onChangeText={setAddress}
-              placeholder={strings.products.deliveryAddressPlaceholder.en}
-              placeholderTextColor={colors.faint}
-              multiline
-            />
-
             {orderError && <Text style={styles.orderErrorText}>{orderError}</Text>}
 
             <TouchableOpacity
@@ -257,6 +269,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper, paddingHorizontal: spacing.lg },
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.paper },
   heading: { marginBottom: spacing.lg, color: colors.ink },
+  addressWarning: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    backgroundColor: "#F6EFDD", // soft brass tint; theme has no token for it
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  addressWarningText: { flex: 1, ...type.small, color: colors.ink, lineHeight: 19 },
   emptyCard: { alignItems: "flex-start", gap: spacing.sm, marginBottom: spacing.lg },
   emptyText: { color: colors.ink, lineHeight: 21 },
   productCard: { marginBottom: spacing.md },

@@ -1,5 +1,6 @@
 import { Body, Controller, Post } from "@nestjs/common";
 import {
+  VaultGetDeliveryAddressDtoSchema,
   VaultRegisterRelayMapDtoSchema,
   VaultResolveRelayDtoSchema,
   VaultSetDeliveryAddressDtoSchema,
@@ -18,6 +19,12 @@ export class RelayController {
   setDeliveryAddress(@Body() body: unknown) {
     const dto = parseOrThrow(VaultSetDeliveryAddressDtoSchema, body);
     return this.relay.setDeliveryAddress(dto.aliasId, dto.address, dto.zoneHint);
+  }
+
+  @Post("resolve-delivery-address")
+  getDeliveryAddress(@Body() body: unknown) {
+    const dto = parseOrThrow(VaultGetDeliveryAddressDtoSchema, body);
+    return this.relay.getDeliveryAddress(dto.aliasId);
   }
 
   @Post("relay-map")
