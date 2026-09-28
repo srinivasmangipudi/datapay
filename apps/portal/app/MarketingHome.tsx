@@ -4,6 +4,10 @@ import { getCatalogPreview } from "./lib/catalog-preview";
 import type { Lang } from "./lib/language";
 import { SystemDiagram } from "./SystemDiagram";
 
+/** The open-testing listing. Same package name as apps/mobile's applicationId —
+    if that ever changes, this link dies silently, so they change together. */
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=org.datapay.mobile";
+
 function formatRupees(paise: number): string {
   return `₹${Math.round(paise / 100).toLocaleString("en-IN")}`;
 }
@@ -225,6 +229,8 @@ const CONTENT = {
       registry: "Demand registry",
       orgLogin: "Organization login",
       contact: "Contact",
+      android: "Android app",
+      ios: "iOS — coming soon",
     },
   },
   kn: {
@@ -321,6 +327,8 @@ const CONTENT = {
       registry: "ಬೇಡಿಕೆ ನೋಂದಣಿ",
       orgLogin: "ಸಂಸ್ಥೆ ಲಾಗಿನ್",
       contact: "ಸಂಪರ್ಕಿಸಿ",
+      android: "ಆ್ಯಂಡ್ರಾಯ್ಡ್ ಆ್ಯಪ್",
+      ios: "iOS — ಶೀಘ್ರದಲ್ಲಿ ಬರಲಿದೆ",
     },
   },
 } as const;
@@ -364,13 +372,19 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
                       <strong>App Store</strong>
                     </span>
                   </div>
-                  <div className="mkBadge mkBadgeLive" aria-label={`Google Play — ${t.openBeta}`}>
+                  <a
+                    className="mkBadge mkBadgeLive"
+                    href={PLAY_STORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Google Play — ${t.openBeta}`}
+                  >
                     <AndroidIcon />
                     <span className="mkBadgeText">
                       <small>{t.openBeta}</small>
                       <strong>Google Play</strong>
                     </span>
-                  </div>
+                  </a>
                 </div>
               </div>
             </div>
@@ -547,6 +561,12 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
             </span>
           </div>
           <div className="mkFooterLinks">
+            <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">
+              {t.footerLinks.android}
+            </a>
+            {/* Not a link on purpose — there is no iOS build to point at, and a
+                footer link that goes nowhere is worse than plain text. */}
+            <span className="mkFooterMuted">{t.footerLinks.ios}</span>
             <a href="/about">{t.footerLinks.about}</a>
             <a href="/privacy">{t.footerLinks.privacy}</a>
             <a href="/delete-account">{t.footerLinks.delete}</a>
@@ -697,8 +717,10 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkBadgeText strong { font-size: 14px; font-weight: 700; color: var(--mk-ink); }
         /* The Android build is real and installable; iOS isn't, so only this
            one loses the dashed "not yet" treatment. */
-        .mkBadgeLive { border-style: solid; border-color: var(--mk-jade); opacity: 1; }
+        .mkBadgeLive { border-style: solid; border-color: var(--mk-jade); opacity: 1; text-decoration: none; transition: border-color 120ms ease, background 120ms ease; }
         .mkBadgeLive .mkBadgeText small { color: var(--mk-jade); }
+        a.mkBadgeLive:hover { background: var(--mk-surface-2, var(--mk-surface)); border-color: var(--mk-ink); }
+        a.mkBadgeLive:focus-visible { outline: 2px solid var(--mk-jade); outline-offset: 2px; }
         .mkBetaNote { font-size: 12.5px; line-height: 1.5; color: var(--mk-mist); max-width: 46ch; margin: 12px 0 0; }
 
         .mkSection { max-width: 1200px; margin: 0 auto; padding: var(--section-y) var(--gutter); border-top: 1px solid var(--mk-border); }
@@ -748,6 +770,7 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkFooterLinks { display: flex; flex-wrap: wrap; gap: 20px; }
         .mkFooterLinks a { color: var(--mk-mist); text-decoration: none; font-size: 13px; font-weight: 600; }
         .mkFooterLinks a:hover { color: var(--mk-ink); }
+        .mkFooterMuted { color: var(--mk-mist); font-size: 13px; font-weight: 600; opacity: 0.6; }
 
         @media (max-width: 980px) {
           .mkHero { grid-template-columns: 1fr; gap: 40px; padding: 48px 24px 40px; }
