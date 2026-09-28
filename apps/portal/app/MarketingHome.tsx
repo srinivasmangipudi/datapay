@@ -796,7 +796,7 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkPhoneTop { display: flex; align-items: center; justify-content: space-between; }
         .mkPhoneBrand { font-size: 13.5px; font-weight: 800; color: #101418; letter-spacing: -0.01em; }
         .mkPhoneTokens {
-          font-size: 12px; font-weight: 700; color: #B98F2F;
+          font-size: 12px; font-weight: 700; color: var(--mk-brass);
           background: #faf1dd; border-radius: 999px; padding: 4px 10px;
         }
         .mkPhoneEyebrow {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isPublicPath } from "./app/lib/public-paths";
 
 const SESSION_COOKIE = "portal_session";
 const ORG_SESSION_COOKIE = "org_session";
@@ -40,6 +41,13 @@ export function middleware(request: NextRequest): NextResponse {
     return NextResponse.redirect(orgLoginUrl);
   }
 
+  // Behaviour lives here, in the shared list — not in the matcher regex below.
+  // The matcher is only a filter deciding which requests run this function at
+  // all; when the two disagree, THIS wins. AdminNav reads the same list, so a
+  // new public page can no longer be public to the middleware and unknown to
+  // the nav, which is how /brand first rendered with the ops chrome above it.
+  if (isPublicPath(pathname)) return NextResponse.next();
+
   const sessionSecret = process.env.PORTAL_SESSION_SECRET;
   if (!sessionSecret) {
     // Fails open only in the sense of not crashing the whole app — but every
@@ -61,6 +69,6 @@ export function middleware(request: NextRequest): NextResponse {
 
 export const config = {
   matcher: [
-    "/((?!login|registry|privacy|delete-account|child-safety|about|store|fonts|_next/static|_next/image|favicon\\.ico|icon\\.png|apple-icon\\.png|og-image\\.png|mark-primary\\.svg|logo-tagline-asset\\.svg|site\\.webmanifest).*)",
+    "/((?!login|registry|privacy|delete-account|child-safety|about|brand|store|fonts|_next/static|_next/image|favicon\\.ico|icon\\.png|apple-icon\\.png|og-image\\.png|mark-primary\\.svg|logo-tagline-asset\\.svg|site\\.webmanifest).*)",
   ],
 };

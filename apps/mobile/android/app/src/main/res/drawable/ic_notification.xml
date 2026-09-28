@@ -11,7 +11,9 @@
   Android fills it as a solid disc — which is exactly how the first version
   shipped, and it read as a green tomato.
 
-  Paths verified by rendering them at 96/48/24px before building.
+  Rendered at 24px and compared against alternatives before building. A bold
+  letter "D" was more legible still, but introduces a symbol the brand does not
+  otherwise use — this keeps the mark.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
@@ -19,15 +21,17 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
 
-    <!-- Ring: outer circle with the inner one punched out by evenOdd. -->
+    <!-- Ring: outer circle with the inner punched out by evenOdd. Thicker
+         than the brand mark's, because a 24dp status bar eats fine strokes. -->
     <path
         android:fillColor="#FFFFFFFF"
         android:fillType="evenOdd"
-        android:pathData="M1.75,12 a10.25,10.25 0 1,0 20.5,0 a10.25,10.25 0 1,0 -20.5,0 M4.9,12 a7.1,7.1 0 1,0 14.2,0 a7.1,7.1 0 1,0 -14.2,0" />
+        android:pathData="M1,12 a11,11 0 1,0 22,0 a11,11 0 1,0 -22,0 M5,12 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
 
-    <!-- Centre block, echoing the mark's rounded square. Kept clear of the
-         ring so the two stay distinguishable in a 24dp status bar. -->
+    <!-- A solid dot, not the mark's rounded square: at this size a square with
+         a gap around it reads as a smudge, where concentric circles stay
+         legible. Three bold elements, no fine detail. -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M9.6,9.7 L14.4,9.7 A1.4,1.4 0 0 1 15.8,11.1 L15.8,12.9 A1.4,1.4 0 0 1 14.4,14.3 L9.6,14.3 A1.4,1.4 0 0 1 8.2,12.9 L8.2,11.1 A1.4,1.4 0 0 1 9.6,9.7 Z" />
+        android:pathData="M12,8.6 a3.4,3.4 0 1,0 0,6.8 a3.4,3.4 0 1,0 0,-6.8 Z" />
 </vector>

@@ -305,7 +305,7 @@ export default async function RegistryPage(): Promise<JSX.Element> {
         .summaryLabel { font-size: 12.5px; color: #898781; }
         .section { margin-bottom: 72px; }
         .sectionHead { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
-        .kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #B98F2F; background: #fdf6e3; border-radius: 999px; padding: 4px 10px; }
+        .kicker { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--brass); background: #fdf6e3; border-radius: 999px; padding: 4px 10px; }
         .section h2 { font-size: 1.5rem; margin: 0; color: #101418; letter-spacing: -0.01em; }
         .sectionLede { color: #898781; font-size: 14px; margin: 0 0 28px; max-width: 62ch; line-height: 1.6; }
         .groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; align-items: start; }
@@ -319,7 +319,7 @@ export default async function RegistryPage(): Promise<JSX.Element> {
         .badge { flex-shrink: 0; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #8a4b1f; background: #fdf0e3; border: 1px solid #f0d8bf; border-radius: 999px; padding: 4px 9px; }
         .headline { display: flex; gap: 28px; margin: 18px 0 4px; }
         .headlineStat { display: flex; flex-direction: column; }
-        .headlineNumber { font-size: 2.1rem; font-weight: 800; color: #B98F2F; line-height: 1; font-variant-numeric: tabular-nums; }
+        .headlineNumber { font-size: 2.1rem; font-weight: 800; color: var(--brass); line-height: 1; font-variant-numeric: tabular-nums; }
         .headlineIntent { color: #0E7A5C; }
         .headlineLabel { font-size: 12px; color: #898781; margin-top: 4px; }
         .questions { display: flex; flex-direction: column; gap: 18px; margin-top: 20px; padding-top: 18px; border-top: 1px solid #f0efe9; }
@@ -340,7 +340,7 @@ export default async function RegistryPage(): Promise<JSX.Element> {
         .oppCard { display: flex; flex-direction: column; background: #fff; border: 1px solid #f0d8bf; border-radius: 14px; padding: 22px; gap: 2px; }
         .oppBadge { align-self: flex-start; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #8a4b1f; background: #fdf0e3; border-radius: 999px; padding: 4px 9px; margin-bottom: 12px; }
         .oppCategory { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #0E7A5C; }
-        .oppCohort { font-size: 2.2rem; font-weight: 800; color: #B98F2F; margin-top: 8px; line-height: 1; font-variant-numeric: tabular-nums; }
+        .oppCohort { font-size: 2.2rem; font-weight: 800; color: var(--brass); margin-top: 8px; line-height: 1; font-variant-numeric: tabular-nums; }
         .oppCohortLabel { font-size: 12.5px; color: #898781; margin-bottom: 14px; }
         .oppZone { font-size: 14px; color: #101418; font-weight: 600; }
         .empty { background: #fbfaf7; border: 1px dashed #e1e0d9; border-radius: 14px; padding: 32px; text-align: center; }

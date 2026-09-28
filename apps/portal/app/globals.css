@@ -185,6 +185,11 @@ h1 {
   background: color-mix(in srgb, var(--page-bg, #f6f5f1) 88%, transparent);
   backdrop-filter: saturate(1.4) blur(12px);
 }
+/* Context label beside the wordmark ("Ops", the org's name). Deliberately
+   quieter and unstyled by the brand, so the lockup stays the brand and this
+   stays a label. */
+.brandSuffix { font-weight: 500; color: var(--ink-3, #8A939B); margin-left: 2px; }
+
 .adminNavBrand {
   display: inline-flex;
   align-items: center;

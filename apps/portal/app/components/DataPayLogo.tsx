@@ -9,7 +9,11 @@ const TOKENS = {
   porcelain: "#F6F5F1",
   jade: "#0E7A5C",
   jadeBright: "#12946F",
-  brass: "#B98F2F",
+  // Deepened from the brand package's #B98F2F, which sat at 2.9:1 on paper —
+  // under the 3:1 floor for a non-text graphic. globals.css made this change
+  // for --brass already; the logo kept the old value, so the wordmark's brass
+  // visibly differed from every other brass on the same page.
+  brass: "#a67c21",
   brassBright: "#D4AA45",
   mist: "#8A939B",
 } as const;
@@ -28,6 +32,31 @@ export function DataPayMark({ size = 40, dark = false, title = "DataPay" }: Mark
       <rect x="35" y="35" width="30" height="30" rx="7" fill={square} />
       <circle cx="50" cy="50" r="5.5" fill={dot} />
     </svg>
+  );
+}
+
+/**
+ * The wordmark alone — "Data" in ink, "Pay" in brass with the brand's -9° lean.
+ *
+ * Exists because three navs rendered a plain <span>DataPay</span> instead, so
+ * the brand appeared flat and monochrome in the chrome of every page while the
+ * hero lockup right below it leaned and used brass. Inherits font-size and
+ * colour from its context, so a nav can size it like any other label.
+ */
+export function DataPayWordmark({ dark = false }: { dark?: boolean }) {
+  return (
+    <span style={{ fontWeight: 800, letterSpacing: "-0.02em" }}>
+      <span style={{ color: dark ? TOKENS.porcelain : TOKENS.ink }}>Data</span>
+      <span
+        style={{
+          color: dark ? TOKENS.brassBright : TOKENS.brass,
+          display: "inline-block",
+          transform: "skewX(-9deg)",
+        }}
+      >
+        Pay
+      </span>
+    </span>
   );
 }
 

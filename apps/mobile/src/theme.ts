@@ -16,7 +16,10 @@ export const colors = {
   surface: "#FFFFFF", // cards on top of paper
   border: "#E7E4DC",
 
-  brass: "#B98F2F", // token/value accent on light surfaces — brand "brass"; value/money only, never body text
+  // Matches portal globals.css --brass and both DataPayLogo components. The
+  // brand package's #B98F2F sat at 2.9:1 on paper, under the 3:1 floor for a
+  // non-text graphic; value/money only, never body text.
+  brass: "#a67c21",
   brassOnDark: "#D4AA45", // brand "brassBright" — brass on dark
   brassTint: "#FBF2DD",
 

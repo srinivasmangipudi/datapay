@@ -94,7 +94,7 @@ export default function ChildSafetyStandardsPage(): JSX.Element {
         .hero { text-align: center; margin-bottom: 56px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
         .hero h1 { font-size: 2rem; margin: 8px 0 0; letter-spacing: -0.02em; color: #101418; }
         .lede { color: #898781; font-size: 13px; margin: 0; }
-        .notice { color: #B98F2F; font-size: 13px; margin: 8px 0 0; max-width: 480px; }
+        .notice { color: var(--brass); font-size: 13px; margin: 8px 0 0; max-width: 480px; }
         .section { margin-bottom: 40px; }
         .section h2 { font-size: 1.2rem; margin: 0 0 12px; color: #101418; }
         .section p, .section li { color: #3a3934; font-size: 14.5px; line-height: 1.7; }

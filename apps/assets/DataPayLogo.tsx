@@ -10,7 +10,7 @@ const TOKENS = {
   porcelain: "#F6F5F1",
   jade: "#0E7A5C",
   jadeBright: "#12946F",
-  brass: "#B98F2F",
+  brass: "#a67c21",
   brassBright: "#D4AA45",
   mist: "#8A939B",
 } as const;

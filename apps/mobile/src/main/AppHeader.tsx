@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import { Bilingual } from "../components/Bilingual";
-import { DataPayMark } from "../brand/DataPayLogo";
+import { DataPayLogo } from "../brand/DataPayLogo";
 import { strings } from "../i18n/strings";
 import type { Session } from "../session";
 import { colors, spacing } from "../theme";
@@ -11,17 +11,16 @@ import { colors, spacing } from "../theme";
  * It used to live inside HomeScreen, so the branding and the member's own
  * username vanished the moment they opened Pulse, Products or Community — the
  * app looked like it had lost its chrome halfway through.
+ *
+ * The wordmark comes from DataPayLogo rather than being rebuilt here. Hand-
+ * rolling it is exactly how this screen ended up rendering "DataPay" flat
+ * while every other surface leans "Pay" by -9° — the brand looked different
+ * depending on which screen you happened to be on.
  */
 export function AppHeader({ session, topInset }: { session: Session; topInset: number }) {
   return (
     <View style={[styles.header, { paddingTop: topInset + spacing.md }]}>
-      <DataPayMark size={24} />
-      <Text style={styles.wordmark}>
-        Data
-        <Text style={styles.wordmarkPay}>Pay</Text>
-        <Text style={styles.wordmarkSep}>-</Text>
-        <Text style={styles.wordmarkBeta}>Beta</Text>
-      </Text>
+      <DataPayLogo size={26} beta />
       <View style={styles.spacer} />
       {/* Labelled and bold. It was faint 13px with nothing naming it, so a
           member had no way to tell their own alias from decoration — and this
@@ -49,21 +48,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     backgroundColor: colors.paper,
   },
-  // Carried over verbatim from HomeScreen. CabinetGrotesk-Extrabold isn't
-  // loaded at runtime (nothing calls useFonts), so this falls back to the
-  // system face at weight 800 — same as DataPayLogo.
-  wordmark: {
-    fontFamily: "CabinetGrotesk-Extrabold",
-    fontWeight: "800",
-    fontSize: 17,
-    letterSpacing: -0.5,
-    color: colors.ink,
-  },
-  // Brand lockup: "Data" in ink, "Pay" in brass.
-  wordmarkPay: { color: colors.brass },
-  // Muted hyphen so it reads as a separator rather than part of either word.
-  wordmarkSep: { color: colors.faint, fontWeight: "700" },
-  wordmarkBeta: { color: colors.teal },
   spacer: { flex: 1 },
   identity: { alignItems: "flex-end" },
   identityLabel: { letterSpacing: 0.7, textTransform: "uppercase" },

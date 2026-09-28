@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Lang } from "../lib/lang-constants";
-import { DataPayMark } from "./DataPayLogo";
+import { DataPayMark, DataPayWordmark } from "./DataPayLogo";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
 const T = {
@@ -31,7 +31,7 @@ export function PublicNav({ lang }: { lang: Lang }): JSX.Element {
       <nav className={`publicNav ${scrolled ? "publicNavScrolled" : ""}`}>
         <a href="/" className="publicNavBrand">
           <DataPayMark size={26} />
-          <span>DataPay</span>
+          <DataPayWordmark />
         </a>
         <div className="publicNavLinks">
           <a href="/#how-it-works">{t.how}</a>

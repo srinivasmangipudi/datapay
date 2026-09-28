@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
   },
   areaLabel: { fontSize: 11, color: "#8A939B", letterSpacing: 1.2, fontWeight: "700" },
   areaValue: { fontSize: 16, fontWeight: "700", color: "#101418", marginTop: 6 },
-  areaNote: { fontSize: 12, color: "#B98F2F", marginTop: 6, lineHeight: 16 },
+  areaNote: { fontSize: 12, color: colors.brass, marginTop: 6, lineHeight: 16 },
   changeAreaText: { fontSize: 13, color: "#0E7A5C", fontWeight: "700", marginTop: 12 },
   row: {
     flexDirection: "row",

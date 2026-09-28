@@ -12,7 +12,9 @@ export const color = {
   jade: "#0E7A5C",       // trust, growth, the data record (primary accent)
   jadeBright: "#12946F", // jade on dark
   jadeSoft: "#E3EFEA",   // jade tint (badges, fills)
-  brass: "#B98F2F",      // VALUE & MONEY ONLY + the "Pay" wordmark
+  // Deepened from #B98F2F, which sat at 2.9:1 on paper — under the 3:1
+  // floor for a non-text graphic.
+  brass: "#a67c21",     // VALUE & MONEY ONLY + the "Pay" wordmark
   brassBright: "#D4AA45",// brass on dark
   mist: "#8A939B",       // secondary text
 } as const;

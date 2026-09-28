@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { DataPayMark } from "../components/DataPayLogo";
+import { DataPayMark, DataPayWordmark } from "../components/DataPayLogo";
 import { orgLogoutAction } from "./login/actions";
 
 export function OrgNav({ orgName }: { orgName: string | null }): JSX.Element | null {
@@ -15,7 +15,8 @@ export function OrgNav({ orgName }: { orgName: string | null }): JSX.Element | n
     <nav className="adminNav">
       <span className="adminNavBrand">
         <DataPayMark size={20} />
-        {orgName ?? "DataPay"} — Organization
+        <DataPayWordmark />
+        <span className="brandSuffix">{orgName ?? "Organization"}</span>
       </span>
       <a href="/org/questions" className={`adminNavLink ${pathname === "/org/questions" ? "adminNavLinkOn" : ""}`}>
         Submit a question

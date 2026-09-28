@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { DataPayMark } from "./DataPayLogo";
+import { DataPayMark, DataPayWordmark } from "./DataPayLogo";
+import { isPublicPath } from "../lib/public-paths";
 import { logoutAction } from "../login/actions";
 
 const LINKS = [
@@ -28,18 +29,10 @@ export function AdminNav({ isOpsSession }: { isOpsSession: boolean }): JSX.Eleme
   // Root is the one path that's session-conditional content, not a fixed
   // page — show the nav there only when it's actually the ops dashboard
   // underneath, never over the public marketing homepage.
-  if (
-    pathname === "/login" ||
-    pathname === "/registry" ||
-    pathname === "/privacy" ||
-    pathname === "/delete-account" ||
-    pathname === "/child-safety" ||
-    pathname === "/about" ||
-    pathname.startsWith("/org/") ||
-    pathname.startsWith("/store/") ||
-    (pathname === "/" && !isOpsSession)
-  )
-    return null;
+  // Shared with middleware.ts via app/lib/public-paths.ts — these were two
+  // separate hardcoded lists and drifted, which is how a public page ended up
+  // rendering the ops nav above it.
+  if (isPublicPath(pathname) || (pathname === "/" && !isOpsSession)) return null;
 
   return (
     <nav className="adminNav">
@@ -55,7 +48,8 @@ export function AdminNav({ isOpsSession }: { isOpsSession: boolean }): JSX.Eleme
         <span className="brandMarkDark">
           <DataPayMark size={20} dark />
         </span>
-        DataPay Ops
+        <DataPayWordmark />
+        <span className="brandSuffix">Ops</span>
       </span>
       {LINKS.map((link) => (
         <a

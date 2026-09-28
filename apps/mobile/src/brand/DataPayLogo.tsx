@@ -13,7 +13,9 @@ export const dataPayTokens = {
   porcelain: "#F6F5F1",
   jade: "#0E7A5C",
   jadeBright: "#12946F",
-  brass: "#B98F2F",
+  // Matches globals.css --brass and the portal logo: the brand package's
+  // #B98F2F sat at 2.9:1, under the 3:1 floor for a non-text graphic.
+  brass: "#a67c21",
   brassBright: "#D4AA45",
   mist: "#8A939B",
 };
@@ -35,9 +37,13 @@ export function DataPayMark({ size = 40, dark = false }: MarkProps) {
   );
 }
 
-type LogoProps = MarkProps & { tagline?: string };
+type LogoProps = MarkProps & {
+  tagline?: string;
+  /** Appends "-Beta" to the wordmark for the open-testing build. */
+  beta?: boolean;
+};
 
-export function DataPayLogo({ size = 44, dark = false, tagline }: LogoProps) {
+export function DataPayLogo({ size = 44, dark = false, tagline, beta = false }: LogoProps) {
   const ink = dark ? dataPayTokens.porcelain : dataPayTokens.ink;
   const brass = dark ? dataPayTokens.brassBright : dataPayTokens.brass;
   return (
@@ -46,6 +52,12 @@ export function DataPayLogo({ size = 44, dark = false, tagline }: LogoProps) {
       <View style={styles.col}>
         <Text style={[styles.wm, { fontSize: size * 0.6, color: ink }]}>
           Data<Text style={[styles.pay, { color: brass }]}>Pay</Text>
+          {beta ? (
+            <Text>
+              <Text style={{ color: dataPayTokens.mist }}>-</Text>
+              <Text style={{ color: dataPayTokens.jadeBright }}>Beta</Text>
+            </Text>
+          ) : null}
         </Text>
         {tagline ? <Text style={styles.tag}>{tagline.toUpperCase()}</Text> : null}
       </View>

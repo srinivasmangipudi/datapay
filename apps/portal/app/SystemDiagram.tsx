@@ -16,7 +16,7 @@ export function SystemDiagram({ floor }: { floor: number }): JSX.Element {
           <path d="M0,0 L10,5 L0,10 z" fill="#0E7A5C" />
         </marker>
         <marker id="arrowBrass" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-          <path d="M0,0 L10,5 L0,10 z" fill="#B98F2F" />
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--brass)" />
         </marker>
       </defs>
 
@@ -86,12 +86,12 @@ export function SystemDiagram({ floor }: { floor: number }): JSX.Element {
         .diagramDot { fill: #0E7A5C; opacity: 0.75; }
         .diagramPill { fill: #1A2027; }
         .diagramPillText { font: 600 12.5px "Switzer", system-ui, sans-serif; fill: #E3EFEA; }
-        .diagramBar { fill: #B98F2F; opacity: 0.85; }
+        .diagramBar { fill: var(--brass); opacity: 0.85; }
         .diagramArrow { fill: none; stroke-width: 3; }
         .diagramArrowJade { stroke: #0E7A5C; }
-        .diagramArrowBrass { stroke: #B98F2F; stroke-dasharray: 2 6; stroke-linecap: round; }
+        .diagramArrowBrass { stroke: var(--brass); stroke-dasharray: 2 6; stroke-linecap: round; }
         .diagramFlowLabel { font: 600 11.5px "Switzer", system-ui, sans-serif; fill: #0E7A5C; }
-        .diagramFlowLabelBrass { font: 600 11.5px "Switzer", system-ui, sans-serif; fill: #B98F2F; }
+        .diagramFlowLabelBrass { font: 600 11.5px "Switzer", system-ui, sans-serif; fill: var(--brass); }
         @media (prefers-color-scheme: dark) {
           .diagramBox { fill: #14161b; stroke: #24282e; }
           .diagramBoxHub { fill: #F6F5F1; stroke: #F6F5F1; }
