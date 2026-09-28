@@ -208,7 +208,7 @@ export function PulseScreen({ session }: Props) {
       keyboardVerticalOffset={insets.top}
     >
       <ScrollView
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.lg }]}
+        contentContainerStyle={[styles.container, { paddingTop: spacing.lg }]}
         keyboardShouldPersistTaps="handled"
       >
       <View style={styles.progressTrack}>

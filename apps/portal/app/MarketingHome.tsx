@@ -873,7 +873,15 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
 
         /* The band spans the page, so each door gets real width — badges sit
            in a row and neither card has to stretch to fill dead space. */
-        .mkDoorsBand { max-width: 1200px; margin: 0 auto; padding: 0 var(--gutter) clamp(40px, 5vw, 64px); }
+        /* Same rhythm as .mkSection — it had zero TOP padding, which jammed
+           the cards against the band above it. A section's vertical padding is
+           symmetric; this is a continuation of the hero rather than a new
+           section, so it takes ~70% of the gap and no border of its own. */
+        .mkDoorsBand {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: clamp(56px, 6.3vw, 92px) var(--gutter);
+        }
         .mkDoors { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
         .mkDoor {
           display: flex; flex-direction: column; align-items: flex-start; gap: 14px;

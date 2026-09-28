@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { strings } from "../i18n/strings";
+import { registerForPushNotifications, watchForTokenRefresh } from "../push";
 import type { Session } from "../session";
 import { colors, spacing } from "../theme";
+import { AppHeader } from "./AppHeader";
 import { CommunityScreen } from "./CommunityScreen";
 import { HomeScreen } from "./HomeScreen";
 import { ProductsScreen } from "./ProductsScreen";
@@ -32,8 +34,20 @@ export function MainApp({ session, onLogout }: Props) {
   const [tab, setTab] = useState<TabKey>("home");
   const insets = useSafeAreaInsets();
 
+  // Registered here rather than at login: this runs on every launch, so a
+  // member who declined the prompt once gets asked again next time they open
+  // the app, and a token FCM rotated while they were away is re-registered
+  // without them doing anything. Both calls are silent on failure.
+  useEffect(() => {
+    registerForPushNotifications(session.token);
+    return watchForTokenRefresh(session.token);
+  }, [session.token]);
+
   return (
     <View style={styles.container}>
+      {/* Above the tab content, so branding and the member's username are
+          present on every screen rather than only on Home. */}
+      <AppHeader session={session} topInset={insets.top} />
       <View style={styles.screen}>
         {tab === "home" && <HomeScreen session={session} onNavigate={setTab} />}
         {tab === "pulse" && <PulseScreen session={session} />}

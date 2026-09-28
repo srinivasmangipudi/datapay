@@ -8,6 +8,7 @@ import { AuthModule } from "./auth/auth.module";
 import { CategoriesModule } from "./categories/categories.module";
 import { ConsentsModule } from "./consents/consents.module";
 import { CorpusFundModule } from "./corpus-fund/corpus-fund.module";
+import { PushModule } from "./push/push.module";
 import { DbModule } from "./db/db.module";
 import { FraudModule } from "./fraud/fraud.module";
 import { IntelligenceModule } from "./intelligence/intelligence.module";
@@ -67,6 +68,7 @@ import { ZonesModule } from "./zones/zones.module";
     TranslationModule,
     PublicModule,
     CorpusFundModule,
+    PushModule,
     AdminOverviewModule,
   ],
   controllers: [AppController],

@@ -16,6 +16,7 @@
     "@expo/vector-icons": "^15.1.1",
     "@react-native-firebase/app": "^26.4.0",
     "@react-native-firebase/auth": "^26.4.0",
+    "@react-native-firebase/messaging": "^26.4.0",
     "expo": "~54.0.36",
     "expo-asset": "~12.0.13",
     "expo-audio": "~1.1.1",

@@ -346,6 +346,19 @@ export function setDeliveryAddress(token: string, address: string): Promise<{ ok
   return request("/v1/me/delivery-address", { method: "POST", body: JSON.stringify({ address }) }, token);
 }
 
+/** Registers this device for push. Proxied to Vault — Core never stores it. */
+export function registerPushToken(
+  token: string,
+  pushToken: string,
+  platform: "android" | "ios"
+): Promise<{ ok: true }> {
+  return request(
+    "/v1/me/push-token",
+    { method: "POST", body: JSON.stringify({ token: pushToken, platform }) },
+    token
+  );
+}
+
 export function getProducts(token: string): Promise<Product[]> {
   return request("/v1/products", {}, token);
 }

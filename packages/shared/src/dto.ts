@@ -418,6 +418,33 @@ export const VaultGetDeliveryAddressDtoSchema = z.object({
 });
 export type VaultGetDeliveryAddressDto = z.infer<typeof VaultGetDeliveryAddressDtoSchema>;
 
+/** Vault-internal push-token routes. A device token is "how to reach a person",
+    the same category as a phone number or a delivery address, so it lives in
+    Vault and Core only ever asks for a batch by alias. */
+export const VaultRegisterPushTokenDtoSchema = z.object({
+  aliasId: z.string().length(64),
+  token: z.string().min(10).max(4096),
+  platform: z.enum(["android", "ios"]),
+});
+export type VaultRegisterPushTokenDto = z.infer<typeof VaultRegisterPushTokenDtoSchema>;
+
+export const VaultRemovePushTokenDtoSchema = z.object({
+  token: z.string().min(10).max(4096),
+});
+export type VaultRemovePushTokenDto = z.infer<typeof VaultRemovePushTokenDtoSchema>;
+
+export const VaultResolvePushTokensDtoSchema = z.object({
+  aliasIds: z.array(z.string().length(64)).min(1).max(1000),
+});
+export type VaultResolvePushTokensDto = z.infer<typeof VaultResolvePushTokensDtoSchema>;
+
+/** Member-facing POST /v1/me/push-token — the app registering its own device. */
+export const RegisterPushTokenDtoSchema = z.object({
+  token: z.string().min(10).max(4096),
+  platform: z.enum(["android", "ios"]),
+});
+export type RegisterPushTokenDto = z.infer<typeof RegisterPushTokenDtoSchema>;
+
 /** Vault-internal POST /resolve-payout — batch, producers only (SPEC.md §5A). */
 export const VaultResolvePayoutDtoSchema = z.object({
   aliasIds: z.array(z.string().length(64)).min(1).max(500),

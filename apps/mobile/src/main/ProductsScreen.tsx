@@ -111,22 +111,23 @@ export function ProductsScreen({ session }: { session: Session }) {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
+    <View style={[styles.container, { paddingTop: spacing.lg }]}>
+      {/* Pinned above the scroll, not inside it: an undeliverable order is not
+          something to discover by scrolling past it. Shown only once it is
+          actionable — an order exists and there is nowhere to send it — so
+          someone who has never ordered is never nagged. */}
+      {hasAddress === false && myOrders.length > 0 && (
+        <View style={styles.addressWarning}>
+          <Ionicons name="alert-circle" size={20} color={colors.onDark} />
+          <Text style={styles.addressWarningText}>
+            {myOrders.length === 1 ? "Your order can't be delivered yet." : "Your orders can't be delivered yet."}{" "}
+            Add your address in the Vault, or collect from your local PACS centre.
+          </Text>
+        </View>
+      )}
+
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}>
         <Bilingual {...strings.products.heading} size={22} weight="700" style={styles.heading as any} />
-
-        {/* Only once it actually matters: an order is waiting and there is
-            nowhere to send it. Showing this to someone who has never ordered
-            would be nagging for no reason. */}
-        {hasAddress === false && myOrders.length > 0 && (
-          <View style={styles.addressWarning}>
-            <Ionicons name="location-outline" size={18} color={colors.brass} />
-            <Text style={styles.addressWarningText}>
-              {myOrders.length === 1 ? "Your order needs" : "Your orders need"} a delivery address.
-              Add one in your Vault, or collect from your local PACS centre.
-            </Text>
-          </View>
-        )}
 
         {products.length === 0 ? (
           <Card variant="outline" style={styles.emptyCard}>
@@ -271,14 +272,14 @@ const styles = StyleSheet.create({
   heading: { marginBottom: spacing.lg, color: colors.ink },
   addressWarning: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: spacing.sm,
-    backgroundColor: "#F6EFDD", // soft brass tint; theme has no token for it
-    borderRadius: radii.md,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
+    backgroundColor: colors.danger,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
   },
-  addressWarningText: { flex: 1, ...type.small, color: colors.ink, lineHeight: 19 },
+  addressWarningText: { flex: 1, ...type.small, color: colors.onDark, lineHeight: 19, fontWeight: "600" },
   emptyCard: { alignItems: "flex-start", gap: spacing.sm, marginBottom: spacing.lg },
   emptyText: { color: colors.ink, lineHeight: 21 },
   productCard: { marginBottom: spacing.md },

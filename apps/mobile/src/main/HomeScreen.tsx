@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getPulseToday, getTokens, TokensSummary } from "../api";
 import { Bilingual } from "../components/Bilingual";
 import { Card } from "../components/Card";
-import { DataPayMark } from "../brand/DataPayLogo";
 import { strings } from "../i18n/strings";
 import type { Session } from "../session";
 import { colors, spacing, type } from "../theme";
@@ -61,21 +60,9 @@ export function HomeScreen({ session, onNavigate }: Props) {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingTop: insets.top + spacing.md, paddingBottom: spacing.xl }}
+      contentContainerStyle={{ paddingTop: spacing.md, paddingBottom: spacing.xl }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal} />}
     >
-      <View style={styles.header}>
-        <DataPayMark size={24} />
-        <Text style={styles.wordmark}>
-          Data
-          <Text style={styles.wordmarkPay}>Pay</Text>
-          <Text style={styles.wordmarkSep}>-</Text>
-          <Text style={styles.wordmarkBeta}>Beta</Text>
-        </Text>
-        <View style={styles.headerSpacer} />
-        <Text style={styles.greeting}>{session.displayAlias}</Text>
-      </View>
-
       <Card variant="dark" style={styles.balanceCard}>
         <Bilingual {...strings.home.yourTokens} tone="onDarkSubtle" size={11.5} weight="700" style={type.label as any} />
         {/* TOKEN_ECONOMY_REDESIGN.md — every token is equal, one number */}
@@ -128,25 +115,6 @@ export function HomeScreen({ session, onNavigate }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper, paddingHorizontal: spacing.lg },
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.paper },
-  header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.base },
-  greeting: { fontSize: 13, color: colors.faint, fontWeight: "500" },
-  headerSpacer: { flex: 1 },
-  // The wordmark, not just the mark: during open testing a tester should be
-  // able to name the app from any screenshot they send us.
-  // CabinetGrotesk-Extrabold isn't loaded at runtime (nothing calls useFonts),
-  // so this falls back to the system face at weight 800 — same as DataPayLogo.
-  wordmark: {
-    fontFamily: "CabinetGrotesk-Extrabold",
-    fontWeight: "800",
-    fontSize: 17,
-    letterSpacing: -0.5,
-    color: colors.ink,
-  },
-  // Brand lockup: "Data" in ink, "Pay" in brass.
-  wordmarkPay: { color: colors.brass },
-  // Muted hyphen so it reads as a separator rather than part of either word.
-  wordmarkSep: { color: colors.faint, fontWeight: "700" },
-  wordmarkBeta: { color: colors.teal },
   balanceCard: { marginBottom: spacing.md },
   balance: { color: colors.brassOnDark, fontSize: 34, fontWeight: "700", marginTop: spacing.sm },
   pulseCard: {

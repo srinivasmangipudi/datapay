@@ -38,6 +38,7 @@ export const strings = {
   },
   home: {
     yourTokens: { en: "Your tokens", kn: "ನಿಮ್ಮ ಟೋಕನ್‌ಗಳು" },
+    username: { en: "Your username", kn: "ನಿಮ್ಮ ಬಳಕೆದಾರ ಹೆಸರು" },
     todaysPulse: { en: "Today's Pulse", kn: "ಇಂದಿನ ಪಲ್ಸ್" },
     recentActivity: { en: "Recent activity", kn: "ಇತ್ತೀಚಿನ ಚಟುವಟಿಕೆ" },
     emptyActivity: {
