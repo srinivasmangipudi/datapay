@@ -26,20 +26,32 @@ export async function reviewProductAction(formData: FormData): Promise<void> {
  */
 export async function setProductRatesAction(formData: FormData): Promise<void> {
   const productId = Number(formData.get("productId"));
-  const raw = (name: string): number | null | undefined => {
+  // Percent in the UI, basis points on the wire (the supplier fee).
+  const rawPct = (name: string): number | null | undefined => {
     const v = formData.get(name);
     if (v === null) return undefined;
     const s = String(v).trim();
     if (s === "") return null;
     const pct = Number(s);
     if (!Number.isFinite(pct)) return undefined;
-    return Math.round(pct * 100); // percent in the UI, basis points on the wire
+    return Math.round(pct * 100);
+  };
+
+  // A plain token count — no unit conversion, it is the number ops typed.
+  const rawInt = (name: string): number | null | undefined => {
+    const v = formData.get(name);
+    if (v === null) return undefined;
+    const s = String(v).trim();
+    if (s === "") return null;
+    const n = Number(s);
+    if (!Number.isFinite(n)) return undefined;
+    return Math.round(n);
   };
 
   try {
     await setProductRates(productId, {
-      tokenRewardBps: raw("tokenRewardPct"),
-      platformFeeBps: raw("platformFeePct"),
+      purchaseRewardTokens: rawInt("purchaseRewardTokens"),
+      platformFeeBps: rawPct("platformFeePct"),
     });
   } catch (err) {
     revalidatePath("/product-review");

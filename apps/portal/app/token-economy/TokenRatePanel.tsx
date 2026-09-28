@@ -1,4 +1,4 @@
-import { DEFAULT_PLATFORM_FEE_BPS, DEFAULT_TOKEN_REWARD_BPS } from "@datapay/shared";
+import { DEFAULT_PLATFORM_FEE_BPS, DEFAULT_PURCHASE_REWARD_TOKENS } from "@datapay/shared";
 import type { TokenRateDetail } from "./core-api";
 
 function rupees(paise: number): string {
@@ -122,13 +122,15 @@ export function TokenRatePanel({ detail }: { detail: TokenRateDetail }): JSX.Ele
 
       <h3 className="subhead">Purchase rates</h3>
       <p className="lede">
-        Platform-wide defaults, overridable per product on the org catalog. Stored as basis points
-        so the arithmetic stays exact.
+        Platform-wide defaults, overridable per product on the org catalog. The supplier fee is a
+        percentage of the sale — ordinary revenue. The buyer reward is a FLAT token count per
+        order, never a share of what was spent: a proportional reward would make money-in produce
+        tokens-out, and tokens set a share of the reward pool.
       </p>
       <div className="tiles">
         <div className="tile">
-          <span className="tileLabel">Buyer token reward</span>
-          <span className="tileValue value">{(DEFAULT_TOKEN_REWARD_BPS / 100).toFixed(2)}%</span>
+          <span className="tileLabel">Buyer tokens per order</span>
+          <span className="tileValue value">{DEFAULT_PURCHASE_REWARD_TOKENS}</span>
         </div>
         <div className="tile">
           <span className="tileLabel">Supplier platform fee</span>

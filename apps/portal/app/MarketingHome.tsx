@@ -452,49 +452,6 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
               <span className="mkHeroKicker">{t.heroKicker}</span>
               <h1>{t.heroTitle}</h1>
               <p className="mkLede">{t.heroLede}</p>
-              {/* Two labelled doors, not one CTA with badges underneath. The
-                  old layout put "Sign up your organization" first and the app
-                  badges below it, which read as one funnel — households were
-                  clicking a signup meant for businesses. Naming the audience
-                  above each path is the whole point of this block. */}
-              <div className="mkDoors">
-                <div className="mkDoor">
-                  <span className="mkDoorTag">{t.doorHousehold}</span>
-                  <p className="mkDoorBody">{t.doorHouseholdBody}</p>
-                  <div className="mkBadgeRow">
-                    <a
-                      className="mkBadge mkBadgeLive"
-                      href={PLAY_STORE_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`Google Play — ${t.openBeta}`}
-                    >
-                      <AndroidIcon />
-                      <span className="mkBadgeText">
-                        <small>{t.openBeta}</small>
-                        <strong>Google Play</strong>
-                      </span>
-                    </a>
-                    <div className="mkBadge" aria-label={`App Store — ${t.comingSoon}`}>
-                      <AppleIcon />
-                      <span className="mkBadgeText">
-                        <small>{t.comingSoon}</small>
-                        <strong>App Store</strong>
-                      </span>
-                    </div>
-                  </div>
-                  <p className="mkDoorNote">{t.doorHouseholdNote}</p>
-                </div>
-
-                <div className="mkDoor mkDoorOrg">
-                  <span className="mkDoorTag">{t.doorOrg}</span>
-                  <p className="mkDoorBody">{t.doorOrgBody}</p>
-                  <a href="/org/signup" className="mkCtaPrimary">
-                    {t.ctaSignup}
-                  </a>
-                  <p className="mkDoorNote">{t.doorOrgNote}</p>
-                </div>
-              </div>
 
               <a href="#how-it-works" className="mkCtaSecondary mkCtaHow">
                 {t.ctaHowItWorks}
@@ -516,6 +473,53 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
             ))}
           </div>
         </section>
+
+        {/* A FULL-WIDTH band, not a grid inside the hero's left column. Nested
+            two-up inside an already-half-width column gave each door ~230px:
+            the badges stacked, the shorter card stretched to a dead gap, and
+            the secondary link was orphaned underneath. Naming the audience
+            above each path was right; cramming it beside the phone was not. */}
+        <section className="mkDoorsBand">
+          <div className="mkDoors">
+            <div className="mkDoor">
+              <span className="mkDoorTag">{t.doorHousehold}</span>
+              <p className="mkDoorBody">{t.doorHouseholdBody}</p>
+              <div className="mkBadgeRow">
+                <a
+                  className="mkBadge mkBadgeLive"
+                  href={PLAY_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Google Play — ${t.openBeta}`}
+                >
+                  <AndroidIcon />
+                  <span className="mkBadgeText">
+                    <small>{t.openBeta}</small>
+                    <strong>Google Play</strong>
+                  </span>
+                </a>
+                <div className="mkBadge" aria-label={`App Store — ${t.comingSoon}`}>
+                  <AppleIcon />
+                  <span className="mkBadgeText">
+                    <small>{t.comingSoon}</small>
+                    <strong>App Store</strong>
+                  </span>
+                </div>
+              </div>
+              <p className="mkDoorNote">{t.doorHouseholdNote}</p>
+            </div>
+
+            <div className="mkDoor mkDoorOrg">
+              <span className="mkDoorTag">{t.doorOrg}</span>
+              <p className="mkDoorBody">{t.doorOrgBody}</p>
+              <a href="/org/signup" className="mkCtaPrimary">
+                {t.ctaSignup}
+              </a>
+              <p className="mkDoorNote">{t.doorOrgNote}</p>
+            </div>
+          </div>
+        </section>
+
 
         {/* The collective buy is the concrete, immediate thing a household
             gets — no waiting, no token redemption, no trust required. It was
@@ -867,14 +871,28 @@ export async function MarketingHome({ lang }: { lang: Lang }): Promise<JSX.Eleme
         .mkBuyStep p { font-size: 14px; line-height: 1.55; color: var(--mk-subtle); margin: 0; }
         @media (max-width: 860px) { .mkBuySteps { grid-template-columns: 1fr; } }
 
-        .mkDoors { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 26px; align-items: start; }
-        .mkDoor { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; padding: 20px; border: 1px solid var(--mk-border); border-radius: 16px; background: var(--mk-surface); height: 100%; }
+        /* The band spans the page, so each door gets real width — badges sit
+           in a row and neither card has to stretch to fill dead space. */
+        .mkDoorsBand { max-width: 1200px; margin: 0 auto; padding: 0 var(--gutter) clamp(40px, 5vw, 64px); }
+        .mkDoors { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+        .mkDoor {
+          display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+          padding: 28px 30px; border: 1px solid var(--mk-border); border-radius: 18px;
+          background: var(--mk-surface);
+        }
+        /* Pins the fine print to the bottom of whichever card is shorter, so
+           the two line up instead of one ending in a gap. */
+        .mkDoorNote { margin-top: auto; padding-top: 4px; }
         .mkDoorOrg { border-color: var(--mk-jade); }
-        .mkDoorTag { font-family: "Spline Sans Mono", monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mk-jade); }
-        .mkDoorBody { font-size: 14.5px; line-height: 1.55; color: var(--mk-ink); margin: 0; }
-        .mkDoorNote { font-size: 12.5px; line-height: 1.5; color: var(--mk-mist); margin: 0; }
-        .mkCtaHow { display: inline-block; margin-top: 18px; }
-        @media (max-width: 720px) { .mkDoors { grid-template-columns: 1fr; } }
+        .mkDoorTag {
+          font-family: "Spline Sans Mono", monospace; font-size: 10.5px; font-weight: 600;
+          letter-spacing: 0.16em; text-transform: uppercase; color: var(--mk-jade);
+        }
+        .mkDoorBody { font-size: 15px; line-height: 1.6; color: var(--mk-ink); margin: 0; max-width: 46ch; }
+        .mkDoorNote { font-size: 12.5px; line-height: 1.5; color: var(--mk-mist); margin-bottom: 0; }
+        .mkDoor .mkBadgeRow { display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px; }
+        .mkCtaHow { align-self: flex-start; }
+        @media (max-width: 820px) { .mkDoors { grid-template-columns: 1fr; } }
 
         .mkAppBadges { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
         .mkAppBadgesLabel { font-family: "Spline Sans Mono", monospace; font-size: 10.5px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mk-mist); }

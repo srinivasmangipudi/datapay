@@ -405,8 +405,8 @@ export class OrgProductsService {
       set a rate on an approved product, not just one awaiting review. */
   async listAllForOps() {
     const { rows } = await this.pool.query(
-      `SELECT p.id, p.name_en, p.sale_price_paise, p.review_state,
-              p.token_reward_bps, p.platform_fee_bps, o.name AS organization_name
+      `SELECT p.id, p.name_en, p.unit_spec, p.photo_url, p.sale_price_paise, p.review_state,
+              p.purchase_reward_tokens, p.platform_fee_bps, o.name AS organization_name
        FROM org_products p
        JOIN organizations o ON o.id = p.organization_id
        ORDER BY o.name, p.name_en`
@@ -422,13 +422,13 @@ export class OrgProductsService {
    */
   async setRates(
     productId: number,
-    dto: { tokenRewardBps?: number | null; platformFeeBps?: number | null }
+    dto: { purchaseRewardTokens?: number | null; platformFeeBps?: number | null }
   ) {
     const sets: string[] = [];
     const values: Array<number | null> = [];
-    if (dto.tokenRewardBps !== undefined) {
-      values.push(dto.tokenRewardBps);
-      sets.push(`token_reward_bps = $${values.length}`);
+    if (dto.purchaseRewardTokens !== undefined) {
+      values.push(dto.purchaseRewardTokens);
+      sets.push(`purchase_reward_tokens = $${values.length}`);
     }
     if (dto.platformFeeBps !== undefined) {
       values.push(dto.platformFeeBps);
@@ -439,7 +439,7 @@ export class OrgProductsService {
     const { rows } = await this.pool.query(
       `UPDATE org_products SET ${sets.join(", ")}, updated_at = now()
        WHERE id = $${values.length}
-       RETURNING id, token_reward_bps, platform_fee_bps`,
+       RETURNING id, purchase_reward_tokens, platform_fee_bps`,
       values
     );
     if (!rows[0]) throw new NotFoundException(`Product ${productId} not found`);

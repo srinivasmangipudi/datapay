@@ -1,16 +1,9 @@
-import { DEFAULT_PLATFORM_FEE_BPS, DEFAULT_TOKEN_REWARD_BPS } from "@datapay/shared";
+import { DEFAULT_PLATFORM_FEE_BPS, DEFAULT_PURCHASE_REWARD_TOKENS } from "@datapay/shared";
 import { setProductRatesAction } from "./actions";
 import type { ProductRates } from "./core-api";
 
 function bpsToPct(bps: number | null): string {
   return bps === null ? "" : (bps / 100).toString();
-}
-
-/** What a buyer actually earns on one unit at the effective rate — the number
-    that makes an abstract percentage concrete while ops is setting it. */
-function tokensPerUnit(salePricePaise: number, bps: number | null): number {
-  const rate = bps ?? DEFAULT_TOKEN_REWARD_BPS;
-  return Math.round((salePricePaise * rate) / 10000 / 100);
 }
 
 export function RatesPanel({ products }: { products: ProductRates[] }): JSX.Element {
@@ -22,9 +15,10 @@ export function RatesPanel({ products }: { products: ProductRates[] }): JSX.Elem
       <p className="lede">
         Ops-only — an organization sets its own prices and stock, never what the platform charges it
         or pays out in rewards. Leave a field <strong>empty</strong> to use the platform default (
-        {(DEFAULT_TOKEN_REWARD_BPS / 100).toFixed(2)}% reward,{" "}
+        {DEFAULT_PURCHASE_REWARD_TOKENS} token per order,{" "}
         {(DEFAULT_PLATFORM_FEE_BPS / 100).toFixed(2)}% fee); enter <strong>0</strong> for an
-        explicit none on that product.
+        explicit none on that product. The buyer reward is a flat count per order, deliberately not
+        a share of what was spent — see the token-economy page.
       </p>
 
       {products.length === 0 && <p className="empty">No products yet.</p>}
@@ -34,38 +28,49 @@ export function RatesPanel({ products }: { products: ProductRates[] }): JSX.Elem
           <table>
             <thead>
               <tr>
+                <th className="num">ID</th>
                 <th>Product</th>
                 <th>Organization</th>
                 <th className="num">Price</th>
-                <th className="num">Reward %</th>
+                <th className="num">Tokens / order</th>
                 <th className="num">Fee %</th>
-                <th className="num">Tokens / unit</th>
                 <th />
               </tr>
             </thead>
             <tbody>
               {products.map((p) => (
                 <tr key={p.id}>
+                  <td className="num mono small muted">{p.id}</td>
                   <td>
+                    {/* Thumb + id, because "Test Rice" and "Test Rice 5kg" are
+                        impossible to tell apart from a name alone once a
+                        catalog has more than a handful of rows. */}
+                    {p.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.photo_url} alt={p.name_en} className="productThumb" />
+                    ) : (
+                      <span className="productThumbEmpty" aria-hidden="true" />
+                    )}
                     {p.name_en}
+                    {p.unit_spec && <span className="muted small"> · {p.unit_spec}</span>}
                     {p.review_state !== "approved" && (
                       <span className="muted small"> · {p.review_state}</span>
                     )}
                   </td>
                   <td className="small muted">{p.organization_name}</td>
                   <td className="num value">₹{(p.sale_price_paise / 100).toLocaleString("en-IN")}</td>
-                  <td colSpan={4}>
+                  <td colSpan={3}>
                     <form action={setProductRatesAction} className="ratesForm">
                       <input type="hidden" name="productId" value={p.id} />
                       <input
                         type="number"
-                        name="tokenRewardPct"
-                        step="0.01"
+                        name="purchaseRewardTokens"
+                        step="1"
                         min="0"
-                        max="100"
-                        defaultValue={bpsToPct(p.token_reward_bps)}
-                        placeholder={(DEFAULT_TOKEN_REWARD_BPS / 100).toFixed(2)}
-                        aria-label={`Token reward percent for ${p.name_en}`}
+                        max="1000"
+                        defaultValue={p.purchase_reward_tokens ?? ""}
+                        placeholder={String(DEFAULT_PURCHASE_REWARD_TOKENS)}
+                        aria-label={`Tokens earned per order for ${p.name_en}`}
                       />
                       <input
                         type="number"
@@ -77,9 +82,6 @@ export function RatesPanel({ products }: { products: ProductRates[] }): JSX.Elem
                         placeholder={(DEFAULT_PLATFORM_FEE_BPS / 100).toFixed(2)}
                         aria-label={`Platform fee percent for ${p.name_en}`}
                       />
-                      <span className="num small muted">
-                        {tokensPerUnit(p.sale_price_paise, p.token_reward_bps)}
-                      </span>
                       <button type="submit" className="linkBtn">
                         Save
                       </button>

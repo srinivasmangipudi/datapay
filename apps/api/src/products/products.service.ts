@@ -102,9 +102,9 @@ export class ProductsService {
         review_state: string;
         quantity_available: number;
         sale_price_paise: number;
-        token_reward_bps: number | null;
+        purchase_reward_tokens: number | null;
       }>(
-        `SELECT id, review_state, quantity_available, sale_price_paise, token_reward_bps
+        `SELECT id, review_state, quantity_available, sale_price_paise, purchase_reward_tokens
          FROM org_products WHERE id = $1 FOR UPDATE`,
         [productId]
       );
@@ -137,16 +137,15 @@ export class ProductsService {
         throw new ConcurrentOrderReplay();
       }
 
-      // The buyer's token reward, at this product's rate or the platform
-      // default. Credited here at order time rather than on delivery, because
+      // The buyer's token reward: a flat count for this product, or the
+      // platform default. Deliberately NOT scaled by price or quantity — see
+      // purchaseTokenReward's comment. Credited at order time rather than on
+      // delivery, because
       // an org product order has no delivery-confirmation step the way a
       // collective offer does — there is no later event to hang it off.
       // Idempotent via the ledger's UNIQUE(ref_type, ref_id), so the replay
       // paths above can never credit twice.
-      const tokens = purchaseTokenReward(
-        product.sale_price_paise * quantity,
-        product.token_reward_bps
-      );
+      const tokens = purchaseTokenReward(product.purchase_reward_tokens);
       if (tokens > 0) {
         await this.ledger.creditTokens({
           client,

@@ -43,10 +43,12 @@ export function listOrdersForOps(): Promise<OpsOrder[]> {
 export interface ProductRates {
   id: number;
   name_en: string;
+  unit_spec: string | null;
+  photo_url: string | null;
   organization_name: string;
   sale_price_paise: number;
   review_state: string;
-  token_reward_bps: number | null;
+  purchase_reward_tokens: number | null;
   platform_fee_bps: number | null;
 }
 
@@ -58,7 +60,7 @@ export function listAllProductsForOps(): Promise<ProductRates[]> {
     none on this product". Omitting a field leaves it untouched. */
 export function setProductRates(
   productId: number,
-  rates: { tokenRewardBps?: number | null; platformFeeBps?: number | null }
+  rates: { purchaseRewardTokens?: number | null; platformFeeBps?: number | null }
 ) {
   return apiFetch(`/v1/admin/org-products/${productId}/rates`, {
     method: "PATCH",

@@ -15,18 +15,18 @@ import { LedgerService } from "../ledger/ledger.service";
 const FUND_ACCRUAL_RATE = 0.2;
 
 // TOKEN_ECONOMY_REDESIGN.md — the new revenue mechanism. On every confirmed
-// purchase: the supplier's cut builds the reward pool, a share of which is
-// meant to go back to members as a discretionary reward for contribution —
-// not a dividend, not a return on a holding, and not built yet; the buyer's
-// cut comes back to them as ordinary tokens, the same kind earned by
-// answering questions. Both computed off the same
-// number — what the buyer actually paid (qty × collective_price_paise) —
-// which is the honest, real "amount spent" already tracked in this system,
-// independent of how payment is actually collected.
+// purchase two separate things happen, and they are deliberately different
+// shapes:
 //
-// The rates themselves now live in @datapay/shared as DEFAULT_PLATFORM_FEE_BPS
-// and DEFAULT_TOKEN_REWARD_BPS, so ops changing a default moves every path at
-// once instead of leaving this file behind.
+//   - The SUPPLIER pays a PERCENTAGE of the sale, which builds the reward
+//     pool. Ordinary B2B revenue; a percentage is the right shape.
+//   - The BUYER earns a FLAT number of tokens, the same kind and scale earned
+//     by answering a question. NOT a share of what they spent — that would
+//     make money-in produce tokens-out, and tokens set a share of the pool, so
+//     a proportional reward is an investment return however it is worded.
+//
+// Both defaults live in @datapay/shared (DEFAULT_PLATFORM_FEE_BPS,
+// DEFAULT_PURCHASE_REWARD_TOKENS) so a change moves every path at once.
 
 @Injectable()
 export class FundService {
@@ -43,11 +43,11 @@ export class FundService {
    * write (UNIQUE(ref_type, ref_id) — same discipline as §15's
    * token_ledger, applied here to real rupees too).
    *
-   * TOKEN_ECONOMY_REDESIGN.md — the SAME event now also: credits the buyer
-   * new tokens worth 2% of what they spent (a second, ordinary way to earn
-   * tokens — not "unlocking" or "actualising" the ones redeemed to join;
-   * that causal-attribution idea was tried and rejected as unprovable), and
-   * credits 2% of the sale into the corpus fund. Replaces SPEC.md §40's
+   * TOKEN_ECONOMY_REDESIGN.md — the SAME event now also: credits the buyer a
+   * flat token reward (a second, ordinary way to earn tokens — not
+   * "unlocking" or "actualising" the ones redeemed to join; that
+   * causal-attribution idea was tried and rejected as unprovable), and credits
+   * the supplier's percentage into the reward pool. Replaces SPEC.md §40's
    * reserve entirely.
    */
   async confirmDelivery(aliasId: string, offerId: number) {
@@ -117,9 +117,10 @@ export class FundService {
         });
       }
 
-      // A flat share of spend as tokens — an ordinary earn, same ledger as
-      // answering a question, and no claim about what a token is worth.
-      const purchaseTokens = purchaseTokenReward(amountSpentPaise, null);
+      // A flat count, not a share of spend — an ordinary earn, same ledger and
+      // same scale as answering a question, and no claim about what a token is
+      // worth or about how much the buyer spent.
+      const purchaseTokens = purchaseTokenReward(null);
       if (purchaseTokens > 0) {
         await this.ledger.creditTokens({
           client,

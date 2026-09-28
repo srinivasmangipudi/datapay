@@ -496,7 +496,7 @@ export type UpdateOrgProductDto = z.infer<typeof UpdateOrgProductDtoSchema>;
  */
 export const SetProductRatesDtoSchema = z
   .object({
-    tokenRewardBps: z.number().int().min(0).max(10000).nullable().optional(),
+    purchaseRewardTokens: z.number().int().min(0).max(1000).nullable().optional(),
     platformFeeBps: z.number().int().min(0).max(10000).nullable().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Provide at least one rate to set" });

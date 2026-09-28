@@ -27,25 +27,34 @@ export function computeTokenRate(inputs: TokenRateInputs): number {
 }
 
 /**
- * Platform-wide defaults for the two purchase-time rates, in basis points
- * (200 = 2.00%). A product may override either; NULL on the product means
- * "use these", so changing a default here moves every product that never set
- * one of its own.
+ * Tokens earned for buying through the platform: a FLAT count per order, the
+ * same scale as answering a question — not a share of what was spent.
  *
- * DELIBERATELY a flat percentage of spend, not a value-derived rate. A formula
- * like `price ÷ (system value ÷ outstanding tokens)` would make a token a
- * claim on accumulated value — the security framing DataPay's copy is careful
- * to avoid — and has no damping: more outstanding tokens would mean larger
- * awards, which mean more outstanding tokens. A flat rate says only "you spent
- * X, you earned Y" and makes no claim about what a token is worth.
+ * This is the single most important line in the token design. A reward
+ * proportional to spend means money in gets tokens out, and tokens set a share
+ * of the reward pool — which is an investment return however the copy words
+ * it. A flat count rewards the act of participating: buying through DataPay is
+ * a real contribution to the platform and should earn something, but spending
+ * ₹10,000 must not earn ten times what ₹1,000 earns.
+ *
+ * Also rejected: `price ÷ (system value ÷ outstanding tokens)`. That makes a
+ * token an explicit claim on accumulated value, and has no damping — more
+ * outstanding tokens would mean larger awards, which mean more outstanding
+ * tokens.
  */
-export const DEFAULT_TOKEN_REWARD_BPS = 200;
+export const DEFAULT_PURCHASE_REWARD_TOKENS = 1;
+
+/**
+ * The supplier's fee stays a PERCENTAGE, and that's correct: it is ordinary
+ * B2B revenue DataPay charges on a sale, not a member reward, so none of the
+ * reasoning above applies to it.
+ */
 export const DEFAULT_PLATFORM_FEE_BPS = 200;
 
-/** Tokens earned on a purchase: bps of spend, expressed in whole rupees. */
-export function purchaseTokenReward(amountPaise: number, bps: number | null | undefined): number {
-  const rate = bps ?? DEFAULT_TOKEN_REWARD_BPS;
-  return Math.round((amountPaise * rate) / 10000 / 100);
+/** Tokens earned on one order. Quantity-independent by design: one order is
+    one act of participation, whether it is one sack of rice or ten. */
+export function purchaseTokenReward(perOrder: number | null | undefined): number {
+  return perOrder ?? DEFAULT_PURCHASE_REWARD_TOKENS;
 }
 
 /** The supplier's fee on a sale, in paise, that builds the reward pool. */

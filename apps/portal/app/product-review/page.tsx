@@ -46,6 +46,7 @@ export default async function ProductReviewPage({
             <table>
               <thead>
                 <tr>
+                  <th className="num">ID</th>
                   <th>Product</th>
                   <th>Organization</th>
                   <th>Unit</th>
@@ -59,6 +60,7 @@ export default async function ProductReviewPage({
               <tbody>
                 {pending.map((p) => (
                   <tr key={p.id}>
+                    <td className="num mono small muted">{p.id}</td>
                     <td>
                       {p.photo_url && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -110,7 +112,8 @@ export default async function ProductReviewPage({
 
       <style
         dangerouslySetInnerHTML={{
-          __html: `.productThumb { width: 32px; height: 32px; object-fit: cover; border-radius: 6px; margin-right: 8px; vertical-align: middle; }
+          __html: `.productThumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; margin-right: 10px; vertical-align: middle; background: var(--surface-2, #efefe9); }
+          .productThumbEmpty { display: inline-block; width: 40px; height: 40px; border-radius: 6px; margin-right: 10px; vertical-align: middle; border: 1px dashed var(--edge); }
           .ratesForm { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
           .ratesForm input { width: 82px; text-align: right; padding: 6px 8px; font-size: 13px; }`,
         }}

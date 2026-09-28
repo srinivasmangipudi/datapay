@@ -1,6 +1,7 @@
 import { INestApplication } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Test } from "@nestjs/testing";
+import { DEFAULT_PURCHASE_REWARD_TOKENS } from "@datapay/shared";
 import { Pool } from "pg";
 import request from "supertest";
 import { AppModule } from "../app.module";
@@ -14,9 +15,10 @@ import {
 } from "../test-fixtures";
 import { startVaultForTest, stopVaultForTest } from "../test-vault-process";
 
-// Seeded rice offer (infra/migrations/core/1737849602000_seed_offer.js):
-// collective_price_paise = 119000. 2% of that, as whole rupees: round(119000*0.02/100) = 24.
-const EXPECTED_PURCHASE_TOKENS = Math.round((119000 * 0.02) / 100);
+// The buyer's reward is a FLAT count per purchase, not a share of spend —
+// deliberately independent of the seeded offer's collective_price_paise, which
+// is the whole point of the design (see purchaseTokenReward in @datapay/shared).
+const EXPECTED_PURCHASE_TOKENS = DEFAULT_PURCHASE_REWARD_TOKENS;
 
 describe("GET /v1/tokens — every token is equal, no issued/realised split (TOKEN_ECONOMY_REDESIGN.md)", () => {
   let app: INestApplication;

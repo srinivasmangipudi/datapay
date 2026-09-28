@@ -2,6 +2,7 @@ import { INestApplication } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Test } from "@nestjs/testing";
 import { randomUUID } from "crypto";
+import { DEFAULT_PURCHASE_REWARD_TOKENS } from "@datapay/shared";
 import { Pool } from "pg";
 import request from "supertest";
 import { AppModule } from "../app.module";
@@ -258,13 +259,14 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
   });
 
   /**
-   * A flat share of spend, never a value-derived rate: the number depends only
-   * on price × quantity and the product's own bps, so it says nothing about
-   * what a token is worth. sale_price_paise is 39900 (₹399).
+   * A FLAT count per order, never a share of spend. Quantity is 2 and the
+   * price is ₹399 — neither changes the reward, which is the whole point: a
+   * proportional reward would make money-in produce tokens-out, and tokens set
+   * a share of the reward pool.
    */
-  it("crediting: an order earns tokens at the product's rate, and a retry never credits twice", async () => {
+  it("crediting: an order earns the product's flat token count, and a retry never credits twice", async () => {
     const productId = await seedProduct(5);
-    await pool.query(`UPDATE org_products SET token_reward_bps = 500 WHERE id = $1`, [productId]); // 5%
+    await pool.query(`UPDATE org_products SET purchase_reward_tokens = 3 WHERE id = $1`, [productId]);
     const member = await memberWithAddress();
     const clientMsgId = randomUUID();
 
@@ -274,13 +276,12 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
         .set({ Authorization: `Bearer ${member.token}` })
         .send({ quantity: 2, clientMsgId });
 
-    // 39900 × 2 = 79800 paise, 5% = 3990 paise = ₹39.90 → 40 tokens.
     const first = await send();
     expect(first.status).toBe(201);
-    expect(first.body.tokensEarned).toBe(40);
+    expect(first.body.tokensEarned).toBe(3); // flat — NOT scaled by qty 2 or by ₹399
 
     const retry = await send();
-    expect(retry.body.tokensEarned).toBe(40); // echoes, doesn't re-credit
+    expect(retry.body.tokensEarned).toBe(3); // echoes, doesn't re-credit
 
     const { rows } = await pool.query<{ n: string; total: string }>(
       `SELECT COUNT(*) n, COALESCE(SUM(tokens), 0) total FROM token_ledger
@@ -288,13 +289,13 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
       [member.aliasId]
     );
     expect(rows[0].n).toBe("1");
-    expect(Number(rows[0].total)).toBe(40);
+    expect(Number(rows[0].total)).toBe(3);
 
     await cleanupMember(member);
   });
 
-  it("falls back to the platform default when a product sets no rate", async () => {
-    const productId = await seedProduct(5); // token_reward_bps left NULL
+  it("falls back to the platform default when a product sets no reward", async () => {
+    const productId = await seedProduct(5); // purchase_reward_tokens left NULL
     const member = await memberWithAddress();
 
     const res = await request(app.getHttpServer())
@@ -302,15 +303,14 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
       .set({ Authorization: `Bearer ${member.token}` })
       .send({ quantity: 1, clientMsgId: randomUUID() });
 
-    // 39900 paise at the 200bps default = 798 paise = ₹7.98 → 8 tokens.
-    expect(res.body.tokensEarned).toBe(8);
+    expect(res.body.tokensEarned).toBe(DEFAULT_PURCHASE_REWARD_TOKENS);
 
     await cleanupMember(member);
   });
 
-  it("a zero rate is honoured as 'no reward', not treated as unset", async () => {
+  it("a zero reward is honoured as 'no reward', not treated as unset", async () => {
     const productId = await seedProduct(5);
-    await pool.query(`UPDATE org_products SET token_reward_bps = 0 WHERE id = $1`, [productId]);
+    await pool.query(`UPDATE org_products SET purchase_reward_tokens = 0 WHERE id = $1`, [productId]);
     const member = await memberWithAddress();
 
     const res = await request(app.getHttpServer())
