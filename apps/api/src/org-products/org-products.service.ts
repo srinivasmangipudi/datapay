@@ -32,6 +32,7 @@ ${sheetText.slice(0, MAX_SHEET_CHARS)}
 
 For EACH distinct row that looks like a real sellable product, extract:
 - nameEn: a clean product name
+- sku: the seller's own product code/SKU/item-code if a column clearly holds one — omit the field entirely if the sheet has no such column. Do NOT invent one, and do not use a plain row number as a SKU.
 - unitSpec: the pack size/unit if shown (e.g. "1kg", "500ml", "1 dozen") — omit the field entirely if not present
 - marketPricePaise: the regular/list price, in paise (multiply a rupee amount by 100)
 - salePricePaise: the actual selling price, in paise — if the sheet only has one price column, use that same value for both marketPricePaise and salePricePaise
@@ -42,7 +43,7 @@ Skip rows that are headers, blank, subtotals, or not real individual products.
 
 Respond with ONLY a JSON array (no markdown fences, no commentary) matching exactly this shape:
 [
-  {"nameEn": "...", "unitSpec": "...", "marketPricePaise": 5000, "salePricePaise": 4500, "quantityAvailable": 20, "photoUrl": "..."}
+  {"nameEn": "...", "sku": "...", "unitSpec": "...", "marketPricePaise": 5000, "salePricePaise": 4500, "quantityAvailable": 20, "photoUrl": "..."}
 ]`;
 }
 
@@ -121,11 +122,57 @@ export class OrgProductsService {
   }
 
   /**
-   * Points at a public sheet (Google Sheets share link, or any plain CSV
-   * URL), extracts a product list via the LLM, and upserts every product by
-   * (organization_id, dedup_key) — a genuinely new product lands as 'draft'
-   * (needs ops review); a re-import matching an already-approved product
-   * updates quantity/price/photo in place without re-entering review.
+   * Resolves a sheet row to an existing product: SKU first (stable across
+   * renames), then normalized name. Returns null when this is genuinely new.
+   *
+   * Note the asymmetry — a SKU MISS does not fall through to a name match.
+   * If the org codes its products and this code is unseen, it is a new
+   * product even if some other row happens to share its name; falling back
+   * would silently merge two distinct SKUs that a seller named alike.
+   */
+  private async findExistingProduct(
+    client: PoolClient,
+    organizationId: string,
+    nameEn: string,
+    sku?: string
+  ): Promise<number | null> {
+    if (sku) {
+      const { rows } = await client.query<{ id: number }>(
+        `SELECT id FROM org_products WHERE organization_id = $1 AND sku = $2`,
+        [organizationId, sku]
+      );
+      if (rows[0]) return rows[0].id;
+      // Adopt a row that predates the org publishing SKUs: same name, no code
+      // on file yet. Restricted to sku IS NULL so it can never steal a row
+      // that already belongs to a different code.
+      const { rows: byName } = await client.query<{ id: number }>(
+        `SELECT id FROM org_products
+          WHERE organization_id = $1 AND dedup_key = $2 AND sku IS NULL`,
+        [organizationId, normalizeDedupKey(nameEn)]
+      );
+      return byName[0]?.id ?? null;
+    }
+
+    const { rows } = await client.query<{ id: number }>(
+      `SELECT id FROM org_products WHERE organization_id = $1 AND dedup_key = $2`,
+      [organizationId, normalizeDedupKey(nameEn)]
+    );
+    return rows[0]?.id ?? null;
+  }
+
+  /**
+   * Points at a public sheet (Google Sheets share link, or any plain CSV URL),
+   * extracts a product list via the LLM, and matches each row to an existing
+   * product by SKU where the sheet has one, else by normalized name (see
+   * findExistingProduct). A genuinely new product lands as 'draft' and needs
+   * ops review; a re-import matching an already-approved product updates
+   * quantity/price/photo in place without re-entering review.
+   *
+   * Consequence worth knowing: for an org WITHOUT SKUs, renaming a product in
+   * the sheet creates a new listing rather than renaming the old one. That is
+   * deliberate — it is the only way such an org can deliberately fork a
+   * listing — and it is why capturing a SKU matters for anyone maintaining a
+   * real catalog.
    */
   async importFromSheet(organizationId: string, sheetUrl: string): Promise<{ runId: number }> {
     const { rows: runRows } = await this.pool.query<{ id: number }>(
@@ -169,33 +216,56 @@ export class OrgProductsService {
         let created = 0;
         let updated = 0;
         for (const p of withRehostedPhotos) {
-          const { rows } = await client.query<{ inserted: boolean }>(
-            `INSERT INTO org_products
-               (organization_id, name_en, unit_spec, market_price_paise, sale_price_paise,
-                quantity_available, photo_url, dedup_key, source, review_state, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'sheet_extracted', 'draft', now())
-             ON CONFLICT (organization_id, dedup_key) DO UPDATE SET
-               name_en = EXCLUDED.name_en,
-               unit_spec = EXCLUDED.unit_spec,
-               market_price_paise = EXCLUDED.market_price_paise,
-               sale_price_paise = EXCLUDED.sale_price_paise,
-               quantity_available = EXCLUDED.quantity_available,
-               photo_url = COALESCE(EXCLUDED.photo_url, org_products.photo_url),
-               updated_at = now()
-             RETURNING (xmax = 0) AS inserted`,
-            [
-              organizationId,
-              p.nameEn,
-              p.unitSpec ?? null,
-              p.marketPricePaise,
-              p.salePricePaise,
-              p.quantityAvailable,
-              p.photoUrl,
-              normalizeDedupKey(p.nameEn),
-            ]
-          );
-          if (rows[0].inserted) created += 1;
-          else updated += 1;
+          // Identity resolution, in order:
+          //   1. the org's own SKU, when the sheet has one — so renaming a
+          //      product updates it instead of forking a duplicate;
+          //   2. failing that, the normalized name, as before.
+          // A row first seen without a SKU and later carrying one is matched by
+          // name here and adopts the SKU, rather than becoming a second row.
+          const existingId = await this.findExistingProduct(client, organizationId, p.nameEn, p.sku);
+
+          if (existingId) {
+            await client.query(
+              `UPDATE org_products SET
+                 name_en = $1, unit_spec = $2, market_price_paise = $3, sale_price_paise = $4,
+                 quantity_available = $5, photo_url = COALESCE($6, photo_url),
+                 sku = COALESCE($7, sku),
+                 dedup_key = $8,
+                 updated_at = now()
+               WHERE id = $9`,
+              [
+                p.nameEn,
+                p.unitSpec ?? null,
+                p.marketPricePaise,
+                p.salePricePaise,
+                p.quantityAvailable,
+                p.photoUrl,
+                p.sku ?? null,
+                normalizeDedupKey(p.nameEn),
+                existingId,
+              ]
+            );
+            updated += 1;
+          } else {
+            await client.query(
+              `INSERT INTO org_products
+                 (organization_id, name_en, sku, unit_spec, market_price_paise, sale_price_paise,
+                  quantity_available, photo_url, dedup_key, source, review_state, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'sheet_extracted', 'draft', now())`,
+              [
+                organizationId,
+                p.nameEn,
+                p.sku ?? null,
+                p.unitSpec ?? null,
+                p.marketPricePaise,
+                p.salePricePaise,
+                p.quantityAvailable,
+                p.photoUrl,
+                normalizeDedupKey(p.nameEn),
+              ]
+            );
+            created += 1;
+          }
         }
         return { created, updated };
       });
@@ -405,7 +475,8 @@ export class OrgProductsService {
       set a rate on an approved product, not just one awaiting review. */
   async listAllForOps() {
     const { rows } = await this.pool.query(
-      `SELECT p.id, p.name_en, p.unit_spec, p.photo_url, p.sale_price_paise, p.review_state,
+      `SELECT p.id, p.name_en, p.sku, p.unit_spec, p.photo_url, p.sale_price_paise, p.review_state,
+              p.delisted_at, p.delisted_reason,
               p.purchase_reward_tokens, p.platform_fee_bps, o.name AS organization_name
        FROM org_products p
        JOIN organizations o ON o.id = p.organization_id
@@ -441,6 +512,23 @@ export class OrgProductsService {
        WHERE id = $${values.length}
        RETURNING id, purchase_reward_tokens, platform_fee_bps`,
       values
+    );
+    if (!rows[0]) throw new NotFoundException(`Product ${productId} not found`);
+    return rows[0];
+  }
+
+  /**
+   * Ops pulls a product from (or returns it to) the marketplace. Independent of
+   * review_state on purpose: the org controls stock and prices, ops controls
+   * what members can actually see, and neither should silently undo the other.
+   */
+  async setDelisted(productId: number, delisted: boolean, reason?: string) {
+    const { rows } = await this.pool.query(
+      `UPDATE org_products
+          SET delisted_at = $1, delisted_reason = $2, updated_at = now()
+        WHERE id = $3
+        RETURNING id, name_en, delisted_at, delisted_reason`,
+      [delisted ? new Date() : null, delisted ? (reason ?? null) : null, productId]
     );
     if (!rows[0]) throw new NotFoundException(`Product ${productId} not found`);
     return rows[0];

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { resolveDeliveryInfo, reviewProduct, setProductRates } from "./core-api";
+import { resolveDeliveryInfo, reviewProduct, setProductDelisted, setProductRates } from "./core-api";
 
 export async function reviewProductAction(formData: FormData): Promise<void> {
   const productId = Number(formData.get("productId"));
@@ -59,6 +59,21 @@ export async function setProductRatesAction(formData: FormData): Promise<void> {
   }
   revalidatePath("/product-review");
   redirect("/product-review?rates=saved");
+}
+
+export async function setProductDelistedAction(formData: FormData): Promise<void> {
+  const productId = Number(formData.get("productId"));
+  const delisted = String(formData.get("delisted")) === "true";
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  try {
+    await setProductDelisted(productId, delisted, reason || undefined);
+  } catch (err) {
+    revalidatePath("/product-review");
+    redirect(`/product-review?error=${encodeURIComponent((err as Error).message)}`);
+  }
+  revalidatePath("/product-review");
+  redirect(`/product-review?listing=${delisted ? "removed" : "restored"}`);
 }
 
 // Called directly from a client component (not a <form> submit) — the

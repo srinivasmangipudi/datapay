@@ -12,7 +12,7 @@ function formatPaise(paise: number): string {
 export default async function ProductReviewPage({
   searchParams,
 }: {
-  searchParams: { error?: string; rates?: string };
+  searchParams: { error?: string; rates?: string; listing?: string };
 }): Promise<JSX.Element> {
   const [pending, orders, allProducts] = await Promise.all([
     listPendingProducts(),
@@ -36,6 +36,12 @@ export default async function ProductReviewPage({
         <div className="errorBanner">
           <strong>Action failed:</strong> {searchParams.error}
         </div>
+      )}
+      {searchParams.listing === "removed" && (
+        <div className="successBanner">Product removed from the marketplace.</div>
+      )}
+      {searchParams.listing === "restored" && (
+        <div className="successBanner">Product is listed again.</div>
       )}
 
       <section className="section">
@@ -115,7 +121,11 @@ export default async function ProductReviewPage({
           __html: `.productThumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; margin-right: 10px; vertical-align: middle; background: var(--surface-2, #efefe9); }
           .productThumbEmpty { display: inline-block; width: 40px; height: 40px; border-radius: 6px; margin-right: 10px; vertical-align: middle; border: 1px dashed var(--edge); }
           .ratesForm { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
-          .ratesForm input { width: 82px; text-align: right; padding: 6px 8px; font-size: 13px; }`,
+          .ratesForm input { width: 82px; text-align: right; padding: 6px 8px; font-size: 13px; }
+          td.actions { display: table-cell; white-space: nowrap; }
+          td.actions form { display: inline-flex; align-items: center; gap: 6px; }
+          .reasonInput { width: 140px; padding: 6px 8px; font-size: 12.5px; }
+          .delistedTag { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: #b4342c1a; color: #b4342c; border: 1px solid #b4342c40; }`,
         }}
       />
     </main>

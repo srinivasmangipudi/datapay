@@ -43,8 +43,11 @@ export function listOrdersForOps(): Promise<OpsOrder[]> {
 export interface ProductRates {
   id: number;
   name_en: string;
+  sku: string | null;
   unit_spec: string | null;
   photo_url: string | null;
+  delisted_at: string | null;
+  delisted_reason: string | null;
   organization_name: string;
   sale_price_paise: number;
   review_state: string;
@@ -65,6 +68,16 @@ export function setProductRates(
   return apiFetch(`/v1/admin/org-products/${productId}/rates`, {
     method: "PATCH",
     body: JSON.stringify(rates),
+  });
+}
+
+/** Ops pulls a product from the marketplace, or puts it back. Separate from
+    review state on purpose: an org restocking must not silently relist
+    something ops removed. */
+export function setProductDelisted(productId: number, delisted: boolean, reason?: string) {
+  return apiFetch(`/v1/admin/org-products/${productId}/delist`, {
+    method: "POST",
+    body: JSON.stringify({ delisted, reason }),
   });
 }
 

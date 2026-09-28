@@ -51,6 +51,7 @@ export class ProductsService {
        FROM org_products p
        JOIN organizations o ON o.id = p.organization_id
        WHERE p.review_state = 'approved'
+         AND p.delisted_at IS NULL
          AND p.quantity_available > 0
          AND (p.zone_id IS NULL OR p.zone_id IN (SELECT id FROM member_zone_chain))
        ORDER BY p.id DESC`,
@@ -100,17 +101,22 @@ export class ProductsService {
       const { rows: productRows } = await client.query<{
         id: number;
         review_state: string;
+        delisted_at: Date | null;
         quantity_available: number;
         sale_price_paise: number;
         purchase_reward_tokens: number | null;
       }>(
-        `SELECT id, review_state, quantity_available, sale_price_paise, purchase_reward_tokens
+        `SELECT id, review_state, delisted_at, quantity_available, sale_price_paise,
+                purchase_reward_tokens
          FROM org_products WHERE id = $1 FOR UPDATE`,
         [productId]
       );
       const product = productRows[0];
       if (!product) throw new NotFoundException("Product not found");
-      if (product.review_state !== "approved") {
+      if (product.review_state !== "approved" || product.delisted_at !== null) {
+        // Checked here as well as in browse(): a client that loaded the list
+        // before ops pulled the product would otherwise still be able to order
+        // it from a stale screen.
         throw new BadRequestException("Product is not available");
       }
       if (product.quantity_available < quantity) {

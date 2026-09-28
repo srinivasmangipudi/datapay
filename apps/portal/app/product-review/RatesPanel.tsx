@@ -1,5 +1,5 @@
 import { DEFAULT_PLATFORM_FEE_BPS, DEFAULT_PURCHASE_REWARD_TOKENS } from "@datapay/shared";
-import { setProductRatesAction } from "./actions";
+import { setProductDelistedAction, setProductRatesAction } from "./actions";
 import type { ProductRates } from "./core-api";
 
 function bpsToPct(bps: number | null): string {
@@ -34,7 +34,7 @@ export function RatesPanel({ products }: { products: ProductRates[] }): JSX.Elem
                 <th className="num">Price</th>
                 <th className="num">Tokens / order</th>
                 <th className="num">Fee %</th>
-                <th />
+                <th>Listing</th>
               </tr>
             </thead>
             <tbody>
@@ -52,9 +52,15 @@ export function RatesPanel({ products }: { products: ProductRates[] }): JSX.Elem
                       <span className="productThumbEmpty" aria-hidden="true" />
                     )}
                     {p.name_en}
+                    {p.sku && <span className="muted small mono"> · {p.sku}</span>}
                     {p.unit_spec && <span className="muted small"> · {p.unit_spec}</span>}
                     {p.review_state !== "approved" && (
                       <span className="muted small"> · {p.review_state}</span>
+                    )}
+                    {p.delisted_at && (
+                      <span className="delistedTag" title={p.delisted_reason ?? undefined}>
+                        removed from marketplace
+                      </span>
                     )}
                   </td>
                   <td className="small muted">{p.organization_name}</td>
@@ -84,6 +90,20 @@ export function RatesPanel({ products }: { products: ProductRates[] }): JSX.Elem
                       />
                       <button type="submit" className="linkBtn">
                         Save
+                      </button>
+                    </form>
+                  </td>
+                  <td className="actions">
+                    {/* Ops has the last word on what members see. Independent of
+                        review state, so an org restocking can't undo it. */}
+                    <form action={setProductDelistedAction}>
+                      <input type="hidden" name="productId" value={p.id} />
+                      <input type="hidden" name="delisted" value={p.delisted_at ? "false" : "true"} />
+                      {!p.delisted_at && (
+                        <input name="reason" placeholder="Reason (optional)" className="reasonInput" />
+                      )}
+                      <button type="submit" className={p.delisted_at ? "approveBtn" : "rejectBtn"}>
+                        {p.delisted_at ? "Relist" : "Remove"}
                       </button>
                     </form>
                   </td>

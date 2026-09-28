@@ -33,6 +33,18 @@ const SHEET_V2 = JSON.stringify([
   { nameEn: "Toothpaste", unitSpec: "200g", marketPricePaise: 9000, salePricePaise: 7900, quantityAvailable: 60 },
 ]);
 
+// Same products, now with the seller's own codes — and "Basmati Rice" RENAMED.
+// Without SKUs that rename would fork a new listing; with them it must update
+// the existing row in place.
+const SHEET_SKU_V1 = JSON.stringify([
+  { nameEn: "Basmati Rice", sku: "RICE-5", unitSpec: "5kg", marketPricePaise: 45000, salePricePaise: 39900, quantityAvailable: 25 },
+  { nameEn: "Toor Dal", sku: "DAL-1", unitSpec: "1kg", marketPricePaise: 14000, salePricePaise: 12500, quantityAvailable: 40 },
+]);
+const SHEET_SKU_V2_RENAMED = JSON.stringify([
+  { nameEn: "Basmati Rice Premium 5kg", sku: "RICE-5", unitSpec: "5kg", marketPricePaise: 45000, salePricePaise: 41000, quantityAvailable: 12 },
+  { nameEn: "Toor Dal", sku: "DAL-1", unitSpec: "1kg", marketPricePaise: 14000, salePricePaise: 12500, quantityAvailable: 40 },
+]);
+
 describe("Org product catalog — sheet import dedup/upsert + review gating", () => {
   let app: INestApplication;
   let pool: Pool;
@@ -243,6 +255,93 @@ describe("Org product catalog — sheet import dedup/upsert + review gating", ()
       const afterSecondUpdate = await pool.query(`SELECT id FROM questions WHERE org_product_id = $1`, [productId]);
       expect(afterSecondUpdate.rows).toHaveLength(1);
       expect(afterSecondUpdate.rows[0].id).toBe(afterFirstUpdate.rows[0].id);
+    });
+  });
+
+  describe("SKU identity and ops delisting", () => {
+    it("a rename keeps the same product when the sheet carries a SKU", async () => {
+      orgProducts.llmOverride = new FakeLlmProvider(SHEET_SKU_V1);
+      orgProducts.sheetFetchOverride = async () => "fake csv";
+      await orgProducts.importFromSheet(organizationId, "https://example.com/s.csv");
+
+      const before = await pool.query<{ id: number; name_en: string }>(
+        `SELECT id, name_en FROM org_products WHERE organization_id = $1 AND sku = 'RICE-5'`,
+        [organizationId]
+      );
+      expect(before.rows).toHaveLength(1);
+      const originalId = before.rows[0].id;
+
+      orgProducts.llmOverride = new FakeLlmProvider(SHEET_SKU_V2_RENAMED);
+      await orgProducts.importFromSheet(organizationId, "https://example.com/s.csv");
+
+      const after = await pool.query<{ id: number; name_en: string }>(
+        `SELECT id, name_en FROM org_products WHERE organization_id = $1 AND sku = 'RICE-5'`,
+        [organizationId]
+      );
+      // Same row, new name — not a duplicate listing with the orders and rates
+      // of the original stranded on a row nobody can see.
+      expect(after.rows).toHaveLength(1);
+      expect(after.rows[0].id).toBe(originalId);
+      expect(after.rows[0].name_en).toBe("Basmati Rice Premium 5kg");
+
+      const all = await pool.query(
+        `SELECT id FROM org_products WHERE organization_id = $1`,
+        [organizationId]
+      );
+      expect(all.rows).toHaveLength(2); // rice + dal, no third row from the rename
+    });
+
+    it("a product first imported without a SKU adopts one rather than duplicating", async () => {
+      orgProducts.llmOverride = new FakeLlmProvider(SHEET_V1); // no SKUs
+      orgProducts.sheetFetchOverride = async () => "fake csv";
+      await orgProducts.importFromSheet(organizationId, "https://example.com/s.csv");
+
+      orgProducts.llmOverride = new FakeLlmProvider(SHEET_SKU_V1); // same names, now coded
+      await orgProducts.importFromSheet(organizationId, "https://example.com/s.csv");
+
+      const rows = await pool.query<{ sku: string | null }>(
+        `SELECT sku FROM org_products WHERE organization_id = $1 ORDER BY id`,
+        [organizationId]
+      );
+      expect(rows.rows).toHaveLength(2);
+      expect(rows.rows.map((r) => r.sku).sort()).toEqual(["DAL-1", "RICE-5"]);
+    });
+
+    it("ops delisting hides an approved product from members and survives a restock", async () => {
+      const { id } = await orgProducts.createProduct(organizationId, {
+        nameEn: "Delist Me",
+        marketPricePaise: 10000,
+        salePricePaise: 9000,
+        quantityAvailable: 5,
+      });
+      await orgProducts.review(id, "approved");
+
+      await orgProducts.setDelisted(id, true, "supplier quality issue");
+
+      const hidden = await pool.query<{ delisted_at: Date | null; delisted_reason: string | null }>(
+        `SELECT delisted_at, delisted_reason FROM org_products WHERE id = $1`,
+        [id]
+      );
+      expect(hidden.rows[0].delisted_at).not.toBeNull();
+      expect(hidden.rows[0].delisted_reason).toBe("supplier quality issue");
+
+      // The org restocking must NOT quietly put it back on the marketplace —
+      // that is the whole reason this is a separate column from review_state.
+      await orgProducts.updateProduct(organizationId, id, { quantityAvailable: 99 });
+      const stillHidden = await pool.query<{ delisted_at: Date | null; review_state: string }>(
+        `SELECT delisted_at, review_state FROM org_products WHERE id = $1`,
+        [id]
+      );
+      expect(stillHidden.rows[0].delisted_at).not.toBeNull();
+      expect(stillHidden.rows[0].review_state).toBe("approved");
+
+      await orgProducts.setDelisted(id, false);
+      const relisted = await pool.query<{ delisted_at: Date | null; delisted_reason: string | null }>(
+        `SELECT delisted_at, delisted_reason FROM org_products WHERE id = $1`,
+        [id]
+      );
+      expect(relisted.rows[0].delisted_at).toBeNull();
+      expect(relisted.rows[0].delisted_reason).toBeNull();
     });
   });
 });

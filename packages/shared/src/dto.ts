@@ -502,6 +502,18 @@ export const SetProductRatesDtoSchema = z
   .refine((v) => Object.keys(v).length > 0, { message: "Provide at least one rate to set" });
 export type SetProductRatesDto = z.infer<typeof SetProductRatesDtoSchema>;
 
+/**
+ * POST /v1/admin/org-products/:id/delist — OPS ONLY, and deliberately separate
+ * from review_state. Ops has the final say over what reaches the marketplace:
+ * an org re-stocking or an approved review must never quietly relist something
+ * ops pulled, so this is its own column and its own decision.
+ */
+export const DelistProductDtoSchema = z.object({
+  delisted: z.boolean(),
+  reason: z.string().max(300).optional(),
+});
+export type DelistProductDto = z.infer<typeof DelistProductDtoSchema>;
+
 /** POST /v1/org/products/:id/photo — base64-in-JSON, same convention as every other upload in this app. */
 export const UploadOrgProductPhotoDtoSchema = z.object({
   imageBase64: z.string().min(1),

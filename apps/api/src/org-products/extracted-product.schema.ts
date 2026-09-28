@@ -5,6 +5,10 @@ import { z } from "zod";
 // QuestionVariantSchema, ../question-feeder/question-variant.schema.ts).
 export const ExtractedProductSchema = z.object({
   nameEn: z.string().min(1),
+  // The seller's own product code, when their sheet has one. Optional because
+  // plenty of small sellers keep no codes at all — where it exists it becomes
+  // the product's identity across re-imports, so a rename stays a rename.
+  sku: z.string().min(1).max(120).optional(),
   unitSpec: z.string().optional(),
   marketPricePaise: z.number().int().positive(),
   salePricePaise: z.number().int().positive(),

@@ -87,7 +87,7 @@ export class PublicService {
               c.name AS category_name
        FROM org_products p
        LEFT JOIN categories c ON c.id = p.category_id
-       WHERE p.organization_id = $1 AND p.review_state = 'approved'
+       WHERE p.organization_id = $1 AND p.review_state = 'approved' AND p.delisted_at IS NULL
        ORDER BY p.id`,
       [org.id]
     );

@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from "@nestjs/common";
-import { SetProductRatesDtoSchema } from "@datapay/shared";
+import { DelistProductDtoSchema, SetProductRatesDtoSchema } from "@datapay/shared";
 import { parseOrThrow } from "../zod.util";
 import { OrgProductsService } from "./org-products.service";
 
@@ -32,6 +32,12 @@ export class OrgProductsAdminController {
   @Get()
   listAll() {
     return this.orgProducts.listAllForOps();
+  }
+
+  @Post(":id/delist")
+  delist(@Param("id", ParseIntPipe) id: number, @Body() body: unknown) {
+    const dto = parseOrThrow(DelistProductDtoSchema, body);
+    return this.orgProducts.setDelisted(id, dto.delisted, dto.reason);
   }
 
   @Patch(":id/rates")
