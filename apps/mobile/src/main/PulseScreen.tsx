@@ -26,7 +26,7 @@ import { hasFace } from "../faceDetector";
 import { strings } from "../i18n/strings";
 import { enqueueAnswer, flushOutbox } from "../outbox";
 import type { Session } from "../session";
-import { colors, radii, spacing } from "../theme";
+import { colors, radii, spacing, type } from "../theme";
 
 interface Props {
   session: Session;
@@ -37,6 +37,9 @@ export function PulseScreen({ session }: Props) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number[]>([]);
   const [numericInput, setNumericInput] = useState("");
+  // Set the moment a member declares a need we can already meet — cleared when
+  // they dismiss it or move on.
+  const [justMatched, setJustMatched] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [usedVoice, setUsedVoice] = useState(false);
@@ -87,6 +90,19 @@ export function PulseScreen({ session }: Props) {
       lat: coords?.lat,
       lng: coords?.lng,
     });
+    // Close the loop while they are still looking at it. A member who declares
+    // a need and hears nothing back has no reason to answer again tomorrow;
+    // this is the moment the app can show it listened.
+    const saidYes =
+      question.type === "intent_window" &&
+      selected.some((id) => {
+        const label = question.options.find((o) => o.id === id)?.labelEn?.toLowerCase();
+        return label === "yes" || label === "maybe";
+      });
+    if (saidYes && question.availableNow > 0) {
+      setJustMatched(question.availableNow);
+    }
+
     resetSupplements();
     setIndex((i) => i + 1);
     // Best-effort background sync — the outbox is the source of truth if this fails.
@@ -211,6 +227,25 @@ export function PulseScreen({ session }: Props) {
         contentContainerStyle={[styles.container, { paddingTop: spacing.lg }]}
         keyboardShouldPersistTaps="handled"
       >
+      {/* Sits above the next question rather than blocking it: the member keeps
+          answering, and the fact that we listened is simply there. */}
+      {justMatched !== null && (
+        <TouchableOpacity
+          style={styles.matchBanner}
+          activeOpacity={0.85}
+          onPress={() => setJustMatched(null)}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss"
+        >
+          <Ionicons name="sparkles" size={18} color={colors.tealDeep} />
+          <Text style={styles.matchBannerText}>
+            Good news — {justMatched === 1 ? "that's" : `${justMatched} of those are`} available
+            near you right now. Check the Products tab.
+          </Text>
+          <Ionicons name="close" size={16} color={colors.subtle} />
+        </TouchableOpacity>
+      )}
+
       <View style={styles.progressTrack}>
         {questions.map((_, i) => (
           <View
@@ -341,6 +376,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
     paddingHorizontal: spacing.xl,
   },
+  matchBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.tealTint,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  matchBannerText: { flex: 1, ...type.small, color: colors.tealDeep, fontWeight: "600", lineHeight: 19 },
   progressTrack: { flexDirection: "row", gap: spacing.xs, marginBottom: spacing.sm },
   progressSegment: { flex: 1, height: 4, borderRadius: 2, backgroundColor: colors.border },
   progressDone: { backgroundColor: colors.teal },

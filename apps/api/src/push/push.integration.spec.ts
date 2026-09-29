@@ -156,4 +156,93 @@ describe("Morning push nudge", () => {
     await vaultPool.query(`DELETE FROM push_tokens WHERE token = $1`, [deviceToken]);
     await cleanup(member);
   });
+
+  /**
+   * The payoff for lazy demand: someone declared a need months ago, nothing
+   * existed, and now something does. Targeting is the whole risk here — a push
+   * saying "the thing you asked for is here" that reaches someone who asked for
+   * nothing destroys the one mechanic it exists to serve.
+   */
+  describe("intent-match notification", () => {
+    async function seedApprovedProduct(categoryId: number): Promise<number> {
+      const { rows: orgRows } = await pool.query<{ id: string }>(
+        `INSERT INTO organizations (slug, name, email, password_hash)
+         VALUES ($1, 'Intent Org', $2, 'x') RETURNING id`,
+        [`intent-org-${randomUUID()}`, `${randomUUID()}@example.com`]
+      );
+      const { rows } = await pool.query<{ id: number }>(
+        `INSERT INTO org_products
+           (organization_id, name_en, market_price_paise, sale_price_paise,
+            quantity_available, dedup_key, source, review_state, category_id)
+         VALUES ($1, 'Intent Test Lamp', 50000, 45000, 10, $2, 'manual', 'approved', $3)
+         RETURNING id`,
+        [orgRows[0].id, `intent-${randomUUID()}`, categoryId]
+      );
+      return rows[0].id;
+    }
+
+    // A category of its own per test. Using an existing one means matching
+    // whatever intents other suites left behind in the shared database, which
+    // is how the first version of this asserted "nobody declared" and got 6.
+    const madeCategories: number[] = [];
+    async function freshCategory(): Promise<number> {
+      const slug = `intent-test-${randomUUID().slice(0, 8)}`;
+      const { rows } = await pool.query<{ id: number }>(
+        `INSERT INTO categories (slug, name, sensitivity) VALUES ($1, $2, 'standard') RETURNING id`,
+        [slug, `Intent Test ${slug}`]
+      );
+      madeCategories.push(rows[0].id);
+      return rows[0].id;
+    }
+
+    afterAll(async () => {
+      if (madeCategories.length) {
+        await pool.query(`DELETE FROM intents WHERE product_category_id = ANY($1)`, [madeCategories]);
+        await pool.query(`DELETE FROM categories WHERE id = ANY($1)`, [madeCategories]);
+      }
+    });
+
+    it("targets only members with a live declaration in that category", async () => {
+      const categoryId = await freshCategory();
+      const productId = await seedApprovedProduct(categoryId);
+
+      const declarer = await createTestMember(pool, jwt, VILLAGE_ZONE_ID);
+      const silent = await createTestMember(pool, jwt, VILLAGE_ZONE_ID);
+      const expired = await createTestMember(pool, jwt, VILLAGE_ZONE_ID);
+
+      await pool.query(
+        `INSERT INTO intents (alias_id, product_category_id, "window", strength, expires_at)
+         VALUES ($1, $2, '3m', 'yes', now() + interval '3 months')`,
+        [declarer.aliasId, categoryId]
+      );
+      await pool.query(
+        `INSERT INTO intents (alias_id, product_category_id, "window", strength, expires_at)
+         VALUES ($1, $2, '3m', 'yes', now() - interval '1 day')`,
+        [expired.aliasId, categoryId]
+      );
+
+      const result = await push.notifyIntentMatch(productId);
+
+      // Exactly one: the silent member never asked, and the expired one's
+      // window has passed — telling either "you asked for this" is a lie.
+      expect(result.matched).toBe(1);
+
+      await pool.query(`DELETE FROM intents WHERE alias_id = ANY($1)`, [
+        [declarer.aliasId, expired.aliasId],
+      ]);
+      await pool.query(`DELETE FROM org_products WHERE id = $1`, [productId]);
+      for (const m of [declarer, silent, expired]) await cleanup(m);
+    });
+
+    it("sends nothing for a product nobody declared", async () => {
+      const categoryId = await freshCategory();
+      const productId = await seedApprovedProduct(categoryId);
+
+      const result = await push.notifyIntentMatch(productId);
+      expect(result.matched).toBe(0);
+      expect(result.sent).toBe(0);
+
+      await pool.query(`DELETE FROM org_products WHERE id = $1`, [productId]);
+    });
+  });
 });

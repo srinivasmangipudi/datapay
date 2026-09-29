@@ -61,6 +61,11 @@ export interface PulseQuestion {
   rewardTokens: number;
   allowPhoto: boolean;
   allowVoice: boolean;
+  /** How many products in this question's category can already reach this
+      member. Travels with the question so answering "yes" can be followed
+      immediately by "and here it is" — answers queue offline and flush later,
+      so the submit response comes far too late to tell them anything. */
+  availableNow: number;
   options: PulseOption[];
 }
 

@@ -113,6 +113,68 @@ export class PushService {
   }
 
   /**
+   * Tells members who DECLARED a need that it can now be met.
+   *
+   * This is the payoff for the whole lazy-demand model: someone said months ago
+   * that they were looking for a solar light, nothing existed, and now
+   * something does. Without this the declaration only pays off if they happen
+   * to open the app on the right day.
+   *
+   * Scoped tightly on purpose — a live, unexpired intent in this product's
+   * exact category, and a member the product can actually reach. A push that
+   * says "the thing you asked for is here" about something unavailable or
+   * unrelated destroys the one mechanic it exists to serve.
+   */
+  async notifyIntentMatch(productId: number): Promise<{ matched: number; sent: number }> {
+    const { rows: aliasRows } = await this.pool.query<{ alias_id: string }>(
+      `WITH RECURSIVE product_zone AS (
+         SELECT p.id, p.category_id, p.zone_id, p.name_en
+           FROM org_products p
+          WHERE p.id = $1
+            AND p.review_state = 'approved'
+            AND p.delisted_at IS NULL
+            AND p.quantity_available > 0
+       ),
+       member_chain AS (
+         SELECT m.alias_id, z.id, z.parent_id FROM members m JOIN zones z ON z.id = m.zone_id
+         UNION ALL
+         SELECT c.alias_id, z.id, z.parent_id FROM zones z JOIN member_chain c ON z.id = c.parent_id
+       )
+       SELECT DISTINCT i.alias_id
+         FROM intents i
+         JOIN product_zone pz ON pz.category_id = i.product_category_id
+         JOIN members m ON m.alias_id = i.alias_id
+        WHERE i.expires_at > now()
+          AND m.status = 'active'
+          AND (pz.zone_id IS NULL
+               OR pz.zone_id IN (SELECT id FROM member_chain WHERE alias_id = i.alias_id))`,
+      [productId]
+    );
+
+    if (aliasRows.length === 0) return { matched: 0, sent: 0 };
+
+    const { rows: nameRows } = await this.pool.query<{ name_en: string }>(
+      `SELECT name_en FROM org_products WHERE id = $1`,
+      [productId]
+    );
+    const productName = nameRows[0]?.name_en ?? "Something you asked for";
+
+    const devices = await this.resolveTokens(aliasRows.map((r) => r.alias_id));
+    let sent = 0;
+    for (const d of devices) {
+      const result = await this.sender.send(d.token, {
+        title: "You asked for this",
+        body: `${productName} is now available near you.`,
+      });
+      if (result.ok) sent += 1;
+      else if (result.unregistered) await this.removeToken(d.token);
+    }
+
+    this.logger.log(`intent-match push: product=${productId} matched=${aliasRows.length} sent=${sent}`);
+    return { matched: aliasRows.length, sent };
+  }
+
+  /**
    * One pass of the morning nudge. Returns counts rather than anything
    * member-identifying, so the result is safe to log and to show ops.
    */

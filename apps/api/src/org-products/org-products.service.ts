@@ -1,8 +1,9 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { CreateOrgProductDto, UpdateOrgProductDto } from "@datapay/shared";
 import { Pool, PoolClient } from "pg";
 import { z } from "zod";
 import { PG_POOL } from "../db/db.module";
+import { PushService } from "../push/push.service";
 import { withTransaction } from "../db/tx.util";
 import { stripCodeFences } from "../intelligence/llm-json.util";
 import { GeminiLlmProvider, LlmProvider } from "../intelligence/llm.provider";
@@ -74,7 +75,12 @@ export class OrgProductsService {
   // Test seam — avoids a real network fetch in tests, same shape as llmOverride.
   sheetFetchOverride: ((url: string) => Promise<string>) | null = null;
 
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  private readonly logger = new Logger(OrgProductsService.name);
+
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly push: PushService
+  ) {}
 
   private get llm(): LlmProvider {
     if (this.llmOverride) return this.llmOverride;
@@ -541,6 +547,17 @@ export class OrgProductsService {
       [decision, productId]
     );
     if (!rows[0]) throw new NotFoundException(`Draft product ${productId} not found`);
+
+    // Approval is the moment a declared need becomes meetable — tell the people
+    // who declared it. Best-effort and outside the decision: a push failure
+    // must never leave a product unapproved, and ops should not have to retry
+    // a review because a notification did not go out.
+    if (decision === "approved") {
+      this.push
+        .notifyIntentMatch(productId)
+        .catch((err) => this.logger.warn(`intent-match push failed: ${(err as Error).message}`));
+    }
+
     return rows[0];
   }
 

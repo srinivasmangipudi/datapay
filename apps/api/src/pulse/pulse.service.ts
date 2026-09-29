@@ -22,6 +22,7 @@ interface QuestionRow {
   allow_photo: boolean;
   allow_voice: boolean;
   options: { id: number; labelEn: string; labelKn: string | null; sort: number }[];
+  available_now: string;
 }
 
 @Injectable()
@@ -98,6 +99,19 @@ export class PulseService {
                 ) FILTER (WHERE o.id IS NOT NULL),
                 '[]'
               ) AS options
+              ,
+              -- Whether anything in this question's category can already be
+              -- supplied to this member. Travels WITH the question so the app
+              -- can respond the instant they answer "yes" — answers are queued
+              -- offline and flushed later, so the submit response is far too
+              -- late to tell them anything.
+              (SELECT COUNT(*) FROM org_products op
+                WHERE op.category_id = q.category_id
+                  AND op.review_state = 'approved'
+                  AND op.delisted_at IS NULL
+                  AND op.quantity_available > 0
+                  AND (op.zone_id IS NULL OR op.zone_id IN (SELECT id FROM member_zone_chain))
+              ) AS available_now
        FROM questions q
        LEFT JOIN question_options o ON o.question_id = q.id
        LEFT JOIN question_translations qt_hi ON qt_hi.question_id = q.id AND qt_hi.language_code = 'hi'
@@ -153,6 +167,9 @@ export class PulseService {
       allowPhoto: q.allow_photo,
       allowVoice: q.allow_voice,
       options: q.options,
+      // 0 for most questions. Non-zero means answering "yes" can be followed
+      // immediately by "and here it is" rather than by silence.
+      availableNow: Number(q.available_now ?? 0),
     }));
   }
 

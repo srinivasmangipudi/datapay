@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { PushModule } from "../push/push.module";
 import { AuthModule } from "../auth/auth.module";
 import { OrgAuthGuard } from "../organizations/org-auth.guard";
 import { OrgProductsAdminController } from "./org-products-admin.controller";
@@ -9,7 +10,7 @@ import { OrgProductsService } from "./org-products.service";
 // which exports nothing) — a stateless guard needing only JwtService
 // (already global via AuthModule), so a second registration is harmless.
 @Module({
-  imports: [AuthModule],
+  imports: [PushModule, AuthModule],
   controllers: [OrgProductsController, OrgProductsAdminController],
   providers: [OrgProductsService, OrgAuthGuard],
 })
