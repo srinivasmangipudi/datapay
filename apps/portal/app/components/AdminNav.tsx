@@ -16,6 +16,7 @@ const LINKS = [
   { href: "/snaps", label: "Snap verification" },
   { href: "/token-economy", label: "Token economy" },
   { href: "/fund", label: "Fund & governance" },
+  { href: "/delivery-agents", label: "Delivery people" },
   { href: "/produce", label: "Produce & payouts" },
   { href: "/audit", label: "Audit & fraud" },
   { href: "/zones", label: "Zones & categories" },

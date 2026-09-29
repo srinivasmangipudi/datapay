@@ -549,6 +549,50 @@ export const DelistProductDtoSchema = z.object({
 });
 export type DelistProductDto = z.infer<typeof DelistProductDtoSchema>;
 
+/**
+ * Delivery people — onboarded by ops with a phone number and an area, and
+ * signing in with that number plus a passcode ops hands them out of band.
+ * Phone rather than email because that is what a delivery person actually has.
+ */
+export const CreateDeliveryAgentDtoSchema = z.object({
+  name: z.string().min(1).max(120),
+  phone: z.string().min(10).max(20),
+  zoneId: z.string().uuid(),
+  password: z.string().min(6).max(200),
+});
+export type CreateDeliveryAgentDto = z.infer<typeof CreateDeliveryAgentDtoSchema>;
+
+/** Vault-internal — a delivery agent's phone lives here, never in core_db. */
+export const VaultRegisterAgentPhoneDtoSchema = z.object({
+  agentId: z.string().uuid(),
+  phone: z.string().min(10).max(20),
+});
+export type VaultRegisterAgentPhoneDto = z.infer<typeof VaultRegisterAgentPhoneDtoSchema>;
+
+export const VaultResolveAgentPhoneDtoSchema = z.object({
+  phone: z.string().min(10).max(20),
+});
+export type VaultResolveAgentPhoneDto = z.infer<typeof VaultResolveAgentPhoneDtoSchema>;
+
+export const VaultResolveAgentPhonesDtoSchema = z.object({
+  agentIds: z.array(z.string().uuid()).min(1).max(500),
+});
+export type VaultResolveAgentPhonesDto = z.infer<typeof VaultResolveAgentPhonesDtoSchema>;
+
+export const DeliveryLoginDtoSchema = z.object({
+  phone: z.string().min(10).max(20),
+  password: z.string().min(1),
+});
+export type DeliveryLoginDto = z.infer<typeof DeliveryLoginDtoSchema>;
+
+export const SetDeliveryAgentActiveDtoSchema = z.object({ active: z.boolean() });
+export type SetDeliveryAgentActiveDto = z.infer<typeof SetDeliveryAgentActiveDtoSchema>;
+
+export const ResetDeliveryPasswordDtoSchema = z.object({
+  password: z.string().min(6).max(200),
+});
+export type ResetDeliveryPasswordDto = z.infer<typeof ResetDeliveryPasswordDtoSchema>;
+
 /** POST /v1/org/products/:id/photo — base64-in-JSON, same convention as every other upload in this app. */
 export const UploadOrgProductPhotoDtoSchema = z.object({
   imageBase64: z.string().min(1),

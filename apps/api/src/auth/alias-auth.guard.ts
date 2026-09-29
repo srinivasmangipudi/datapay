@@ -12,8 +12,20 @@ export interface AliasRequest extends Request {
   displayAlias: string;
 }
 
-// Core never mints this token, only verifies it — Vault is the sole issuer, so the
-// only claim that can ever be present is aliasId. See SPEC.md §9 / FIG.3.
+// Vault mints member tokens as { aliasId, displayAlias } with NO `type` claim.
+//
+// This guard used to accept any token that merely VERIFIED, on the stated
+// assumption that "Vault is the sole issuer, so the only claim that can ever be
+// present is aliasId". That was true when written and is not any more: Core now
+// mints org tokens (type: "org") and delivery-agent tokens (type: "delivery"),
+// all signed with the same JWT_SECRET. A delivery passcode therefore
+// authenticated against member endpoints — aliasId came through undefined so
+// queries returned nothing, but it was an authentication bypass waiting for the
+// first query that handled a missing alias loosely.
+//
+// So: a member token is one that carries an aliasId and carries NO type. Both
+// halves matter — the absent type rejects Core-minted tokens, and the required
+// aliasId rejects anything else that happens to share the secret.
 @Injectable()
 export class AliasAuthGuard implements CanActivate {
   constructor(private readonly jwt: JwtService) {}
@@ -26,11 +38,16 @@ export class AliasAuthGuard implements CanActivate {
     }
     const token = header.slice("Bearer ".length);
     try {
-      const payload = await this.jwt.verifyAsync<{ aliasId: string; displayAlias: string }>(
-        token
-      );
+      const payload = await this.jwt.verifyAsync<{
+        aliasId?: string;
+        displayAlias?: string;
+        type?: string;
+      }>(token);
+      if (payload.type !== undefined || !payload.aliasId) {
+        throw new UnauthorizedException("Invalid token type");
+      }
       req.aliasId = payload.aliasId;
-      req.displayAlias = payload.displayAlias;
+      req.displayAlias = payload.displayAlias ?? "";
       return true;
     } catch {
       throw new UnauthorizedException("Invalid or expired token");

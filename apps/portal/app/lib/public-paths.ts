@@ -19,6 +19,9 @@ export const PUBLIC_EXACT_PATHS = [
   "/child-safety",
   "/about",
   "/brand",
+  // The delivery person's surface. They are not ops and must never hit the
+  // ops login — their own token gates the data, server-side.
+  "/delivery",
 ] as const;
 
 /** Public path prefixes — every route beneath them is public too. */
