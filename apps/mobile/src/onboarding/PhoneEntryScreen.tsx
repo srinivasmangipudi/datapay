@@ -64,8 +64,8 @@ export function PhoneEntryScreen({ onSent }: Props) {
         <Text style={styles.title}>Let's get your village on the map</Text>
         <Text style={styles.titleKn}>ನಿಮ್ಮ ಊರನ್ನು ನಕ್ಷೆಗೆ ಸೇರಿಸೋಣ</Text>
         <Text style={styles.subtitle}>
-          A few questions a day, small rewards, and your household's answers help your community
-          get better prices — together.
+          A few questions a day, small rewards — and when someone can supply what your household
+          said it needs, we'll tell you.
         </Text>
 
         <View style={styles.card}>

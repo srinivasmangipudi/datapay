@@ -166,7 +166,7 @@ const CONTENT = {
     getApp: "Get the DataPay app",
     doorHousehold: "For households",
     doorHouseholdBody:
-      "When your village wants the same thing, you buy it together — better quality at a better price than any one household gets alone. Answer a few short questions a day to make that happen, and earn tokens while you do.",
+      "Tell us what your household actually needs. When someone can supply it near you, we'll tell you — because they already knew you wanted it. Answer a few short questions a day, and earn tokens while you do.",
     doorHouseholdNote: "Everything happens in the app — there is nothing to sign up for here.",
     doorOrg: "For organizations",
     doorOrgBody:
@@ -190,22 +190,22 @@ const CONTENT = {
       { stat: "0", label: "names, numbers or addresses ever shared with a brand" },
       { stat: "100%", label: "of demand data published as aggregates only" },
     ],
-    buyEyebrow: "The part that pays off immediately",
-    buyTitle: "Buy together, pay less, get better quality",
+    buyEyebrow: "Why it costs less",
+    buyTitle: "Nobody has to guess what you need",
     buyLede:
-      "A single household has no bargaining power. A hundred households wanting the same 5kg of rice do. DataPay finds where that demand overlaps and takes it to suppliers as one order — so the price drops and the quality goes up, for everyone in it.",
+      "A supplier serving a village is mostly guessing — how much to stock, what people want, whether anyone will buy. Guessing is expensive: unsold stock, wasted trips, advertising to people who never wanted the thing. When households say what they need up front, none of that waste is necessary, and that is where a better price comes from. Not squeezed out of anyone.",
     buySteps: [
       {
         title: "You answer, honestly",
         body: "A few seconds a day. What your household actually buys and needs — no names attached, ever.",
       },
       {
-        title: "Your village's demand adds up",
-        body: "Answers combine into one real, verified order that a supplier genuinely wants to serve well.",
+        title: "Your area's real needs become visible",
+        body: "Answers combine into an honest picture of what your area needs — never any one household's answers.",
       },
       {
-        title: "Everyone gets the better price",
-        body: "The collective price, not the corner-shop price — and you keep the tokens you earned getting there.",
+        title: "What you asked for turns up",
+        body: "When a supplier can meet what you declared, you hear about it — at a price that reflects their not having guessed.",
       },
     ],
     catalogEyebrow: "Live on DataPay",
@@ -228,7 +228,7 @@ const CONTENT = {
     benefitsOrganizations: "For organizations",
     householdBenefits: [
       { title: "Earn tokens for answering", text: "Small, real rewards for a few minutes a day — no strings attached." },
-      { title: "Better prices, locally", text: "Combined demand gives your area real bargaining power with suppliers." },
+      { title: "A fair price, because nobody guessed", text: "A supplier who already knows the demand carries no unsold stock and buys no advertising — so it costs less to serve you." },
       { title: "A real say in what's stocked", text: "Organizations see what your community actually needs, not what a distributor assumes." },
       { title: "Browse and reserve real products", text: "A genuine catalog, fair pricing, no in-app payment required." },
       { title: "Total privacy", text: "Only ever a private alias leaves the vault — never your name, phone, or exact location." },
@@ -300,7 +300,7 @@ const CONTENT = {
     getApp: "DataPay ಆ್ಯಪ್ ಪಡೆಯಿರಿ",
     doorHousehold: "ಮನೆಗಳಿಗಾಗಿ",
     doorHouseholdBody:
-      "ನಿಮ್ಮ ಊರಿನವರೆಲ್ಲ ಒಂದೇ ವಸ್ತು ಬಯಸಿದಾಗ, ಒಟ್ಟಿಗೆ ಖರೀದಿಸಿ — ಒಬ್ಬರೇ ಖರೀದಿಸುವುದಕ್ಕಿಂತ ಉತ್ತಮ ಗುಣಮಟ್ಟ, ಕಡಿಮೆ ಬೆಲೆ. ದಿನಕ್ಕೆ ಕೆಲವು ಸಣ್ಣ ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರಿಸಿ ಮತ್ತು ಟೋಕನ್‌ಗಳನ್ನು ಗಳಿಸಿ.",
+      "ನಿಮ್ಮ ಮನೆಗೆ ನಿಜವಾಗಿ ಏನು ಬೇಕು ಎಂದು ತಿಳಿಸಿ. ಅದನ್ನು ನಿಮ್ಮ ಹತ್ತಿರ ಯಾರಾದರೂ ಪೂರೈಸಿದಾಗ ನಾವು ನಿಮಗೆ ತಿಳಿಸುತ್ತೇವೆ. ದಿನಕ್ಕೆ ಕೆಲವು ಸಣ್ಣ ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರಿಸಿ ಮತ್ತು ಟೋಕನ್‌ಗಳನ್ನು ಗಳಿಸಿ.",
     doorHouseholdNote: "ಎಲ್ಲವೂ ಆ್ಯಪ್‌ನಲ್ಲಿ ನಡೆಯುತ್ತದೆ — ಇಲ್ಲಿ ಸೈನ್ ಅಪ್ ಮಾಡುವ ಅಗತ್ಯವಿಲ್ಲ.",
     doorOrg: "ಸಂಸ್ಥೆಗಳಿಗಾಗಿ",
     doorOrgBody:
@@ -324,21 +324,21 @@ const CONTENT = {
       { stat: "0", label: "ಬ್ರ್ಯಾಂಡ್‌ಗೆ ಹಂಚಿಕೊಂಡ ಹೆಸರು, ಸಂಖ್ಯೆ ಅಥವಾ ವಿಳಾಸ" },
       { stat: "100%", label: "ಬೇಡಿಕೆ ಡೇಟಾ ಒಟ್ಟುಗೂಡಿಸಿದ ರೂಪದಲ್ಲಿ ಮಾತ್ರ ಪ್ರಕಟ" },
     ],
-    buyEyebrow: "ತಕ್ಷಣವೇ ಪ್ರಯೋಜನ ಸಿಗುವ ಭಾಗ",
-    buyTitle: "ಒಟ್ಟಿಗೆ ಖರೀದಿಸಿ, ಕಡಿಮೆ ಪಾವತಿಸಿ, ಉತ್ತಮ ಗುಣಮಟ್ಟ ಪಡೆಯಿರಿ",
+    buyEyebrow: "ಇದು ಏಕೆ ಅಗ್ಗವಾಗಿದೆ",
+    buyTitle: "ನಿಮಗೆ ಏನು ಬೇಕು ಎಂದು ಯಾರೂ ಊಹಿಸಬೇಕಿಲ್ಲ",
     buyLede:
-      "ಒಂದೇ ಮನೆಗೆ ಚೌಕಾಸಿ ಶಕ್ತಿ ಇಲ್ಲ. ಆದರೆ ಒಂದೇ 5 ಕೆಜಿ ಅಕ್ಕಿ ಬಯಸುವ ನೂರು ಮನೆಗಳಿಗೆ ಇದೆ. DataPay ಆ ಬೇಡಿಕೆಯನ್ನು ಒಟ್ಟುಗೂಡಿಸಿ ಒಂದೇ ಆರ್ಡರ್ ಆಗಿ ಪೂರೈಕೆದಾರರಿಗೆ ಕೊಂಡೊಯ್ಯುತ್ತದೆ — ಬೆಲೆ ಕಡಿಮೆಯಾಗುತ್ತದೆ, ಗುಣಮಟ್ಟ ಹೆಚ್ಚಾಗುತ್ತದೆ.",
+      "ಊರಿಗೆ ಸೇವೆ ಸಲ್ಲಿಸುವ ಪೂರೈಕೆದಾರರು ಹೆಚ್ಚಾಗಿ ಊಹಿಸುತ್ತಿರುತ್ತಾರೆ — ಎಷ್ಟು ದಾಸ್ತಾನು ಇಡಬೇಕು, ಜನರಿಗೆ ಏನು ಬೇಕು. ಊಹಿಸುವುದು ದುಬಾರಿ: ಮಾರಾಟವಾಗದ ಸರಕು, ವ್ಯರ್ಥ ಪ್ರಯಾಣ, ಬೇಡದವರಿಗೆ ಜಾಹೀರಾತು. ಮನೆಗಳು ಮೊದಲೇ ತಮ್ಮ ಅಗತ್ಯ ತಿಳಿಸಿದಾಗ ಈ ವ್ಯರ್ಥ ಇರುವುದಿಲ್ಲ — ಅಲ್ಲಿಂದಲೇ ಕಡಿಮೆ ಬೆಲೆ ಬರುತ್ತದೆ. ಯಾರಿಂದಲೂ ಕಿತ್ತುಕೊಂಡಿದ್ದಲ್ಲ.",
     buySteps: [
       {
         title: "ನೀವು ಪ್ರಾಮಾಣಿಕವಾಗಿ ಉತ್ತರಿಸಿ",
         body: "ದಿನಕ್ಕೆ ಕೆಲವು ಸೆಕೆಂಡುಗಳು. ನಿಮ್ಮ ಮನೆ ನಿಜವಾಗಿ ಏನು ಖರೀದಿಸುತ್ತದೆ — ಹೆಸರು ಎಂದಿಗೂ ಸೇರಿಸುವುದಿಲ್ಲ.",
       },
       {
-        title: "ನಿಮ್ಮ ಊರಿನ ಬೇಡಿಕೆ ಸೇರುತ್ತದೆ",
+        title: "ನಿಮ್ಮ ಪ್ರದೇಶದ ನಿಜವಾದ ಅಗತ್ಯಗಳು ಗೋಚರಿಸುತ್ತವೆ",
         body: "ಉತ್ತರಗಳು ಒಂದೇ ನಿಜವಾದ ಆರ್ಡರ್ ಆಗಿ ಸೇರುತ್ತವೆ, ಪೂರೈಕೆದಾರರು ಚೆನ್ನಾಗಿ ಸೇವೆ ಸಲ್ಲಿಸಲು ಬಯಸುತ್ತಾರೆ.",
       },
       {
-        title: "ಎಲ್ಲರಿಗೂ ಉತ್ತಮ ಬೆಲೆ",
+        title: "ನೀವು ಕೇಳಿದ್ದು ಬಂದು ತಲುಪುತ್ತದೆ",
         body: "ಅಂಗಡಿ ಬೆಲೆ ಅಲ್ಲ, ಸಾಮೂಹಿಕ ಬೆಲೆ — ಮತ್ತು ಗಳಿಸಿದ ಟೋಕನ್‌ಗಳು ನಿಮ್ಮಲ್ಲೇ ಉಳಿಯುತ್ತವೆ.",
       },
     ],
