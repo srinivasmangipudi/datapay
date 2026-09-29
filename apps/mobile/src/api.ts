@@ -125,6 +125,9 @@ export interface Product {
   categoryName: string | null;
   /** Tokens this purchase earns — a flat count, never a share of what's spent. */
   tokensOnPurchase: number;
+  /** Set when the member has a live declaration for this product's category —
+      the reason it is being shown to them. Null for everything else. */
+  matchedIntent: { window: string; declaredAt: string } | null;
 }
 
 export interface MyOrder {

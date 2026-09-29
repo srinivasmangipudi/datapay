@@ -435,4 +435,118 @@ describe("Member-facing product browse + reserve-only order (identity-blind, §7
 
     await cleanupMember(member);
   });
+
+  /**
+   * The "lazy demand" loop: a member declares a need, nothing exists yet, and
+   * later a product in that category shows up carrying the declaration as its
+   * reason. Deliberately NOT a group mechanic — no threshold, no count of other
+   * households, nothing the member has to help reach.
+   */
+  describe("matching declared intent to products", () => {
+    async function declareIntent(aliasId: string, categoryId: number, months: number) {
+      await pool.query(
+        `INSERT INTO intents (alias_id, product_category_id, "window", strength, expires_at)
+         VALUES ($1, $2, '3m', 'yes', now() + ($3 || ' months')::interval)`,
+        [aliasId, categoryId, months]
+      );
+    }
+
+    async function categoryOf(productId: number): Promise<number> {
+      const { rows } = await pool.query<{ category_id: number }>(
+        `SELECT category_id FROM org_products WHERE id = $1`,
+        [productId]
+      );
+      return rows[0].category_id;
+    }
+
+    async function seedCategorisedProduct(): Promise<number> {
+      const id = await seedProduct(5);
+      await pool.query(
+        `UPDATE org_products SET category_id = (SELECT id FROM categories ORDER BY id LIMIT 1)
+          WHERE id = $1`,
+        [id]
+      );
+      return id;
+    }
+
+    it("a live declaration surfaces the product and says why", async () => {
+      const productId = await seedCategorisedProduct();
+      const member = await createTestMember(pool, jwt, VILLAGE_ZONE_ID);
+      await declareIntent(member.aliasId, await categoryOf(productId), 3);
+
+      const res = await request(app.getHttpServer())
+        .get("/v1/products")
+        .set({ Authorization: `Bearer ${member.token}` });
+
+      const match = res.body.find((p: { id: number }) => p.id === productId);
+      expect(match.matchedIntent).not.toBeNull();
+      expect(match.matchedIntent.window).toBe("3m");
+
+      // Declared-for-you sorts first: a member who told us what they needed
+      // shouldn't have to scroll past everything else to find it.
+      expect(res.body[0].matchedIntent).not.toBeNull();
+
+      await pool.query(`DELETE FROM intents WHERE alias_id = $1`, [member.aliasId]);
+      await deleteTestMember(pool, member.aliasId);
+    });
+
+    it("an EXPIRED declaration does not surface anything", async () => {
+      const productId = await seedCategorisedProduct();
+      const member = await createTestMember(pool, jwt, VILLAGE_ZONE_ID);
+      await pool.query(
+        `INSERT INTO intents (alias_id, product_category_id, "window", strength, expires_at)
+         VALUES ($1, $2, '3m', 'yes', now() - interval '1 day')`,
+        [member.aliasId, await categoryOf(productId)]
+      );
+
+      const res = await request(app.getHttpServer())
+        .get("/v1/products")
+        .set({ Authorization: `Bearer ${member.token}` });
+
+      // "You said you wanted this" is wrong once the window they named has
+      // passed — it reads as the app not having listened.
+      const match = res.body.find((p: { id: number }) => p.id === productId);
+      expect(match.matchedIntent).toBeNull();
+
+      await pool.query(`DELETE FROM intents WHERE alias_id = $1`, [member.aliasId]);
+      await deleteTestMember(pool, member.aliasId);
+    });
+
+    it("another member's declaration never leaks into this one's reasons", async () => {
+      const productId = await seedCategorisedProduct();
+      const declarer = await createTestMember(pool, jwt, VILLAGE_ZONE_ID);
+      const other = await createTestMember(pool, jwt, VILLAGE_ZONE_ID);
+      await declareIntent(declarer.aliasId, await categoryOf(productId), 3);
+
+      const res = await request(app.getHttpServer())
+        .get("/v1/products")
+        .set({ Authorization: `Bearer ${other.token}` });
+
+      const match = res.body.find((p: { id: number }) => p.id === productId);
+      expect(match.matchedIntent).toBeNull();
+
+      await pool.query(`DELETE FROM intents WHERE alias_id = $1`, [declarer.aliasId]);
+      await deleteTestMember(pool, declarer.aliasId);
+      await deleteTestMember(pool, other.aliasId);
+    });
+
+    it("duplicate declarations in one category yield one product, not two", async () => {
+      const productId = await seedCategorisedProduct();
+      const member = await createTestMember(pool, jwt, VILLAGE_ZONE_ID);
+      const categoryId = await categoryOf(productId);
+      await declareIntent(member.aliasId, categoryId, 3);
+      await declareIntent(member.aliasId, categoryId, 6);
+
+      const res = await request(app.getHttpServer())
+        .get("/v1/products")
+        .set({ Authorization: `Bearer ${member.token}` });
+
+      // A plain join would return the product once per intent row.
+      const hits = res.body.filter((p: { id: number }) => p.id === productId);
+      expect(hits).toHaveLength(1);
+
+      await pool.query(`DELETE FROM intents WHERE alias_id = $1`, [member.aliasId]);
+      await deleteTestMember(pool, member.aliasId);
+    });
+  });
 });

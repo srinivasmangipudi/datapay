@@ -24,6 +24,8 @@ interface BrowseProductRow {
   organization_name: string;
   category_name: string | null;
   purchase_reward_tokens: number | null;
+  intent_window: string | null;
+  intent_declared_at: Date | null;
 }
 
 // Member-facing browse + reserve — mirrors PulseService's zone ancestor-chain
@@ -50,15 +52,33 @@ export class ProductsService {
        SELECT p.id, p.name_en, p.name_kn, p.description_en, p.unit_spec,
               p.market_price_paise, p.sale_price_paise, p.quantity_available,
               p.photo_url, p.purchase_reward_tokens, o.name AS organization_name,
-              c.name AS category_name
+              c.name AS category_name,
+              intent."window" AS intent_window, intent.declared_at AS intent_declared_at
        FROM org_products p
        JOIN organizations o ON o.id = p.organization_id
        LEFT JOIN categories c ON c.id = p.category_id
+       -- The member's own live declaration for this product's category. This is
+       -- the whole "you said you wanted this" mechanic: demand is accumulated
+       -- when it is lazy, and connected back when something can meet it. LATERAL
+       -- rather than a plain join so only the most recent live intent matches —
+       -- someone who declared the same category twice gets one reason, not two
+       -- copies of the product.
+       LEFT JOIN LATERAL (
+         SELECT i."window", i.declared_at
+           FROM intents i
+          WHERE i.alias_id = $1
+            AND i.product_category_id = p.category_id
+            AND i.expires_at > now()
+          ORDER BY i.declared_at DESC
+          LIMIT 1
+       ) intent ON true
        WHERE p.review_state = 'approved'
          AND p.delisted_at IS NULL
          AND p.quantity_available > 0
          AND (p.zone_id IS NULL OR p.zone_id IN (SELECT id FROM member_zone_chain))
-       ORDER BY p.id DESC`,
+       -- Declared-for-you first, then newest. A member who told us what they
+       -- needed should not have to scroll past everything else to find it.
+       ORDER BY (intent."window" IS NOT NULL) DESC, p.id DESC`,
       [aliasId]
     );
     return rows.map((r) => ({
@@ -73,6 +93,11 @@ export class ProductsService {
       photoUrl: r.photo_url,
       organizationName: r.organization_name,
       categoryName: r.category_name,
+      // Non-null when this member has a live, unexpired declaration for this
+      // product's category — the app shows it as the reason the product is here.
+      matchedIntent: r.intent_window
+        ? { window: r.intent_window, declaredAt: r.intent_declared_at }
+        : null,
       // Shown on the detail card so the reward is visible BEFORE ordering,
       // not discovered afterwards.
       tokensOnPurchase: purchaseTokenReward(r.purchase_reward_tokens),

@@ -26,6 +26,7 @@ import {
 import { Bilingual } from "../components/Bilingual";
 import { Card } from "../components/Card";
 import { ProductDetail } from "./ProductDetail";
+import { IntentReason, IntentSectionHeader } from "./IntentMatch";
 import { strings } from "../i18n/strings";
 import type { Session } from "../session";
 import { colors, radii, spacing, type } from "../theme";
@@ -51,6 +52,11 @@ export function ProductsScreen({ session }: { session: Session }) {
   // it apart from a second order. Reopening the sheet starts a new attempt.
   const [orderKey, setOrderKey] = useState<string | null>(null);
 
+
+  // Split rather than sorted-and-flat: the matched block gets its own heading,
+  // and a member who declared nothing simply never sees it.
+  const matched = (products ?? []).filter((p) => p.matchedIntent !== null);
+  const rest = (products ?? []).filter((p) => p.matchedIntent === null);
 
   const load = useCallback(async () => {
     const [productList, orderList, addr] = await Promise.all([
@@ -104,46 +110,11 @@ export function ProductsScreen({ session }: { session: Session }) {
     }
   }
 
-  if (!products || !myOrders) {
+  // Shared by both blocks below. `reason` is the "you asked for this" line,
+  // shown only in the matched block: repeating it in the general list would
+  // make it noise rather than a reason.
+  function renderProduct(p: Product, reason = false) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
-  return (
-    <View style={[styles.container, { paddingTop: spacing.lg }]}>
-      {/* Pinned above the scroll, not inside it: an undeliverable order is not
-          something to discover by scrolling past it. Shown only once it is
-          actionable — an order exists and there is nowhere to send it — so
-          someone who has never ordered is never nagged. */}
-      {hasAddress === false && myOrders.length > 0 && (
-        <View style={styles.addressWarning}>
-          <Ionicons name="alert-circle" size={20} color={colors.onDark} />
-          <Text style={styles.addressWarningText}>
-            {myOrders.length === 1 ? "Your order can't be delivered yet." : "Your orders can't be delivered yet."}{" "}
-            Add your address in the Vault, or collect from your local PACS centre.
-          </Text>
-        </View>
-      )}
-
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}>
-        <Bilingual {...strings.products.heading} size={22} weight="700" style={styles.heading as any} />
-
-        {products.length === 0 ? (
-          <Card variant="outline" style={styles.emptyCard}>
-            <Ionicons name="storefront-outline" size={32} color={colors.teal} />
-            <Bilingual
-              {...strings.products.empty}
-              size={14}
-              weight="500"
-              tone="subtle"
-              style={styles.emptyText as any}
-            />
-          </Card>
-        ) : (
-          products.map((p) => (
             <Card key={p.id} style={styles.productCard}>
               <TouchableOpacity
                 activeOpacity={0.7}
@@ -173,6 +144,7 @@ export function ProductsScreen({ session }: { session: Session }) {
                     )}
                   </View>
                   <Text style={styles.qtyLabel}>{p.quantityAvailable} left</Text>
+                  {reason ? <IntentReason product={p} /> : null}
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.faint} />
               </View>
@@ -188,7 +160,56 @@ export function ProductsScreen({ session }: { session: Session }) {
                 </Text>
               </TouchableOpacity>
             </Card>
-          ))
+    );
+  }
+
+  if (!products || !myOrders) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { paddingTop: spacing.lg }]}>
+      {/* Pinned above the scroll, not inside it: an undeliverable order is not
+          something to discover by scrolling past it. Shown only once it is
+          actionable — an order exists and there is nowhere to send it — so
+          someone who has never ordered is never nagged. */}
+      {hasAddress === false && myOrders.length > 0 && (
+        <View style={styles.addressWarning}>
+          <Ionicons name="alert-circle" size={20} color={colors.onDark} />
+          <Text style={styles.addressWarningText}>
+            {myOrders.length === 1 ? "Your order can't be delivered yet." : "Your orders can't be delivered yet."}{" "}
+            Add your address in the Vault, or collect from your local PACS centre.
+          </Text>
+        </View>
+      )}
+
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}>
+        <Bilingual {...strings.products.heading} size={22} weight="700" style={styles.heading as any} />
+
+        {matched.length > 0 && (
+          <View style={styles.matchedBlock}>
+            <IntentSectionHeader count={matched.length} />
+            {matched.map((p) => renderProduct(p, true))}
+          </View>
+        )}
+
+        {products.length === 0 ? (
+          <Card variant="outline" style={styles.emptyCard}>
+            <Ionicons name="storefront-outline" size={32} color={colors.teal} />
+            <Bilingual
+              {...strings.products.empty}
+              size={14}
+              weight="500"
+              tone="subtle"
+              style={styles.emptyText as any}
+            />
+          </Card>
+        ) : (
+          rest.map((p) => renderProduct(p))
         )}
 
         <Bilingual
@@ -299,6 +320,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   addressWarningText: { flex: 1, ...type.small, color: colors.onDark, lineHeight: 19, fontWeight: "600" },
+  matchedBlock: { marginBottom: spacing.xl },
   emptyCard: { alignItems: "flex-start", gap: spacing.sm, marginBottom: spacing.lg },
   emptyText: { color: colors.ink, lineHeight: 21 },
   productCard: { marginBottom: spacing.md },
